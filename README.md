@@ -1,11 +1,10 @@
-# Team Project
+# LeapVelocity Project
 
 > Placeholder - the real project definition goes here once it kicks off.
 
 ## Branching strategy
 
-We're going with trunk-based development. We're a team of 4 on a 10-week project, so we didn't want a heavy process slowing us down - short-lived branches merged often keep conflicts to a minimum and CI feedback comes quickly.
-Every PR gets reviewed and approved before merging to 'main'. 
+We follow trunk-based development to keep the process lightweight and minimize merge conflicts. With short-lived branches merged frequently, we get faster CI feedback and maintain team velocity. All pull requests require peer review and approval before merging to `main`. 
 ## Team
 
 - Oleksandra Tiankina
