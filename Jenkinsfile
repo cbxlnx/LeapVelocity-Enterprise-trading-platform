@@ -6,6 +6,16 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Verify Java') {
+            steps {
+                sh 'java -version && mvn -version'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn -B clean package'
+            }
+        }
         stage('Build Image') {
             steps {
                 sh 'docker build -t team-skeleton:latest .'
