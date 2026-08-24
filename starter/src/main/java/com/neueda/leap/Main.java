@@ -5,4 +5,9 @@ public class Main {
         // TODO: replace LeapVelocity with your team's actual name
         System.out.println("Hello world from  LeapVelocity");
     }
+
+    public static void Goodbye(String[] args) {
+        // TODO: replace LeapVelocity with your team's actual name
+        System.out.println("Goodbye from LeapVelocity");
+    }
 }
