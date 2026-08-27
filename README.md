@@ -12,3 +12,5 @@ We follow trunk-based development to keep the process lightweight and minimize m
 - Anna Radcenko
 - Daniel Fegan
 - Kateryna Kozelko
+
+https://1drv.ms/p/c/0cf40ee5cb00d515/IQB_HBf1EpBLT52LTW4m8V_WAYpGInPQFvyA9-Jd9jk4Ru8?e=EGE3Ac
