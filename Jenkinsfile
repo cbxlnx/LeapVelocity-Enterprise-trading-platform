@@ -1,29 +1,23 @@
 pipeline {
     agent any
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage('Verify Java') {
-            steps {
-                sh 'java -version && mvn -version'
-            }
-        }
-        stage('Build') {
-            steps {
-                sh 'mvn -B clean package'
-            }
-        }
+
         stage('Build Image') {
             steps {
-                sh 'docker build -t team-skeleton:latest .'
+                sh 'docker build -t team-skeleton:${BUILD_NUMBER} .'
             }
         }
-        stage('Smoke Test') {
+
+        stage('Test') {
             steps {
-                sh 'docker run --rm team-skeleton:latest'
+                sh 'mvn -B test'
+                junit 'target/surefire-reports/*.xml'
             }
         }
     }
