@@ -27,15 +27,4 @@ pipeline {
             }
         }
     }
-    post {
-        always {
-            script {
-                githubNotify(
-                    status: currentBuild.result == 'SUCCESS' ? 'SUCCESS' : 'FAILURE',
-                    context: 'continuous-integration/jenkins/multibranch-pipeline-new',
-                    description: 'Jenkins build result'
-                )
-            }
-        }
-    }
 }
