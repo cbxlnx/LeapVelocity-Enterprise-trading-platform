@@ -18,7 +18,7 @@ pipeline {
         }
         stage('Build Image') {
             steps {
-                sh 'docker build -t team-skeleton:latest .'
+                sh 'docker build -f infrastructure/docker/Dockerfile -t team-skeleton:latest .'
             }
         }
         stage('Smoke Test') {
