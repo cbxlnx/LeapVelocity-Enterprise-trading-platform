@@ -13,6 +13,7 @@
 
     <build>
         <finalName>team-skeleton</finalName>
+        <sourceDirectory>backend/src/main/java</sourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -21,7 +22,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.neueda.leap.Main</mainClass>
+                            <mainClass>com.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
