@@ -11,6 +11,7 @@ RUN echo '#!/bin/bash\necho "host all all 10.9.0.0/16 scram-sha-256" >> "$PGDATA
 ARG SCHEMA_PATH=enterprise-schema.sql
 
 COPY database/sql/${SCHEMA_PATH} /docker-entrypoint-initdb.d/02-myschema.sql
+COPY database/sql/seed-data.sql /docker-entrypoint-initdb.d/03-seed-data.sql
 
 VOLUME /var/lib/postgresql/data
 

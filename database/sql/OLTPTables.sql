@@ -12,7 +12,7 @@ CREATE TABLE accounts (
 CREATE TABLE instruments (
     symbol          VARCHAR(20) NOT NULL PRIMARY KEY,
     name            TEXT NOT NULL,
-    asset_class     TEXT NOT NULL CHECK (asset_class IN ('EQUILTY', 'BOND', 'FUND', 'CASH')),
+    asset_class     TEXT NOT NULL CHECK (asset_class IN ('EQUITY', 'BOND', 'FUND', 'CASH')),
     currency        TEXT NOT NULL,
     tradable        BOOLEAN
 );
@@ -24,8 +24,8 @@ CREATE TABLE orders (
     side                VARCHAR(4) NOT NULL,
     quantity            INTEGER NOT NULL,
     price               NUMERIC(18,2) NOT NULL,
-    status              VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'REJECTED', 'SUCCESFULL')),
-    indempotency_key    VARCHAR(100) UNIQUE,
+    status              VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'REJECTED', 'SUCCESSFUL')),
+    idempotency_key     VARCHAR(100) UNIQUE,
     created_on          TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX idx_orders_account_id ON orders(account_id);
