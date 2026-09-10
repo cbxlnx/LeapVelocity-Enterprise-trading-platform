@@ -34,6 +34,9 @@ pipeline {
             steps {
                 script {
                     sh '''
+                        # Kill any existing containers on port 8080
+                        docker rm -f app-test 2>/dev/null || true
+                        
                         # Start Java app container in background
                         docker run -d --name app-test -p 8080:8080 ${DOCKER_APP_IMAGE}
                         
@@ -41,15 +44,15 @@ pipeline {
                         sleep 5
                         
                         # Test if app is running
-                        if docker exec app-test curl -f http://localhost:8080/ || true; then
+                        if docker exec app-test curl -f http://localhost:8080/health || true; then
                             echo "✓ App is running"
                         else
                             echo "⚠ App started but no health endpoint"
                         fi
                         
                         # Cleanup
-                        docker stop app-test
-                        docker rm app-test
+                        docker stop app-test || true
+                        docker rm app-test || true
                     '''
                 }
             }
