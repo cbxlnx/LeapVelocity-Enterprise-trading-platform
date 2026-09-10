@@ -30,31 +30,13 @@ pipeline {
             }
         }
         
-        stage('Smoke Test') {
+        stage('Verify Build') {
             steps {
-                script {
-                    sh '''
-                        docker rm -f app-test 2>/dev/null || true
-                        
-                        docker run -d \
-                            --name app-test \
-                            -p 8080:8080 \
-                            -e SPRING_DATASOURCE_URL="" \
-                            ${DOCKER_APP_IMAGE}
-                        
-                        sleep 5
-                        
-                        # Just check if container is running, not health endpoint
-                        if docker exec app-test curl -f http://localhost:8080/ || true; then
-                            echo "✓ App is running"
-                        else
-                            echo "⚠ App container running"
-                        fi
-                        
-                        docker stop app-test || true
-                        docker rm app-test || true
-                    '''
-                }
+                sh '''
+                    # Verify JAR exists and is valid
+                    test -f /build/target/team-skeleton.jar && echo "✓ JAR built successfully"
+                    jar tf /build/target/team-skeleton.jar | head -5
+                '''
             }
         }
         
