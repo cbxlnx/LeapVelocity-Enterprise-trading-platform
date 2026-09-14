@@ -8,4 +8,6 @@ target/
 .venv
 analysis/data/
 db/scripts/backups/
-analysis/scripts/__pycache__
+analysis/scripts/__pycache__/
+auth-stub/node_modules
+auth-stub/dist
