@@ -6,3 +6,4 @@ target/
 .vscode/
 .env
 .venv
+db/scripts/backups/

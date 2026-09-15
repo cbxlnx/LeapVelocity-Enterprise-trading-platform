@@ -1,0 +1,22 @@
+services:
+  trade-db:
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    container_name: trading-platform-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-leapvelocity_trading_db}
+      POSTGRES_USER: ${DB_USER:-trading_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - trade-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  trade-db-data:

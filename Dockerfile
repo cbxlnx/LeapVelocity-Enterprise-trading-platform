@@ -6,12 +6,12 @@ RUN apk add --no-cache maven
 
 WORKDIR /build
 
-# Copy pom.xml and source - maintain full directory structure
-COPY pom.xml .
-COPY backend ./backend
+# Copy backend Maven project
+COPY backend/pom.xml ./backend/pom.xml
+COPY backend/src ./backend/src
 
 # Build the application
-RUN mvn clean package -DskipTests
+RUN mvn -f backend/pom.xml clean package -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
@@ -19,10 +19,10 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy built JAR from builder
-COPY --from=builder /build/target/team-skeleton.jar app.jar
+COPY --from=builder /build/backend/target/*.jar app.jar
 
 
 # Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-cp", "app.jar", "com.Main"]
 
 EXPOSE 8080

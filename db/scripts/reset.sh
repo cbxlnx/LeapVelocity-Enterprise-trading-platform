@@ -4,12 +4,13 @@
 set -e
 
 DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
+DB_PORT="${DB_PORT:-${POSTGRES_PORT:-5432}}"
 DB_NAME="${DB_NAME:-leapvelocity_trading_db}"
 DB_USER="${DB_USER:-trading_user}"
 
-if [ -f "$(dirname "$0")/../.env" ]; then
-    source "$(dirname "$0")/../.env"
+ENV_FILE="$(dirname "$0")/../../.env"
+if [ -f "$ENV_FILE" ]; then
+    source "$ENV_FILE"
 fi
 
 RED='\033[0;31m'
