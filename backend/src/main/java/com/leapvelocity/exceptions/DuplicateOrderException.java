@@ -1,4 +1,4 @@
-// package com.leapvelocity.exceptions;
+package com.leapvelocity.exceptions;
 
 public class DuplicateOrderException extends RuntimeException {
 

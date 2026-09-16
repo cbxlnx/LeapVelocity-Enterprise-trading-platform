@@ -1,18 +1,16 @@
 package com.leapvelocity.entities;
 
 import com.leapvelocity.entities.enums.AccountStatus;
+import com.leapvelocity.exceptions.InsufficientFundsException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Account")
+@DisplayName("Account Entity")
 class AccountTest {
 
     @Test
@@ -74,5 +72,41 @@ class AccountTest {
 
         assertThrows(IllegalArgumentException.class, () -> account.credit(new BigDecimal("-1.00")));
         assertThrows(IllegalArgumentException.class, () -> account.debit(new BigDecimal("-1.00")));
+    }
+
+    @Test
+    @DisplayName("debit insufficient funds throws exception and preserves balance")
+    void debitInsufficientFunds() {
+        Account account = new Account("ACC-001", "Alice", new BigDecimal("100.00"), AccountStatus.ACTIVE);
+        
+        // Account has $100, trying to debit $150
+        assertThrows(IllegalArgumentException.class, () -> account.debit(new BigDecimal("150.00")));
+        
+        // Balance unchanged after failed debit
+        assertEquals(new BigDecimal("100.00"), account.getCashBalance());
+    }
+
+    @Test
+    @DisplayName("isActive returns true for ACTIVE status")
+    void isActiveReturnsTrueForActiveStatus() {
+        Account account = new Account("ACC-001", "Alice", new BigDecimal("1000.00"), AccountStatus.ACTIVE);
+        
+        assertTrue(account.isActive());
+    }
+
+    @Test
+    @DisplayName("isActive returns false for SUSPENDED status")
+    void isActiveReturnsFalseForSuspendedStatus() {
+        Account account = new Account("ACC-001", "Alice", new BigDecimal("1000.00"), AccountStatus.SUSPENDED);
+        
+        assertFalse(account.isActive());
+    }
+
+    @Test
+    @DisplayName("isActive returns false for CLOSED status")
+    void isActiveReturnsFalseForClosedStatus() {
+        Account account = new Account("ACC-001", "Alice", new BigDecimal("1000.00"), AccountStatus.CLOSED);
+        
+        assertFalse(account.isActive());
     }
 }

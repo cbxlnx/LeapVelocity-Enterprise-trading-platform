@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DisplayName("Instrument")
+@DisplayName("Instrument Entity")
 class InstrumentTest {
 
     @Test
@@ -20,7 +20,7 @@ class InstrumentTest {
         assertEquals("EQUITY", instrument.getAssetClass());
         assertEquals("USD", instrument.getCurrency());
         assertTrue(instrument.isTradable());
-        assertTrue(instrument.isTradeble());
+        assertTrue(instrument.isTradable());
     }
 
     @Test

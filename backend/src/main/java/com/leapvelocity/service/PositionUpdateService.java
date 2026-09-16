@@ -1,3 +1,4 @@
+package com.leapvelocity.service;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
 import java.math.BigDecimal;
@@ -5,9 +6,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.leapvelocity.exceptions.InsufficientHoldingsException;
 
 public class PositionUpdateService {
-
 	private final Map<String, Position> positionsByAccountAndSymbol;
 
 	public PositionUpdateService() {

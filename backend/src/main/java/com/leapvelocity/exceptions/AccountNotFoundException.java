@@ -1,4 +1,4 @@
-// package com.leapvelocity.exceptions;
+package com.leapvelocity.exceptions;
 
 public class AccountNotFoundException extends RuntimeException {
 

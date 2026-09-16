@@ -2,13 +2,14 @@ package com.leapvelocity.entities;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.leapvelocity.exceptions.InsufficientHoldingsException;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@DisplayName("Position")
+@DisplayName("Position Entity")
 class PositionTest {
 
     @Test
@@ -38,5 +39,16 @@ class PositionTest {
         assertThrows(IllegalArgumentException.class, () -> position.apply(null, new BigDecimal("100.00")));
         assertThrows(IllegalArgumentException.class, () -> position.apply(BigDecimal.ONE, null));
         assertThrows(IllegalArgumentException.class, () -> position.marketValue(null));
+    }
+
+    @Test
+    @DisplayName("apply with negative quantity (short selling) reduces position")
+    void applyNegativeQuantityReducesPosition() {
+        Position position = new Position(1L, "AAPL", new BigDecimal("100"), new BigDecimal("150.00"));
+        
+        // Sell 30 shares at $160
+        position.apply(new BigDecimal("-30"), new BigDecimal("160.00"));
+        
+        assertEquals(new BigDecimal("70"), position.getQuantity());
     }
 }
