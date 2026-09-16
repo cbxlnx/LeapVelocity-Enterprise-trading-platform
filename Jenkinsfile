@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_APP_IMAGE = "team-skeleton:latest"
+        DOCKER_APP_IMAGE = "leapvelocity-backend:latest"
     }
     
     stages {
@@ -20,7 +20,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                sh 'mvn -B clean package'
+                sh 'mvn -B -f backend/pom.xml clean package'
             }
         }
         
@@ -34,8 +34,8 @@ pipeline {
             steps {
                 sh '''
                     # Verify JAR exists and is valid
-                    test -f /build/target/team-skeleton.jar && echo "✓ JAR built successfully"
-                    jar tf /build/target/team-skeleton.jar | head -5
+                    test -n "$(find backend/target -maxdepth 1 -name '*.jar' -print -quit)" && echo "✓ JAR built successfully"
+                    jar tf "$(find backend/target -maxdepth 1 -name '*.jar' -print -quit)" | head -5
                 '''
             }
         }

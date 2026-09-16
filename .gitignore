@@ -6,3 +6,5 @@ target/
 .vscode/
 .env
 .venv
+db/scripts/backups/
+analysis/data/
