@@ -6,8 +6,8 @@ services:
     container_name: trading-platform-db
     environment:
       POSTGRES_DB: ${DB_NAME:-leapvelocity_trading_db}
-      POSTGRES_USER: ${DB_USER:-trading_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
