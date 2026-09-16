@@ -1,38 +1,156 @@
-# Sprint 5 Clean Architecture Review And Sprint 6 Preparation
+# Sprint 5 Clean Code, SOLID Review, And Sprint 6 Preparation
 
-## Purpose
+## Scope
 
-This document groups the remaining clean code, SOLID, and clean architecture improvements into separate tasks. The goal is to make the Sprint 5 Java skeleton ready for Sprint 6, where the project will move into Spring Boot, REST API design, MyBatis persistence, and layered architecture.
+This review covers only the `backend` folder of `LeapVelocity-Enterprise-trading-platform`.
 
-Sprint 5 should stay focused on the Java business engine. Do not overbuild Spring-style infrastructure too early, but prepare the code so Sprint 6 can add controllers, repositories, persistence, and exception handling cleanly.
+The goal is to document what should be improved before Sprint 6, where the project will move into Spring Boot, REST API design, MyBatis persistence, and layered architecture.
 
-## Current Sprint 5 Status
+## Current Status
 
-The backend already has the main Sprint 5 skeleton:
+The Sprint 5 backend skeleton already has:
 
 - Domain entities: `Account`, `Instrument`, `Order`, `Position`
 - Enums: `AccountStatus`, `OrderSide`, `OrderStatus`
-- Response DTOs in `com.leapvelocity.dto.response`
 - Request DTOs in `com.leapvelocity.dto.request`
+- Response DTOs in `com.leapvelocity.dto.response`
 - Jakarta Validation annotations on request DTOs
-- Custom exceptions
+- Custom domain exceptions
 - `OrderExecutionService`
 - `PositionUpdateService`
-- JUnit tests for entities, DTO mapping, enums, and services
+- JUnit tests for entities, enums, DTO mapping, and services
 
-The project currently passes:
+Current tests pass with:
 
 ```bash
 mvn test -q
 ```
 
-## Task 1: DTO Request And Response Separation
+## Task 1: Fix Immediate Clean-Code Defects
+
+### 1.1 Fix `addInstrument` null handling
+
+Current issue:
+
+`OrderExecutionService.addInstrument(...)` trims the symbol only when it is not null, but then calls `symbol.isEmpty()`. If `instrument.getSymbol()` returns null, this can throw `NullPointerException`.
+
+Recommended fix:
+
+```java
+symbol = instrument.getSymbol();
+if (symbol == null || symbol.isBlank()) {
+    throw new IllegalArgumentException("Instrument symbol is required");
+}
+symbol = symbol.trim();
+```
+
+Why this matters:
+
+- Avoids a runtime null bug.
+- Makes validation behavior predictable.
+- Keeps service input validation clean.
+
+Priority: high.
+
+### 1.2 Remove typo method `isTradeble()`
+
+Current issue:
+
+`Instrument` has both:
+
+```java
+isTradeble()
+isTradable()
+```
+
+Recommended fix:
+
+- Keep `isTradable()`.
+- Remove `isTradeble()` after confirming tests and code no longer use it.
+
+Why this matters:
+
+- Avoids duplicate API methods.
+- Improves naming consistency.
+- Prevents future code from using the misspelled method.
+
+Priority: low-medium.
+
+### 1.3 Move enum files to package-matching folder
+
+Current issue:
+
+Enum files are located under:
+
+```text
+src/main/java/com/leapvelocity/enums
+```
+
+but the package is:
+
+```java
+package com.leapvelocity.entities.enums;
+```
+
+Recommended structure:
+
+```text
+src/main/java/com/leapvelocity/entities/enums
+```
+
+Do the same for enum tests:
+
+```text
+src/test/java/com/leapvelocity/entities/enums
+```
+
+Why this matters:
+
+- Java compiles it, but folder/package mismatch is confusing.
+- IDE navigation and team readability are better when paths match packages.
+- It avoids package structure surprises during Spring Boot migration.
+
+Priority: medium.
+
+## Task 2: DTO Request And Response
+
+Status: done.
+
 - Request DTOs represent client input.
 - Response DTOs represent API output.
 - Clients cannot send system-owned fields such as `id`, `status`, `createdOn`, or `version`.
 - Sprint 6 controllers can use request DTOs with `@Valid`.
 
-## Task 2: Clean Position Domain Methods
+Current structure:
+
+```text
+dto
+  request
+    CreateAccountRequestDto.java
+    CreateInstrumentRequestDto.java
+    CreatePositionRequestDto.java
+    PlaceOrderRequestDto.java
+
+  response
+    AccountDto.java
+    InstrumentDto.java
+    OrderDto.java
+    PositionDto.java
+```
+
+Completed improvement:
+
+- Added one focused validation test for `PlaceOrderRequestDto`.
+
+Covered validation cases:
+
+- blank `symbol`
+- null `side`
+- zero or negative `quantity`
+- zero or negative `price`
+- blank `idempotencyKey`
+
+## Task 3: Clean `Position` Domain Methods
 
 Status: should do before Sprint 6.
 
@@ -42,14 +160,27 @@ Current issue:
 public void apply(BigDecimal quantity, BigDecimal price)
 ```
 
-`Position.apply(quantity, price)` currently sounds generic, but it is mainly used for buy logic because it recalculates average cost. It can also accept negative quantity, which makes the domain model confusing because sell logic already exists in `PositionUpdateService.applySell()`.
+`Position.apply(quantity, price)` sounds generic, but it is mainly buy logic because it recalculates average cost. It currently accepts negative quantity, and one test expects negative quantity to reduce a position. That conflicts with the existing design because sell logic already lives in `PositionUpdateService.applySell()`.
 
 Recommended change:
 
-Replace `apply(...)` with clearer methods:
+Replace `apply(...)` with a clearer buy method:
 
 ```java
 public void increaseForBuy(BigDecimal quantity, BigDecimal price)
+```
+
+This method should reject:
+
+- null quantity
+- null price
+- zero or negative quantity
+- zero or negative price
+
+Then update `PositionUpdateService.applyBuy(...)`:
+
+```java
+position.increaseForBuy(order.getQuantity(), order.getPrice());
 ```
 
 Optional later:
@@ -58,26 +189,25 @@ Optional later:
 public void reduceForSell(BigDecimal quantity)
 ```
 
-Then `PositionUpdateService` becomes clearer:
-
-```java
-position.increaseForBuy(order.getQuantity(), order.getPrice());
-```
-
-If sell reduction stays in `PositionUpdateService`, that is also acceptable for now. The important part is that the buy method should not allow negative quantity.
+If sell reduction stays in `PositionUpdateService`, that is acceptable for Sprint 5. The important part is to stop using one generic method for both buy and negative sell behavior.
 
 Why this matters:
 
-- Better method names.
-- Less confusing domain behavior.
-- Avoids hidden support for short-selling or negative trades.
-- Makes business rules easier to expose safely through REST APIs in Sprint 6.
+- Better method naming.
+- Clearer domain rules.
+- Avoids hidden support for short selling.
+- Makes REST API behavior safer in Sprint 6.
 
-Recommended priority: high.
+Tests to update:
 
-## Task 3: Base Trading Exception
+- Rename the existing positive buy test to use `increaseForBuy(...)`.
+- Replace the negative quantity test with a rejection test.
 
-Status: good before Sprint 6.
+Priority: high.
+
+## Task 4: Add Base `TradingException`
+
+Status: recommended before Sprint 6.
 
 Current exceptions:
 
@@ -88,7 +218,9 @@ Current exceptions:
 - `InsufficientFundsException`
 - `InsufficientHoldingsException`
 
-These are good, but they currently extend `RuntimeException` directly.
+Current issue:
+
+All custom exceptions extend `RuntimeException` directly.
 
 Recommended change:
 
@@ -102,7 +234,7 @@ public abstract class TradingException extends RuntimeException {
 }
 ```
 
-Then domain exceptions should extend `TradingException`:
+Then update domain exceptions:
 
 ```java
 public class InsufficientFundsException extends TradingException {
@@ -125,18 +257,21 @@ public ResponseEntity<ErrorResponse> handleTradingException(TradingException ex)
 }
 ```
 
-Recommended priority: medium-high.
+Priority: medium-high.
 
-## Task 4: Extract Order Validation
+## Task 5: Extract `OrderValidator`
 
 Status: useful before Sprint 6.
 
 Current issue:
 
-`OrderExecutionService` currently validates the `Order` object inside a private method.
+`OrderExecutionService` currently validates orders inside a private method.
 
-Current responsibility inside `OrderExecutionService` includes:
+Current `OrderExecutionService` responsibilities include:
 
+- stores accounts in memory
+- stores instruments in memory
+- stores orders by idempotency key
 - validates order fields
 - checks duplicate idempotency keys
 - checks account existence
@@ -145,9 +280,9 @@ Current responsibility inside `OrderExecutionService` includes:
 - executes buy orders
 - executes sell orders
 - marks orders as `FILLED` or `REJECTED`
-- stores orders in memory
+- delegates position changes to `PositionUpdateService`
 
-This works, but the class has several responsibilities.
+This works for a skeleton, but it is too many responsibilities for one service.
 
 Recommended change:
 
@@ -163,7 +298,7 @@ public class OrderValidator {
 }
 ```
 
-Then:
+Then use:
 
 ```java
 orderValidator.validate(order);
@@ -171,24 +306,24 @@ orderValidator.validate(order);
 
 Important distinction:
 
-- Request DTO validation checks incoming API input.
+- Request DTO validation checks incoming REST input.
 - `OrderValidator` checks domain-level order validity before execution.
 
 Why this matters:
 
-- Makes `OrderExecutionService` more focused.
-- Keeps controller validation separate from domain validation.
-- Makes validation easier to test directly.
+- Supports Single Responsibility Principle.
+- Makes order validation independently testable.
+- Keeps future controller validation separate from business validation.
 
-Recommended priority: medium.
+Priority: medium.
 
-## Task 5: Repository Interfaces
+## Task 6: Introduce Repository Boundaries
 
 Status: optional before Sprint 6, important during Sprint 6.
 
 Current issue:
 
-`OrderExecutionService` and `PositionUpdateService` currently store data directly in memory using `HashMap`.
+`OrderExecutionService` and `PositionUpdateService` store data directly in `HashMap`.
 
 Current examples:
 
@@ -202,7 +337,7 @@ private final Map<String, Order> ordersByIdempotencyKey;
 private final Map<String, Position> positionsByAccountAndSymbol;
 ```
 
-This is acceptable for Sprint 5 because the goal is a tested business engine. However, these collections should not stay inside services once Spring Boot and MyBatis are added.
+This is acceptable for Sprint 5 because the goal is a tested Java business engine. It should not remain this way once Spring Boot and MyBatis are introduced.
 
 Recommended interfaces:
 
@@ -261,23 +396,23 @@ Why this matters:
 
 - Removes storage details from business services.
 - Prepares for MyBatis persistence.
-- Supports Dependency Inversion.
+- Supports Dependency Inversion Principle.
 - Makes services easier to test.
 
 Recommendation:
 
-- If there is time before Sprint 6, add repository interfaces and in-memory implementations.
-- If time is limited, leave this for Sprint 6 because persistence with MyBatis will naturally force this structure.
+- If time is limited, leave repository implementation for Sprint 6.
+- If time is available, add interfaces and simple in-memory implementations before Sprint 6.
 
-Recommended priority: medium before Sprint 6, high during Sprint 6.
+Priority: medium before Sprint 6, high during Sprint 6.
 
-## Task 6: Refactor OrderExecutionService Dependencies
+## Task 7: Refactor Service Dependencies
 
 Status: do after repository interfaces exist.
 
 Current issue:
 
-`OrderExecutionService` currently creates and owns its dependencies:
+`OrderExecutionService` creates and owns its dependencies:
 
 ```java
 this.accountsById = new HashMap<>();
@@ -285,8 +420,6 @@ this.instrumentsBySymbol = new HashMap<>();
 this.ordersByIdempotencyKey = new HashMap<>();
 this.positionUpdateService = new PositionUpdateService();
 ```
-
-This means the service depends on concrete storage details.
 
 Better direction:
 
@@ -306,15 +439,13 @@ Why this matters:
 
 - Follows Dependency Inversion Principle.
 - Makes Spring Boot dependency injection easier.
-- Allows the service to use in-memory repositories in tests and MyBatis repositories in production.
+- Allows in-memory repositories in tests and MyBatis repositories in production.
 
-Recommended priority: after Task 5.
+Priority: after Task 6.
 
-## Task 7: Keep PositionUpdateService Focused
+## Task 8: Keep `PositionUpdateService` Focused
 
 Status: keep and improve gradually.
-
-`PositionUpdateService` is useful because it keeps position logic out of `OrderExecutionService`.
 
 Current responsibilities:
 
@@ -326,9 +457,11 @@ Current responsibilities:
 - rejects sells with insufficient holdings
 - returns positions by account
 
-Future improvement:
+This is better than putting all position logic into `OrderExecutionService`.
 
-Once `PositionRepository` exists, `PositionUpdateService` should stop owning the `HashMap`. It should use `PositionRepository` instead.
+Future direction:
+
+After `PositionRepository` exists, `PositionUpdateService` should stop owning the `HashMap` and use the repository instead.
 
 Better responsibility:
 
@@ -339,33 +472,36 @@ PositionUpdateService
   - delegates storage to PositionRepository
 ```
 
-Recommended priority: after repository interfaces.
+Priority: after repository interfaces.
 
-## Recommended Work Order Before Sprint 6
+## Recommended Order Before Sprint 6
 
-1. Keep DTO request/response split as it is now.
-2. Refactor `Position.apply(...)` into a clearer buy method such as `increaseForBuy(...)`.
-3. Add `TradingException` and update custom exceptions to extend it.
-4. Extract `OrderValidator` from `OrderExecutionService`.
-5. Optionally add repository interfaces and in-memory repository implementations.
-6. Refactor `OrderExecutionService` to receive dependencies through constructor injection.
-7. Move in-memory collections out of services once repositories exist.
+1. Fix `addInstrument(...)` null handling.
+2. Remove typo method `isTradeble()`.
+3. Move enum files to a package-matching folder.
+4. Keep DTO request/response split as it is now.
+5. Refactor `Position.apply(...)` into `increaseForBuy(...)`.
+6. Add `TradingException` and update custom exceptions.
+7. Extract `OrderValidator`.
+8. Optionally add repository interfaces and in-memory implementations.
+9. Refactor services to receive dependencies through constructors.
 
 ## Minimum Recommended Before Sprint 6
 
-If time is limited, complete these before Sprint 6:
+If time is limited, complete only:
 
-1. Clean `Position.apply(...)`.
-2. Add base `TradingException`.
-3. Extract `OrderValidator`.
+1. Fix `addInstrument(...)` null handling.
+2. Refactor `Position.apply(...)`.
+3. Add base `TradingException`.
+4. Extract `OrderValidator`.
 
-Repositories can be done during Sprint 6 because MyBatis and Spring Boot layered architecture will naturally require them.
+Repository interfaces can be done during Sprint 6 because MyBatis and Spring Boot layered architecture will naturally require them.
 
 ## What Not To Do Yet
 
 Do not create interfaces for constants.
 
-Use this only if constants are truly needed:
+Use a constants class only when constants are truly needed:
 
 ```java
 public final class TradingConstants {
