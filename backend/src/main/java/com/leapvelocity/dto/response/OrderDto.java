@@ -1,4 +1,4 @@
-package com.leapvelocity.dto;
+package com.leapvelocity.dto.response;
 
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.enums.OrderSide;
