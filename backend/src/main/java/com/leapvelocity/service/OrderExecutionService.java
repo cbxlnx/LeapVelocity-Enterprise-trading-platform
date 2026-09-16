@@ -1,3 +1,4 @@
+package com.leapvelocity.service;
 import com.leapvelocity.entities.Account;
 import com.leapvelocity.entities.Instrument;
 import com.leapvelocity.entities.Order;
@@ -8,6 +9,12 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.leapvelocity.exceptions.AccountNotActiveException;
+import com.leapvelocity.exceptions.AccountNotFoundException;
+import com.leapvelocity.exceptions.DuplicateOrderException;
+import com.leapvelocity.exceptions.InsufficientFundsException;
+import com.leapvelocity.exceptions.InstrumentNotFoundException;
+
 
 public class OrderExecutionService {
 
