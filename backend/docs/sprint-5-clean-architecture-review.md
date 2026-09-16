@@ -1,142 +1,85 @@
-# Sprint 5 Backend Clean Architecture Review
+# Sprint 5 Clean Architecture Review And Sprint 6 Preparation
 
-### Domain Entities
+## Purpose
 
-The current domain entities are:
+This document groups the remaining clean code, SOLID, and clean architecture improvements into separate tasks. The goal is to make the Sprint 5 Java skeleton ready for Sprint 6, where the project will move into Spring Boot, REST API design, MyBatis persistence, and layered architecture.
 
-- `Account`
-- `Instrument`
-- `Order`
-- `Position`
+Sprint 5 should stay focused on the Java business engine. Do not overbuild Spring-style infrastructure too early, but prepare the code so Sprint 6 can add controllers, repositories, persistence, and exception handling cleanly.
 
-These match the Sprint 5 project documentation.
+## Current Sprint 5 Status
 
-#### Account
+The backend already has the main Sprint 5 skeleton:
 
-`Account` represents a customer trading account.
+- Domain entities: `Account`, `Instrument`, `Order`, `Position`
+- Enums: `AccountStatus`, `OrderSide`, `OrderStatus`
+- Response DTOs in `com.leapvelocity.dto.response`
+- Request DTOs in `com.leapvelocity.dto.request`
+- Jakarta Validation annotations on request DTOs
+- Custom exceptions
+- `OrderExecutionService`
+- `PositionUpdateService`
+- JUnit tests for entities, DTO mapping, enums, and services
 
-It currently stores:
+The project currently passes:
 
-- internal database `id`
-- external `accountId`
-- holder name
-- cash balance
-- account status
-- version
-- last updated timestamp
-
-It also contains useful domain behavior:
-
-- `debit(amount)`
-- `credit(amount)`
-- `isActive()`
-
-This is good domain design because balance changes are controlled through methods instead of only being changed externally through setters.
-
-#### Instrument
-
-`Instrument` represents a tradable security.
-
-It currently stores:
-
-- symbol
-- name
-- asset class
-- currency
-- tradable flag
-
-It supports:
-
-- checking whether an instrument is tradable.
-
-Current improvement:
-
-- Remove or rename the typo method `isTradeble()`. Keep `isTradable()` only.
-
-#### Order
-
-`Order` represents a customer buy or sell order.
-
-It currently stores:
-
-- account id
-- symbol
-- side
-- quantity
-- price
-- status
-- idempotency key
-- created timestamp
-
-This matches the Sprint 5 requirement for order placement logic.
-
-#### Position
-
-`Position` represents an account holding in one instrument.
-
-It currently stores:
-
-- account id
-- symbol
-- quantity
-- average cost
-
-It supports:
-
-- applying a buy trade and recalculating average cost
-- calculating market value
-
-Current improvement:
-
-- `Position.apply(quantity, price)` currently allows negative quantity. That can be confusing because sell logic is already handled in `PositionUpdateService.applySell()`. Prefer making `Position.apply()` clearly mean "apply buy" or split it into `increaseForBuy()` and `reduceForSell()`.
-
-### Enums
-
-The current enums are:
-
-- `AccountStatus`: `ACTIVE`, `SUSPENDED`, `CLOSED`
-- `OrderSide`: `BUY`, `SELL`
-- `OrderStatus`: `NEW`, `FILLED`, `REJECTED`, `CANCELLED`
-
-These match the Sprint 5 documentation.
-
-Current improvement:
-
-- The files are located under `src/main/java/com/leapvelocity/enums`, but their package is `com.leapvelocity.entities.enums`. Java can compile this, but it is confusing. Move files into a folder path that matches the package:
-
-```text
-src/main/java/com/leapvelocity/entities/enums
+```bash
+mvn test -q
 ```
 
-Do the same for the test files.
+## Task 1: DTO Request And Response Separation
+- Request DTOs represent client input.
+- Response DTOs represent API output.
+- Clients cannot send system-owned fields such as `id`, `status`, `createdOn`, or `version`.
+- Sprint 6 controllers can use request DTOs with `@Valid`.
 
-### DTOs
+## Task 2: Clean Position Domain Methods
 
-The current response DTO records are:
+Status: should do before Sprint 6.
 
-- `dto.response.AccountDto`
-- `dto.response.InstrumentDto`
-- `dto.response.OrderDto`
-- `dto.response.PositionDto`
+Current issue:
 
-They currently support mapping from entity to DTO using static `from(...)` methods.
+```java
+public void apply(BigDecimal quantity, BigDecimal price)
+```
 
-This is a good start because DTOs separate external response shape from the entity classes.
+`Position.apply(quantity, price)` currently sounds generic, but it is mainly used for buy logic because it recalculates average cost. It can also accept negative quantity, which makes the domain model confusing because sell logic already exists in `PositionUpdateService.applySell()`.
 
-The current request DTO records are:
+Recommended change:
 
-- `dto.request.CreateAccountRequestDto`
-- `dto.request.CreateInstrumentRequestDto`
-- `dto.request.CreatePositionRequestDto`
-- `dto.request.PlaceOrderRequestDto`
+Replace `apply(...)` with clearer methods:
 
-These request DTOs use Jakarta Validation annotations such as `@NotNull`, `@NotBlank`, `@Positive`, and `@PositiveOrZero`.
+```java
+public void increaseForBuy(BigDecimal quantity, BigDecimal price)
+```
 
-This split prepares the project for Sprint 6 because REST controllers can validate input at the API boundary without exposing system-owned response fields such as `id`, `status`, `createdOn`, or `version` as client input.
+Optional later:
 
-### Exceptions
+```java
+public void reduceForSell(BigDecimal quantity)
+```
 
-The current custom exceptions are:
+Then `PositionUpdateService` becomes clearer:
+
+```java
+position.increaseForBuy(order.getQuantity(), order.getPrice());
+```
+
+If sell reduction stays in `PositionUpdateService`, that is also acceptable for now. The important part is that the buy method should not allow negative quantity.
+
+Why this matters:
+
+- Better method names.
+- Less confusing domain behavior.
+- Avoids hidden support for short-selling or negative trades.
+- Makes business rules easier to expose safely through REST APIs in Sprint 6.
+
+Recommended priority: high.
+
+## Task 3: Base Trading Exception
+
+Status: good before Sprint 6.
+
+Current exceptions:
 
 - `AccountNotActiveException`
 - `AccountNotFoundException`
@@ -145,13 +88,13 @@ The current custom exceptions are:
 - `InsufficientFundsException`
 - `InsufficientHoldingsException`
 
-These support the project requirement for a custom exception hierarchy.
+These are good, but they currently extend `RuntimeException` directly.
 
-Current improvement:
-
-- Consider introducing a base exception later:
+Recommended change:
 
 ```java
+package com.leapvelocity.exceptions;
+
 public abstract class TradingException extends RuntimeException {
     protected TradingException(String message) {
         super(message);
@@ -159,25 +102,42 @@ public abstract class TradingException extends RuntimeException {
 }
 ```
 
-Then domain exceptions can extend `TradingException`.
+Then domain exceptions should extend `TradingException`:
 
-This is not urgent for Sprint 5, but it will help Sprint 6 global exception handling.
+```java
+public class InsufficientFundsException extends TradingException {
+    public InsufficientFundsException(Long accountId, BigDecimal requiredAmount, BigDecimal availableCash) {
+        super("Insufficient funds for account " + accountId
+                + ": required=" + requiredAmount
+                + ", available=" + availableCash);
+    }
+}
+```
 
-### Services
+Why this matters for Sprint 6:
 
-The current services are:
+Spring Boot global exception handling becomes simpler:
 
-- `OrderExecutionService`
-- `PositionUpdateService`
+```java
+@ExceptionHandler(TradingException.class)
+public ResponseEntity<ErrorResponse> handleTradingException(TradingException ex) {
+    ...
+}
+```
 
-#### OrderExecutionService
+Recommended priority: medium-high.
 
-This service currently:
+## Task 4: Extract Order Validation
 
-- stores accounts in memory
-- stores instruments in memory
-- stores orders by idempotency key in memory
-- validates orders
+Status: useful before Sprint 6.
+
+Current issue:
+
+`OrderExecutionService` currently validates the `Order` object inside a private method.
+
+Current responsibility inside `OrderExecutionService` includes:
+
+- validates order fields
 - checks duplicate idempotency keys
 - checks account existence
 - checks account status
@@ -185,262 +145,86 @@ This service currently:
 - executes buy orders
 - executes sell orders
 - marks orders as `FILLED` or `REJECTED`
-- delegates position changes to `PositionUpdateService`
+- stores orders in memory
 
-This gives the project a working business engine, but the class currently has several responsibilities.
+This works, but the class has several responsibilities.
 
-#### PositionUpdateService
+Recommended change:
 
-This service currently:
-
-- stores positions in memory
-- creates positions for buy orders
-- updates average cost for additional buys
-- reduces positions for sell orders
-- removes positions when fully sold
-- rejects sells with insufficient holdings
-- returns positions by account
-
-This is a useful separate service and supports single responsibility better than putting all position logic into `OrderExecutionService`.
-
-## What It Does
-
-The current backend can run core trading scenarios in memory.
-
-Supported behavior:
-
-- Add accounts.
-- Add instruments.
-- Add existing positions.
-- Place buy orders.
-- Place sell orders.
-- Reject duplicate orders using idempotency key.
-- Reject orders for missing accounts.
-- Reject orders for inactive accounts.
-- Reject orders for missing or non-tradable instruments.
-- Reject buy orders with insufficient cash.
-- Reject sell orders with insufficient holdings.
-- Update cash balances after successful trades.
-- Create, update, reduce, or remove positions.
-- Map entities into DTO records.
-- Validate core behavior through JUnit tests.
-
-This is appropriate for Sprint 5 because Sprint 5 focuses on Java, OOAD, domain logic, SOLID, and unit tests, not yet full Spring Boot persistence.
-
-## Clean Code And SOLID Review
-
-### Single Responsibility Principle
-
-Current state: partially followed.
-
-Good:
-
-- `Account` owns account balance behavior.
-- `PositionUpdateService` owns most position changes.
-- DTOs are separate from entities.
-- Exceptions are separated by failure type.
-
-Needs improvement:
-
-- `OrderExecutionService` does too much. It currently validates, stores data, checks rules, executes orders, and manages order status.
-
-Suggested next split:
-
-```text
-OrderExecutionService
-  - orchestrates order placement
-
-OrderValidator
-  - validates required fields, positive price, positive quantity
-
-AccountRepository
-  - finds and saves accounts
-
-InstrumentRepository
-  - finds instruments by symbol
-
-OrderRepository
-  - checks idempotency and stores orders
-
-PositionRepository
-  - stores and retrieves positions
-
-PositionUpdateService
-  - applies buy/sell changes to positions
-```
-
-For Sprint 5, this split can be documented without implementing all of it immediately. For Sprint 6, repository interfaces become more important because Spring Boot and database persistence will be added.
-
-### Open/Closed Principle
-
-Current state: acceptable for the current scope.
-
-The main place to watch is order execution:
+Create:
 
 ```java
-if (order.getSide() == OrderSide.BUY) {
-    executeBuy(...);
-} else if (order.getSide() == OrderSide.SELL) {
-    executeSell(...);
-}
-```
+package com.leapvelocity.service;
 
-This is fine while the only sides are `BUY` and `SELL`.
-
-If more order types are added later, such as market order, limit order, stop order, or short sell, then consider strategy classes:
-
-```text
-OrderExecutionStrategy
-  BuyOrderExecutionStrategy
-  SellOrderExecutionStrategy
-```
-
-Not necessary now.
-
-### Liskov Substitution Principle
-
-Current state: no serious issue.
-
-There is currently no inheritance hierarchy in the domain model.
-
-The education example with an abstract `Instrument` is useful only when different instrument types need different behavior. For this project, `Instrument` is currently just data plus a tradable flag. It does not need to be abstract yet.
-
-Use abstract classes or interfaces only if behavior differs, for example:
-
-```java
-public abstract class Instrument {
-    public abstract BigDecimal calculateFee(BigDecimal tradeValue);
-}
-```
-
-Then subclasses such as `EquityInstrument`, `BondInstrument`, or `EtfInstrument` would be useful.
-
-If the only difference is the value of `assetClass`, use an enum instead of inheritance.
-
-### Interface Segregation Principle
-
-Current state: acceptable.
-
-There are no large interfaces forcing classes to implement unused methods.
-
-Do not create broad interfaces such as:
-
-```java
-public interface TradingService {
-    void addAccount(...);
-    void addInstrument(...);
-    void addPosition(...);
-    Order placeOrder(...);
-    Position getPosition(...);
-}
-```
-
-That would become too general.
-
-If interfaces are added, keep them small and boundary-focused.
-
-### Dependency Inversion Principle
-
-Current state: needs improvement later.
-
-`OrderExecutionService` currently depends directly on `HashMap` storage and directly creates `PositionUpdateService`.
-
-Current:
-
-```java
-this.accountsById = new HashMap<>();
-this.positionUpdateService = new PositionUpdateService();
-```
-
-Better later:
-
-```java
-public OrderExecutionService(
-        AccountRepository accountRepository,
-        InstrumentRepository instrumentRepository,
-        OrderRepository orderRepository,
-        PositionUpdateService positionUpdateService
-) {
-    ...
-}
-```
-
-This makes the business service depend on abstractions instead of storage details.
-
-For Sprint 5, in-memory collections are acceptable. For Sprint 6, repository interfaces or Spring repositories should be introduced.
-
-## Should We Create Interfaces?
-
-### Interfaces For Constants
-
-No. Do not create interfaces only to hold constants.
-
-Avoid:
-
-```java
-public interface TradingConstants {
-    String DEFAULT_CURRENCY = "USD";
-}
-```
-
-Better:
-
-```java
-public final class TradingConstants {
-    public static final String DEFAULT_CURRENCY = "USD";
-
-    private TradingConstants() {
+public class OrderValidator {
+    public void validate(Order order) {
+        ...
     }
 }
 ```
 
-Even better, when the value is a business concept, use an enum:
+Then:
 
 ```java
-public enum AssetClass {
-    EQUITY,
-    ETF,
-    BOND
-}
+orderValidator.validate(order);
 ```
 
-For this project, possible future enums are:
+Important distinction:
 
-- `AssetClass`
-- `CurrencyCode`, only if currencies are limited by project scope
+- Request DTO validation checks incoming API input.
+- `OrderValidator` checks domain-level order validity before execution.
 
-### Interfaces For Entities
+Why this matters:
 
-No. Do not create interfaces for `Account`, `Order`, `Position`, or `Instrument` unless multiple interchangeable implementations are truly needed.
+- Makes `OrderExecutionService` more focused.
+- Keeps controller validation separate from domain validation.
+- Makes validation easier to test directly.
 
-Entities are domain models. They should stay simple and expressive.
+Recommended priority: medium.
 
-### Interfaces For Services
+## Task 5: Repository Interfaces
 
-Not necessary yet for every service.
+Status: optional before Sprint 6, important during Sprint 6.
 
-Useful later when:
+Current issue:
 
-- Spring Boot controllers depend on services.
-- There are multiple implementations.
-- You need to mock external dependencies.
-- You need a stable boundary between application and infrastructure.
+`OrderExecutionService` and `PositionUpdateService` currently store data directly in memory using `HashMap`.
 
-Example:
+Current examples:
 
 ```java
-public interface OrderPlacementUseCase {
-    Order placeOrder(Order order);
-}
+private final Map<Long, Account> accountsById;
+private final Map<String, Instrument> instrumentsBySymbol;
+private final Map<String, Order> ordersByIdempotencyKey;
 ```
 
-This is useful if controllers should depend on a use-case contract instead of a concrete service.
+```java
+private final Map<String, Position> positionsByAccountAndSymbol;
+```
 
-### Interfaces For Repositories
+This is acceptable for Sprint 5 because the goal is a tested business engine. However, these collections should not stay inside services once Spring Boot and MyBatis are added.
 
-Yes, this is the best place for interfaces when the project moves beyond a memory-only skeleton.
+Recommended interfaces:
 
-Recommended repository contracts:
+```text
+repository
+  AccountRepository.java
+  InstrumentRepository.java
+  OrderRepository.java
+  PositionRepository.java
+```
+
+Recommended temporary implementations:
+
+```text
+repository/inmemory
+  InMemoryAccountRepository.java
+  InMemoryInstrumentRepository.java
+  InMemoryOrderRepository.java
+  InMemoryPositionRepository.java
+```
+
+Suggested contracts:
 
 ```java
 public interface AccountRepository {
@@ -452,14 +236,15 @@ public interface AccountRepository {
 ```java
 public interface InstrumentRepository {
     Optional<Instrument> findBySymbol(String symbol);
+    void save(Instrument instrument);
 }
 ```
 
 ```java
 public interface OrderRepository {
     boolean existsByIdempotencyKey(String idempotencyKey);
-    void save(Order order);
     Optional<Order> findByIdempotencyKey(String idempotencyKey);
+    void save(Order order);
 }
 ```
 
@@ -472,132 +257,135 @@ public interface PositionRepository {
 }
 ```
 
-For Sprint 5, these could be implemented with in-memory maps. For Sprint 6, they can be implemented using MyBatis or Spring persistence.
+Why this matters:
 
-## Should We Have Separate Collections?
+- Removes storage details from business services.
+- Prepares for MyBatis persistence.
+- Supports Dependency Inversion.
+- Makes services easier to test.
 
-Current in-memory maps are acceptable for the skeleton:
+Recommendation:
+
+- If there is time before Sprint 6, add repository interfaces and in-memory implementations.
+- If time is limited, leave this for Sprint 6 because persistence with MyBatis will naturally force this structure.
+
+Recommended priority: medium before Sprint 6, high during Sprint 6.
+
+## Task 6: Refactor OrderExecutionService Dependencies
+
+Status: do after repository interfaces exist.
+
+Current issue:
+
+`OrderExecutionService` currently creates and owns its dependencies:
 
 ```java
-Map<Long, Account> accountsById
-Map<String, Instrument> instrumentsBySymbol
-Map<String, Order> ordersByIdempotencyKey
-Map<String, Position> positionsByAccountAndSymbol
+this.accountsById = new HashMap<>();
+this.instrumentsBySymbol = new HashMap<>();
+this.ordersByIdempotencyKey = new HashMap<>();
+this.positionUpdateService = new PositionUpdateService();
 ```
 
-However, the collections should not remain inside business services long term.
+This means the service depends on concrete storage details.
 
-Recommended next structure:
+Better direction:
+
+```java
+public OrderExecutionService(
+        AccountRepository accountRepository,
+        InstrumentRepository instrumentRepository,
+        OrderRepository orderRepository,
+        PositionUpdateService positionUpdateService,
+        OrderValidator orderValidator
+) {
+    ...
+}
+```
+
+Why this matters:
+
+- Follows Dependency Inversion Principle.
+- Makes Spring Boot dependency injection easier.
+- Allows the service to use in-memory repositories in tests and MyBatis repositories in production.
+
+Recommended priority: after Task 5.
+
+## Task 7: Keep PositionUpdateService Focused
+
+Status: keep and improve gradually.
+
+`PositionUpdateService` is useful because it keeps position logic out of `OrderExecutionService`.
+
+Current responsibilities:
+
+- stores positions in memory
+- creates positions for buy orders
+- updates average cost for additional buys
+- reduces positions for sell orders
+- removes positions when fully sold
+- rejects sells with insufficient holdings
+- returns positions by account
+
+Future improvement:
+
+Once `PositionRepository` exists, `PositionUpdateService` should stop owning the `HashMap`. It should use `PositionRepository` instead.
+
+Better responsibility:
 
 ```text
-repository
-  AccountRepository.java
-  InstrumentRepository.java
-  OrderRepository.java
-  PositionRepository.java
-
-repository/inmemory
-  InMemoryAccountRepository.java
-  InMemoryInstrumentRepository.java
-  InMemoryOrderRepository.java
-  InMemoryPositionRepository.java
+PositionUpdateService
+  - applies buy/sell changes to positions
+  - enforces position business rules
+  - delegates storage to PositionRepository
 ```
 
-This keeps storage separate from business rules.
+Recommended priority: after repository interfaces.
 
-## What Else Is Needed For Sprint 5
+## Recommended Work Order Before Sprint 6
 
-### Important
+1. Keep DTO request/response split as it is now.
+2. Refactor `Position.apply(...)` into a clearer buy method such as `increaseForBuy(...)`.
+3. Add `TradingException` and update custom exceptions to extend it.
+4. Extract `OrderValidator` from `OrderExecutionService`.
+5. Optionally add repository interfaces and in-memory repository implementations.
+6. Refactor `OrderExecutionService` to receive dependencies through constructor injection.
+7. Move in-memory collections out of services once repositories exist.
 
-1. Keep request DTOs separate from response DTOs when adding Spring Boot controllers.
-2. Fix `Instrument.isTradeble()` typo.
-3. Move enum files so folder path matches package name.
-4. Consider a base `TradingException` for easier global exception handling later.
-5. Improve `OrderExecutionService.addInstrument()` null handling for symbol.
-6. Decide whether `Position.apply()` should support negative quantity. Prefer explicit buy/sell methods.
+## Minimum Recommended Before Sprint 6
 
-### Good But Not Urgent
+If time is limited, complete these before Sprint 6:
 
-1. Add repository interfaces and in-memory implementations.
-2. Inject dependencies into `OrderExecutionService` instead of constructing them inside the class.
-3. Add an `AssetClass` enum if asset classes are fixed.
-4. Add a small architecture diagram in `docs/`.
-5. Add a short README section explaining how to run tests.
+1. Clean `Position.apply(...)`.
+2. Add base `TradingException`.
+3. Extract `OrderValidator`.
 
-### Not Needed Yet
+Repositories can be done during Sprint 6 because MyBatis and Spring Boot layered architecture will naturally require them.
 
-1. Interfaces for constants.
-2. Interfaces for every entity.
-3. Abstract `Instrument`, unless different instrument types have different behavior.
-4. Full Spring Boot controller/service/repository layers. That belongs to Sprint 6.
-5. Database repositories in Sprint 5, unless the team wants to prepare early for Sprint 6.
+## What Not To Do Yet
 
-## Suggested Clean Architecture Direction
+Do not create interfaces for constants.
 
-For Sprint 5, a simple clean structure is enough:
+Use this only if constants are truly needed:
 
-```text
-com.leapvelocity
-  entities
-  entities.enums
-  dto
-  exceptions
-  service
+```java
+public final class TradingConstants {
+    public static final String DEFAULT_CURRENCY = "USD";
+
+    private TradingConstants() {
+    }
+}
 ```
 
-For Sprint 6, move toward:
+If a value is a business category, prefer an enum:
 
-```text
-com.leapvelocity
-  domain
-    model
-    enums
-    exception
-    repository
-    service
-  application
-    dto
-    usecase
-  infrastructure
-    persistence
-  api
-    controller
+```java
+public enum AssetClass {
+    EQUITY,
+    ETF,
+    BOND
+}
 ```
 
-The important rule:
+Do not create interfaces for entities such as `Account`, `Order`, `Position`, or `Instrument`. Interfaces are useful at boundaries, especially repositories and external integrations.
 
-Business logic should not depend on controllers, databases, Kafka, or web frameworks.
-
-The dependency direction should be:
-
-```text
-Controller -> Application Use Case -> Domain Service -> Repository Interface
-Infrastructure Repository -> Repository Interface
-```
-
-## Sprint 5 Review Summary
-
-The backend currently satisfies the main Sprint 5 skeleton goal:
-
-- Domain entities exist.
-- Enums exist.
-- DTOs exist.
-- Custom exceptions exist.
-- Buy/sell business logic exists.
-- Unit tests exist and pass.
-
-The main improvements are architectural cleanup, not major rewrites:
-
-- Keep entities simple.
-- Avoid unnecessary interfaces.
-- Do not use interfaces for constants.
-- Introduce interfaces at boundaries, especially repositories.
-- Move in-memory collections out of services when preparing for Sprint 6.
-- Split validation from execution if `OrderExecutionService` keeps growing.
-
-Recommended priority:
-
-1. Fix package/folder consistency.
-2. Keep DTO validation on request DTOs and avoid putting API validation concerns into entities.
-3. Clean small naming and null-check issues.
-4. Add repository boundaries when moving toward Spring Boot persistence.
+Do not make `Instrument` abstract unless different instrument types need different behavior. If the only difference is `assetClass`, use an enum instead.
