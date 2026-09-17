@@ -31,10 +31,10 @@ These tests check the core domain entity classes (`Account`, `Instrument`, `Orde
   - `getCreatedOn()` returns non-null creation timestamp
 
 - **`PositionTest`**
-  - `apply()` increases quantity and recalculates average cost
+  - `increaseForBuy()` increases quantity and recalculates average cost
   - `marketValue()` correctly multiplies quantity by current price
   - Both methods reject null values
-  - Negative quantity handling for partial sales
+  - Buy updates reject zero or negative quantity and price
   - Average cost formula: `(existingQty * existingCost + newQty * newPrice) / totalQty`
 
 ### What Entity Tests Do Not Cover

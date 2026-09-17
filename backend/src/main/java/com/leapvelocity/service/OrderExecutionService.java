@@ -5,10 +5,14 @@ import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
+import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.InstrumentRepository;
+import com.leapvelocity.repository.OrderRepository;
+import com.leapvelocity.repository.inmemory.InMemoryAccountRepository;
+import com.leapvelocity.repository.inmemory.InMemoryInstrumentRepository;
+import com.leapvelocity.repository.inmemory.InMemoryOrderRepository;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import com.leapvelocity.exceptions.AccountNotActiveException;
 import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.DuplicateOrderException;
@@ -18,16 +22,30 @@ import com.leapvelocity.exceptions.InstrumentNotFoundException;
 
 public class OrderExecutionService {
 
-	private final Map<Long, Account> accountsById;
-	private final Map<String, Instrument> instrumentsBySymbol;
-	private final Map<String, Order> ordersByIdempotencyKey;
+	private final AccountRepository accountRepository;
+	private final InstrumentRepository instrumentRepository;
+	private final OrderRepository orderRepository;
 	private final PositionUpdateService positionUpdateService;
+	private final OrderValidator orderValidator;
 
 	public OrderExecutionService() {
-		this.accountsById = new HashMap<>();
-		this.instrumentsBySymbol = new HashMap<>();
-		this.ordersByIdempotencyKey = new HashMap<>();
-		this.positionUpdateService = new PositionUpdateService();
+		this(new InMemoryAccountRepository(),
+			new InMemoryInstrumentRepository(),
+			new InMemoryOrderRepository(),
+			new PositionUpdateService(),
+			new OrderValidator());
+	}
+
+	public OrderExecutionService(AccountRepository accountRepository,
+			InstrumentRepository instrumentRepository,
+			OrderRepository orderRepository,
+			PositionUpdateService positionUpdateService,
+			OrderValidator orderValidator) {
+		this.accountRepository = accountRepository;
+		this.instrumentRepository = instrumentRepository;
+		this.orderRepository = orderRepository;
+		this.positionUpdateService = positionUpdateService;
+		this.orderValidator = orderValidator;
 	}
 
 	public void addAccount(Account account) {
@@ -37,7 +55,7 @@ public class OrderExecutionService {
 		if (account.getId() == null) {
 			throw new IllegalArgumentException("Account id is required");
 		}
-		accountsById.put(account.getId(), account);
+		accountRepository.save(account);
 	}
 
 	public void addInstrument(Instrument instrument) {
@@ -47,15 +65,13 @@ public class OrderExecutionService {
 			throw new IllegalArgumentException("Instrument is required");
 		}
 		symbol = instrument.getSymbol();
-		if (symbol != null) {
-			symbol = symbol.trim();
-		}
-		if (symbol.isEmpty()) {
+		if (symbol == null || symbol.isBlank()) {
 			throw new IllegalArgumentException("Instrument symbol is required");
 		}
+		symbol = symbol.trim();
 
 		instrument.setSymbol(symbol);
-		instrumentsBySymbol.put(symbol, instrument);
+		instrumentRepository.save(instrument);
 	}
 
 	public void addPosition(Position position) {
@@ -69,9 +85,9 @@ public class OrderExecutionService {
 		BigDecimal notional;
 		Account account;
 
-		validateOrder(order);
+		orderValidator.validate(order);
 
-		if (ordersByIdempotencyKey.containsKey(order.getIdempotencyKey())) {
+		if (orderRepository.existsByIdempotencyKey(order.getIdempotencyKey())) {
 			rejectOrder(order);
 			throw new DuplicateOrderException(order.getIdempotencyKey());
 		}
@@ -89,7 +105,7 @@ public class OrderExecutionService {
 		}
 
 		order.setStatus(OrderStatus.FILLED);
-		ordersByIdempotencyKey.put(order.getIdempotencyKey(), order);
+		orderRepository.save(order);
 		return order;
 	}
 
@@ -106,7 +122,7 @@ public class OrderExecutionService {
 	}
 
 	public Order getOrder(String idempotencyKey) {
-		return ordersByIdempotencyKey.get(idempotencyKey);
+		return orderRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
 	}
 
 	private void executeBuy(Order order, Account account, BigDecimal notional) {
@@ -127,7 +143,7 @@ public class OrderExecutionService {
 	private Account requireActiveAccount(Order order) {
 		Account account;
 
-		account = accountsById.get(order.getAccountId());
+		account = accountRepository.findById(order.getAccountId()).orElse(null);
 		if (account == null) {
 			rejectOrder(order);
 			throw new AccountNotFoundException(order.getAccountId());
@@ -144,7 +160,7 @@ public class OrderExecutionService {
 	private void requireTradableInstrument(Order order) {
 		Instrument instrument;
 
-		instrument = instrumentsBySymbol.get(order.getSymbol());
+		instrument = instrumentRepository.findBySymbol(order.getSymbol()).orElse(null);
 		if (instrument == null || !instrument.isTradable()) {
 			rejectOrder(order);
 			throw new InstrumentNotFoundException(order.getSymbol());
@@ -153,31 +169,7 @@ public class OrderExecutionService {
 
 	private void rejectOrder(Order order) {
 		order.setStatus(OrderStatus.REJECTED);
-		ordersByIdempotencyKey.put(order.getIdempotencyKey(), order);
+		orderRepository.save(order);
 	}
 
-	private void validateOrder(Order order) {
-		if (order == null) {
-			throw new IllegalArgumentException("Order is required");
-		}
-		if (order.getAccountId() == null) {
-			throw new IllegalArgumentException("Order account id is required");
-		}
-		if (order.getSide() == null) {
-			throw new IllegalArgumentException("Order side is required");
-		}
-		if (order.getSymbol() == null || order.getSymbol().isBlank()) {
-			throw new IllegalArgumentException("Order symbol is required");
-		}
-		if (order.getIdempotencyKey() == null || order.getIdempotencyKey().isBlank()) {
-			throw new IllegalArgumentException("Order idempotency key is required");
-		}
-		if (order.getQuantity() == null || order.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-			throw new IllegalArgumentException("Order quantity must be greater than zero");
-		}
-		if (order.getPrice() == null || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-			throw new IllegalArgumentException("Order price must be greater than zero");
-		}
-		order.setSymbol(order.getSymbol().trim());
-	}
 }

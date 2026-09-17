@@ -14,6 +14,9 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.repository.inmemory.InMemoryAccountRepository;
+import com.leapvelocity.repository.inmemory.InMemoryInstrumentRepository;
+import com.leapvelocity.repository.inmemory.InMemoryOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,25 @@ class OrderExecutionServiceTest {
         assertNotNull(position);
         assertEquals(new BigDecimal("50"), position.getQuantity());
         assertEquals(new BigDecimal("150.00"), position.getAverageCost());
+    }
+
+    @Test
+    @DisplayName("constructor accepts service dependencies")
+    void constructorAcceptsServiceDependencies() {
+        PositionUpdateService injectedPositionUpdateService = new PositionUpdateService();
+        OrderExecutionService injectedService = new OrderExecutionService(
+            new InMemoryAccountRepository(),
+            new InMemoryInstrumentRepository(),
+            new InMemoryOrderRepository(),
+            injectedPositionUpdateService,
+            new OrderValidator());
+
+        injectedService.addAccount(activeAccount);
+        injectedService.addInstrument(tradableInstrument);
+        injectedService.placeOrder(new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
+            new BigDecimal("10"), new BigDecimal("100.00"), "injected-buy"));
+
+        assertNotNull(injectedPositionUpdateService.getPosition(activeAccount.getId(), "AAPL"));
     }
 
     @Test
@@ -347,6 +369,13 @@ class OrderExecutionServiceTest {
     @DisplayName("add instrument validation: blank symbol throws exception")
     void addInstrumentBlankSymbol() {
         Instrument instrument = new Instrument("", "Test", "EQUITY", "USD", true);
+        assertThrows(IllegalArgumentException.class, () -> service.addInstrument(instrument));
+    }
+
+    @Test
+    @DisplayName("add instrument validation: null symbol throws exception")
+    void addInstrumentNullSymbol() {
+        Instrument instrument = new Instrument(null, "Test", "EQUITY", "USD", true);
         assertThrows(IllegalArgumentException.class, () -> service.addInstrument(instrument));
     }
 }

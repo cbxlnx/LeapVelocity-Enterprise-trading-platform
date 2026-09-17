@@ -45,18 +45,24 @@ public class Position {
         this.averageCost = averageCost;
     }
     
-    // update position with new trade (recalculates average cost)
-    public void apply(BigDecimal quantity, BigDecimal price) {
+    // increase position for a buy trade and recalculate average cost
+    public void increaseForBuy(BigDecimal quantity, BigDecimal price) {
         if (quantity == null || price == null) {
             throw new IllegalArgumentException("Quantity and price cannot be null");
+        }
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be positive");
         }
 
         // current holdings total cost
         BigDecimal currentValue = this.averageCost.multiply(this.quantity);
-        // new trade's total cost
+        // new buy's total cost
         BigDecimal newValue = price.multiply(quantity);
 
-        // new average cost after incorporating the new trade
+        // new average cost after incorporating the new buy
         // new average = (old total + new total) / (old qty + new qty)
         this.quantity = this.quantity.add(quantity);
         this.averageCost = currentValue.add(newValue).divide(this.quantity, RoundingMode.HALF_UP);

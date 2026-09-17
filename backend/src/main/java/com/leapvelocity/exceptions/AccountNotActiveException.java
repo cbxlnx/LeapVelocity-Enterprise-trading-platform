@@ -1,6 +1,6 @@
 package com.leapvelocity.exceptions;
 
-public class AccountNotActiveException extends RuntimeException {
+public class AccountNotActiveException extends TradingException {
 
 	public AccountNotActiveException(Long accountId) {
 		super("Account is not active: " + accountId);

@@ -121,34 +121,6 @@ Status: done.
 - Clients cannot send system-owned fields such as `id`, `status`, `createdOn`, or `version`.
 - Sprint 6 controllers can use request DTOs with `@Valid`.
 
-Current structure:
-
-```text
-dto
-  request
-    CreateAccountRequestDto.java
-    CreateInstrumentRequestDto.java
-    CreatePositionRequestDto.java
-    PlaceOrderRequestDto.java
-
-  response
-    AccountDto.java
-    InstrumentDto.java
-    OrderDto.java
-    PositionDto.java
-```
-
-Completed improvement:
-
-- Added one focused validation test for `PlaceOrderRequestDto`.
-
-Covered validation cases:
-
-- blank `symbol`
-- null `side`
-- zero or negative `quantity`
-- zero or negative `price`
-- blank `idempotencyKey`
 
 ## Task 3: Clean `Position` Domain Methods
 
@@ -398,11 +370,6 @@ Why this matters:
 - Prepares for MyBatis persistence.
 - Supports Dependency Inversion Principle.
 - Makes services easier to test.
-
-Recommendation:
-
-- If time is limited, leave repository implementation for Sprint 6.
-- If time is available, add interfaces and simple in-memory implementations before Sprint 6.
 
 Priority: medium before Sprint 6, high during Sprint 6.
 

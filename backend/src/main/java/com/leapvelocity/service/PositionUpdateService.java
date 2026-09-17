@@ -1,70 +1,60 @@
 package com.leapvelocity.service;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
+import com.leapvelocity.repository.PositionRepository;
+import com.leapvelocity.repository.inmemory.InMemoryPositionRepository;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 
 public class PositionUpdateService {
-	private final Map<String, Position> positionsByAccountAndSymbol;
+	private final PositionRepository positionRepository;
 
 	public PositionUpdateService() {
-		this.positionsByAccountAndSymbol = new HashMap<>();
+		this(new InMemoryPositionRepository());
+	}
+
+	public PositionUpdateService(PositionRepository positionRepository) {
+		this.positionRepository = positionRepository;
 	}
 
 	public void addPosition(Position position) {
-		String key;
-
 		if (position == null) {
 			throw new IllegalArgumentException("Position is required");
 		}
-		key = positionKey(position.getAccountId(), position.getSymbol());
-		positionsByAccountAndSymbol.put(key, position);
+		positionRepository.save(position);
 	}
 
 	public Position getPosition(Long accountId, String symbol) {
-		return positionsByAccountAndSymbol.get(positionKey(accountId, symbol));
+		return positionRepository.findByAccountIdAndSymbol(accountId, symbol).orElse(null);
 	}
 
 	public List<Position> getPositionsForAccount(Long accountId) {
-		List<Position> positions;
-
-		positions = new ArrayList<>();
-		for (Position position : positionsByAccountAndSymbol.values()) {
-			if (position.getAccountId() != null && position.getAccountId().equals(accountId)) {
-				positions.add(position);
-			}
-		}
-
-		return positions;
+		return positionRepository.findByAccountId(accountId);
 	}
 
 	public void applyBuy(Order order) {
 		Position position;
-		String key;
 
-		key = positionKey(order.getAccountId(), order.getSymbol());
-		position = positionsByAccountAndSymbol.get(key);
+		validateBuy(order.getQuantity(), order.getPrice());
+
+		position = getPosition(order.getAccountId(), order.getSymbol());
 
 		if (position == null) {
 			position = new Position(order.getAccountId(), order.getSymbol(), order.getQuantity(), order.getPrice());
-			positionsByAccountAndSymbol.put(key, position);
+			positionRepository.save(position);
 			return;
 		}
 
-		position.apply(order.getQuantity(), order.getPrice());
+		position.increaseForBuy(order.getQuantity(), order.getPrice());
+		positionRepository.save(position);
 	}
 
 	public void applySell(Order order) {
 		Position position;
-		String key;
 		BigDecimal remainingQuantity;
 
-		key = positionKey(order.getAccountId(), order.getSymbol());
-		position = positionsByAccountAndSymbol.get(key);
+		position = getPosition(order.getAccountId(), order.getSymbol());
 		if (position == null) {
 			throw new InsufficientHoldingsException(order.getAccountId(), order.getSymbol(), order.getQuantity(), BigDecimal.ZERO);
 		}
@@ -75,19 +65,22 @@ public class PositionUpdateService {
 
 		remainingQuantity = position.getQuantity().subtract(order.getQuantity());
 		if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
-			positionsByAccountAndSymbol.remove(key);
+			positionRepository.delete(position);
 		} else {
 			position.setQuantity(remainingQuantity);
+			positionRepository.save(position);
 		}
 	}
 
-	private String positionKey(Long accountId, String symbol) {
-		if (accountId == null) {
-			throw new IllegalArgumentException("Account id is required");
+	private void validateBuy(BigDecimal quantity, BigDecimal price) {
+		if (quantity == null || price == null) {
+			throw new IllegalArgumentException("Quantity and price cannot be null");
 		}
-		if (symbol == null || symbol.isBlank()) {
-			throw new IllegalArgumentException("Position symbol is required");
+		if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new IllegalArgumentException("Quantity must be positive");
 		}
-		return accountId + "|" + symbol.trim();
+		if (price.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new IllegalArgumentException("Price must be positive");
+		}
 	}
 }
