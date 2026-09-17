@@ -38,6 +38,11 @@ public class Instrument {
         this.tradable = tradable;
     }
     
+    // check if instrument is tradable
+    public boolean isTradeble() {
+        return this.tradable;
+    }
+    
     // Getters and Setters
     public Long getId() {
         return id;
