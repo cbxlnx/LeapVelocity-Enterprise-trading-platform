@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PlaceOrderRequestDto validation")
-class PlaceOrderRequestDtoValidationTest {
+class adPlaceOrderRequestDtoValidationTest {
 
     private static Validator validator;
 
