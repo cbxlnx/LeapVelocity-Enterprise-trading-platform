@@ -22,12 +22,14 @@ public class OrderExecutionService {
 	private final Map<String, Instrument> instrumentsBySymbol;
 	private final Map<String, Order> ordersByIdempotencyKey;
 	private final PositionUpdateService positionUpdateService;
+	private final OrderValidator orderValidator;
 
 	public OrderExecutionService() {
 		this.accountsById = new HashMap<>();
 		this.instrumentsBySymbol = new HashMap<>();
 		this.ordersByIdempotencyKey = new HashMap<>();
 		this.positionUpdateService = new PositionUpdateService();
+		this.orderValidator = new OrderValidator();
 	}
 
 	public void addAccount(Account account) {
@@ -47,9 +49,10 @@ public class OrderExecutionService {
 			throw new IllegalArgumentException("Instrument is required");
 		}
 		symbol = instrument.getSymbol();
-		if (symbol != null) {
-			symbol = symbol.trim();
+		if (symbol == null) {
+			throw new IllegalArgumentException("Instrument symbol is required");
 		}
+		symbol = symbol.trim();
 		if (symbol.isEmpty()) {
 			throw new IllegalArgumentException("Instrument symbol is required");
 		}
@@ -72,7 +75,7 @@ public class OrderExecutionService {
 		validateOrder(order);
 
 		if (ordersByIdempotencyKey.containsKey(order.getIdempotencyKey())) {
-			rejectOrder(order);
+			order.setStatus(OrderStatus.REJECTED);
 			throw new DuplicateOrderException(order.getIdempotencyKey());
 		}
 
@@ -157,27 +160,6 @@ public class OrderExecutionService {
 	}
 
 	private void validateOrder(Order order) {
-		if (order == null) {
-			throw new IllegalArgumentException("Order is required");
-		}
-		if (order.getAccountId() == null) {
-			throw new IllegalArgumentException("Order account id is required");
-		}
-		if (order.getSide() == null) {
-			throw new IllegalArgumentException("Order side is required");
-		}
-		if (order.getSymbol() == null || order.getSymbol().isBlank()) {
-			throw new IllegalArgumentException("Order symbol is required");
-		}
-		if (order.getIdempotencyKey() == null || order.getIdempotencyKey().isBlank()) {
-			throw new IllegalArgumentException("Order idempotency key is required");
-		}
-		if (order.getQuantity() == null || order.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-			throw new IllegalArgumentException("Order quantity must be greater than zero");
-		}
-		if (order.getPrice() == null || order.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-			throw new IllegalArgumentException("Order price must be greater than zero");
-		}
-		order.setSymbol(order.getSymbol().trim());
+		orderValidator.validate(order);
 	}
 }
