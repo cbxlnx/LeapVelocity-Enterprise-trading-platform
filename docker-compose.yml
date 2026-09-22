@@ -1,4 +1,19 @@
 services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trading-platform-app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://trade-db:5432/${DB_NAME:-leapvelocity_trading_db}?sslmode=disable
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${APP_PORT:-8081}:8081"
+    depends_on:
+      trade-db:
+        condition: service_healthy
+
   trade-db:
     build:
       context: .
