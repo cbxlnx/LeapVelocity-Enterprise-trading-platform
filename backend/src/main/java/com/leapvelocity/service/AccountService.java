@@ -1,14 +1,12 @@
-package com.leapvelocity.service;
-
 import com.leapvelocity.dto.response.AccountBalanceDto;
 import com.leapvelocity.dto.response.AccountDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.dto.response.PositionDto;
 import com.leapvelocity.entities.Account;
 import com.leapvelocity.exceptions.AccountNotFoundException;
-import com.leapvelocity.mapper.AccountMapper;
-import com.leapvelocity.mapper.OrderMapper;
-import com.leapvelocity.mapper.PositionMapper;
+import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.OrderRepository;
+import com.leapvelocity.repository.PositionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,14 +15,14 @@ import java.util.List;
 @Service
 public class AccountService {
 
-    private final AccountMapper accountMapper;
-    private final PositionMapper positionMapper;
-    private final OrderMapper orderMapper;
+    private final AccountRepository accountRepository;
+    private final PositionRepository positionRepository;
+    private final OrderRepository orderRepository;
 
-    public AccountService(AccountMapper accountMapper, PositionMapper positionMapper, OrderMapper orderMapper) {
-        this.accountMapper = accountMapper;
-        this.positionMapper = positionMapper;
-        this.orderMapper = orderMapper;
+    public AccountService(AccountRepository accountRepository, PositionRepository positionRepository, OrderRepository orderRepository) {
+        this.accountRepository = accountRepository;
+        this.positionRepository = positionRepository;
+        this.orderRepository = orderRepository;
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +39,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<PositionDto> getPositions(Long id) {
         requireAccount(id);
-        return positionMapper.findByAccountId(id).stream()
+        return positionRepository.findByAccountIdOrderBySymbolAsc(id).stream()
                 .map(PositionDto::from)
                 .toList();
     }
@@ -49,7 +47,7 @@ public class AccountService {
     @Transactional(readOnly = true)
     public List<OrderDto> getOrders(Long id) {
         requireAccount(id);
-        return orderMapper.findByAccountId(id).stream()
+        return orderRepository.findByAccountIdOrderByCreatedOnDescIdDesc(id).stream()
                 .map(OrderDto::from)
                 .toList();
     }
@@ -58,7 +56,7 @@ public class AccountService {
         if (id == null) {
             throw new AccountNotFoundException("Account id is required");
         }
-        return accountMapper.findById(id)
+        return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
     }
 }
