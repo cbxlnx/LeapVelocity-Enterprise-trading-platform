@@ -8,7 +8,7 @@ info:
     name: Internal use only
 
 servers:
-  - url: api/v1
+  - url: /api/v1
 
 paths:
   /orders:
@@ -264,7 +264,7 @@ components:
 
     PositionDto:
       type: object
-      required: [id, accountId, symbol, quantity, averagePrice]
+      required: [id, accountId, symbol, quantity, averageCost]
       properties:
         id:
           type: integer
@@ -281,18 +281,10 @@ components:
           type: number
           format: double
           description: Number of shares held
-        averagePrice:
+        averageCost:
           type: number
           format: double
-          description: Average purchase price per share
-        currentValue:
-          type: number
-          format: double
-          description: Current market value of position
-        unrealizedGainLoss:
-          type: number
-          format: double
-          description: Unrealized profit/loss on position
+          description: Average acquisition cost per share
 
     ErrorResponse:
       type: object
