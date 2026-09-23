@@ -14,6 +14,8 @@ paths:
   /orders:
     post:
       summary: Place a new trading order
+      tags:
+        - orders
       operationId: placeOrder
       security:
         - bearerAuth: []
@@ -34,10 +36,18 @@ paths:
           description: Invalid request
         '401':
           description: Unauthorized - missing or invalid JWT
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /orders/{id}:
     delete:
       summary: Cancel a trading order
+      tags:
+        - orders
       operationId: cancelOrder
       security:
         - bearerAuth: []
@@ -59,10 +69,18 @@ paths:
           description: Unauthorized - missing or invalid JWT
         '404':
           description: Order not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /accounts/{id}:
     get:
       summary: Retrieve account details
+      tags:
+        - accounts
       operationId: getAccount
       security:
         - bearerAuth: []
@@ -84,10 +102,18 @@ paths:
           description: Unauthorized - missing or invalid JWT
         '404':
           description: Account not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /accounts/{id}/balance:
     get:
       summary: Retrieve account balance
+      tags:
+        - accounts
       operationId: getAccountBalance
       security:
         - bearerAuth: []
@@ -109,10 +135,18 @@ paths:
           description: Unauthorized - missing or invalid JWT
         '404':
           description: Account not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /accounts/{id}/orders:
     get:
       summary: Retrieve all orders for an account
+      tags:
+        - accounts
       operationId: getAccountOrders
       security:
         - bearerAuth: []
@@ -136,10 +170,18 @@ paths:
           description: Unauthorized - missing or invalid JWT
         '404':
           description: Account not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /accounts/{id}/positions:
     get:
       summary: Retrieve all positions (holdings) for an account
+      tags:
+        - accounts
       operationId: getAccountPositions
       security:
         - bearerAuth: []
@@ -163,6 +205,12 @@ paths:
           description: Unauthorized - missing or invalid JWT
         '404':
           description: Account not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     PlaceOrderRequestDto:
@@ -251,7 +299,7 @@ components:
           description: Available cash balance
         status:
           type: string
-          enum: [ACTIVE, INACTIVE, SUSPENDED]
+          enum: [ACTIVE, SUSPENDED, CLOSED]
           description: Account status
         version:
           type: integer
