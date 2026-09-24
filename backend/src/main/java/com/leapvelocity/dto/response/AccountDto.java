@@ -12,7 +12,7 @@ public record AccountDto(
         String holderName,
         BigDecimal cashBalance,
         AccountStatus status,
-        Long version,
+    Integer version,
         LocalDateTime lastUpdated
 ) {
 

@@ -22,7 +22,7 @@ class AccountTest {
         assertEquals("Ada Lovelace", account.getHolderName());
         assertEquals(new BigDecimal("1000.00"), account.getCashBalance());
         assertEquals(AccountStatus.ACTIVE, account.getStatus());
-        assertEquals(0L, account.getVersion());
+        assertEquals(0, account.getVersion());
         assertNotNull(account.getLastUpdated());
         assertTrue(account.isActive());
     }

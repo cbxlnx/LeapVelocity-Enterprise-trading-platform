@@ -5,6 +5,7 @@ import com.leapvelocity.entities.enums.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 // customer trade order
 @Entity
@@ -12,8 +13,7 @@ import java.time.LocalDateTime;
 public class Order {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;                           // unique order identifier
+    private UUID id;                           // unique order identifier
     
     @Column(name = "account_id", nullable = false)
     private Long accountId;                    // account placing the order
@@ -55,6 +55,7 @@ public class Order {
     }
     
     public Order(Long accountId, String symbol, OrderSide side, BigDecimal quantity, BigDecimal price, String idempotencyKey) {
+        this.id = UUID.randomUUID();
         this.accountId = accountId;
         this.symbol = symbol;
         this.side = side;
@@ -64,13 +65,26 @@ public class Order {
         this.idempotencyKey = idempotencyKey;
         this.createdOn = LocalDateTime.now();
     }
+
+    @PrePersist
+    void ensurePersistentDefaults() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
+        }
+        if (this.status == null) {
+            this.status = OrderStatus.NEW;
+        }
+        if (this.createdOn == null) {
+            this.createdOn = LocalDateTime.now();
+        }
+    }
     
     // Getters and Setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
     
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
     
