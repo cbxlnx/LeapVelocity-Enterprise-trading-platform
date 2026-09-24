@@ -7,10 +7,14 @@ import com.leapvelocity.service.OrderExecutionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 /**
  * REST Controller for order management operations.
@@ -56,5 +60,20 @@ public class OrderController {
         // Convert result back to DTO and return with HTTP 201 Created
         OrderDto response = OrderDto.from(executedOrder);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Cancel an existing order by order ID.
+     *
+     * @param id The order ID (UUID)
+     * @return ResponseEntity with the cancelled order details (HTTP 200)
+     * @throws OrderNotFoundException if the order does not exist
+     * @throws IllegalArgumentException if the order has already been filled or previously cancelled
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<OrderDto> cancelOrder(@PathVariable UUID id) {
+        Order cancelledOrder = orderExecutionService.cancelOrder(id);
+        OrderDto response = OrderDto.from(cancelledOrder);
+        return ResponseEntity.ok(response);
     }
 }

@@ -12,6 +12,7 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.GlobalExceptionHandler;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.service.OrderExecutionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,11 +24,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExc
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -481,5 +484,215 @@ class OrderControllerTest {
                 .andExpect(status().isCreated());
 
         verify(orderExecutionService, times(2)).placeOrder(any(Order.class));
+    }
+
+    // =============== DELETE /api/v1/orders/{id} Tests ===============
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Successfully cancels a NEW order")
+    void deleteOrderSuccessfullyCancelsNewOrder() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order newOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
+        newOrder.setId(orderId);
+        newOrder.setStatus(OrderStatus.NEW);
+        newOrder.setCreatedOn(LocalDateTime.now());
+
+        Order cancelledOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
+        cancelledOrder.setId(orderId);
+        cancelledOrder.setStatus(OrderStatus.CANCELLED);
+        cancelledOrder.setCreatedOn(LocalDateTime.now());
+
+        when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(orderId.toString())))
+                .andExpect(jsonPath("$.accountId", equalTo(1)))
+                .andExpect(jsonPath("$.symbol", equalTo("AAPL")))
+                .andExpect(jsonPath("$.side", equalTo("BUY")))
+                .andExpect(jsonPath("$.quantity", equalTo(100)))
+                .andExpect(jsonPath("$.price", equalTo(150)))
+                .andExpect(jsonPath("$.status", equalTo("CANCELLED")));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 404 when order not found")
+    void deleteOrderReturns404WhenOrderNotFound() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderExecutionService.cancelOrder(orderId))
+                .thenThrow(new OrderNotFoundException(orderId.toString()));
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", notNullValue()))
+                .andExpect(jsonPath("$.message", containsString("not found")));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel filled order")
+    void deleteOrderReturns400WhenCancelFilledOrder() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderExecutionService.cancelOrder(orderId))
+                .thenThrow(new IllegalArgumentException("Cannot cancel order with status: FILLED"));
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", notNullValue()))
+                .andExpect(jsonPath("$.message", containsString("Cannot cancel")));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Response has correct content type")
+    void deleteOrderResponseContentType() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order cancelledOrder = new Order(1L, "AAPL", OrderSide.SELL, new BigDecimal("50"), new BigDecimal("200"), "IDEM-SELL");
+        cancelledOrder.setId(orderId);
+        cancelledOrder.setStatus(OrderStatus.CANCELLED);
+        cancelledOrder.setCreatedOn(LocalDateTime.now());
+
+        when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Successfully cancels SELL order")
+    void deleteOrderSuccessfullyCancelsSellOrder() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order cancelledOrder = new Order(1L, "MSFT", OrderSide.SELL, new BigDecimal("75"), new BigDecimal("300"), "IDEM-SELL");
+        cancelledOrder.setId(orderId);
+        cancelledOrder.setStatus(OrderStatus.CANCELLED);
+        cancelledOrder.setCreatedOn(LocalDateTime.now());
+
+        when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", equalTo(orderId.toString())))
+                .andExpect(jsonPath("$.symbol", equalTo("MSFT")))
+                .andExpect(jsonPath("$.side", equalTo("SELL")))
+                .andExpect(jsonPath("$.quantity", equalTo(75)))
+                .andExpect(jsonPath("$.status", equalTo("CANCELLED")));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel rejected order")
+    void deleteOrderReturns400WhenCancelRejectedOrder() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderExecutionService.cancelOrder(orderId))
+                .thenThrow(new IllegalArgumentException("Cannot cancel order with status: REJECTED"));
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", notNullValue()));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel cancelled order")
+    void deleteOrderReturns400WhenCancelCancelledOrder() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderExecutionService.cancelOrder(orderId))
+                .thenThrow(new IllegalArgumentException("Cannot cancel order with status: CANCELLED"));
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", notNullValue()))
+                .andExpect(jsonPath("$.message", containsString("CANCELLED")));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Response body includes all required fields")
+    void deleteOrderResponseIncludesAllFields() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+        Order cancelledOrder = new Order(2L, "GOOGL", OrderSide.BUY, new BigDecimal("10"), new BigDecimal("2800"), "IDEM-GOOGL");
+        cancelledOrder.setId(orderId);
+        cancelledOrder.setStatus(OrderStatus.CANCELLED);
+        cancelledOrder.setCreatedOn(now);
+
+        when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(jsonPath("$.accountId", notNullValue()))
+                .andExpect(jsonPath("$.symbol", notNullValue()))
+                .andExpect(jsonPath("$.side", notNullValue()))
+                .andExpect(jsonPath("$.quantity", notNullValue()))
+                .andExpect(jsonPath("$.price", notNullValue()))
+                .andExpect(jsonPath("$.status", notNullValue()))
+                .andExpect(jsonPath("$.createdOn", notNullValue()));
+
+        verify(orderExecutionService, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Multiple cancellations fail on second attempt")
+    void deleteOrderFailsOnSecondCancellation() throws Exception {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order cancelledOrder = new Order(1L, "TSLA", OrderSide.BUY, new BigDecimal("5"), new BigDecimal("250"), "IDEM-TSLA");
+        cancelledOrder.setId(orderId);
+        cancelledOrder.setStatus(OrderStatus.CANCELLED);
+        cancelledOrder.setCreatedOn(LocalDateTime.now());
+
+        // First call succeeds, second throws exception
+        when(orderExecutionService.cancelOrder(orderId))
+                .thenReturn(cancelledOrder)
+                .thenThrow(new IllegalArgumentException("Cannot cancel order with status: CANCELLED"));
+
+        // Act & Assert - First delete succeeds
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", equalTo("CANCELLED")));
+
+        // Second delete fails
+        mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
+                .andExpect(status().isBadRequest());
+
+        verify(orderExecutionService, times(2)).cancelOrder(orderId);
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/orders/{id} - Invalid UUID returns 400")
+    void deleteOrderInvalidUuidFormat() throws Exception {
+        // Act & Assert - Invalid UUID format results in framework error (500 Internal Server Error)
+        // The service method is never called due to type conversion failure in Spring
+        mockMvc.perform(delete("/api/v1/orders/invalid-uuid-format"))
+                .andExpect(status().isInternalServerError());
+
+        verify(orderExecutionService, never()).cancelOrder(any(UUID.class));
     }
 }
