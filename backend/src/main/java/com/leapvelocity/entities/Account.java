@@ -12,9 +12,10 @@ public class Account {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "account_id")
     private Long id;                           // unique database identifier
     
-    @Column(name = "account_id", nullable = false, unique = true)
+    @Transient
     private String accountId;                  // external account identifier
     
     @Column(name = "holder_name", nullable = false)
@@ -44,6 +45,11 @@ public class Account {
         this.status = status;
         this.version = 0L;
         this.lastUpdated = LocalDateTime.now();
+    }
+
+    @PostLoad
+    private void populateAccountId() {
+        this.accountId = id == null ? null : String.valueOf(id);
     }
     
     // deduct cash from account

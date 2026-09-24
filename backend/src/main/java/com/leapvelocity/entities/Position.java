@@ -7,15 +7,17 @@ import java.math.RoundingMode;
 // account holding in a specific instrument
 @Entity
 @Table(name = "positions")
+@IdClass(PositionId.class)
 public class Position {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Transient
     private Long id;                           // unique position identifier
     
+    @Id
     @Column(name = "account_id", nullable = false)
     private Long accountId;                    // account owning this position
     
+    @Id
     @Column(nullable = false)
     private String symbol;                     // instrument ticker
     

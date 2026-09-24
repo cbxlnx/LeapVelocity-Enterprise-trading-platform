@@ -13,6 +13,7 @@ public class Order {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "order_id")
     private Long id;                           // unique order identifier
     
     @Column(name = "account_id", nullable = false)
@@ -31,11 +32,10 @@ public class Order {
     @Column(nullable = false)
     private BigDecimal price;                  // price per share
     
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;                // new, filled, rejected, cancelled
     
-    @Column(name = "idempotency_key", nullable = false, unique = true)
+    @Column(name = "indempotency_key", nullable = false, unique = true)
     private String idempotencyKey;             // prevents duplicate orders
     
     @Column(name = "created_on", nullable = false)

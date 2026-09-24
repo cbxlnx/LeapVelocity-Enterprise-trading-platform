@@ -7,10 +7,10 @@ import jakarta.persistence.*;
 @Table(name = "instruments")
 public class Instrument {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Transient
     private Long id;                           // unique identifier
     
+    @Id
     @Column(nullable = false, unique = true)
     private String symbol;                     // ticker symbol (AAPL, GOOGL, etc.)
     
