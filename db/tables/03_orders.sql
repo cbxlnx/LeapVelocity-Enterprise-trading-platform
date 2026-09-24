@@ -1,14 +1,14 @@
 -- Orders table: Stores trading orders with status tracking and idempotency
 -- Indexes optimize queries by account and symbol
 CREATE TABLE orders (
-    order_id            SERIAL PRIMARY KEY,
-    account_id          INTEGER NOT NULL REFERENCES accounts(account_id),
-    symbol              VARCHAR(20) REFERENCES instruments(symbol),
-    side                VARCHAR(4) NOT NULL,
-    quantity            INTEGER NOT NULL,
+    id                  UUID PRIMARY KEY,
+    account_id          BIGINT NOT NULL REFERENCES accounts(id),
+    symbol              VARCHAR(20) NOT NULL REFERENCES instruments(symbol),
+    side                VARCHAR(4) NOT NULL CHECK (side IN ('BUY', 'SELL')),
+    quantity            NUMERIC(18,4) NOT NULL,
     price               NUMERIC(18,2) NOT NULL,
-    status              VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'REJECTED', 'SUCCESSFUL')),
-    indempotency_key    VARCHAR(100) UNIQUE,
+    status              VARCHAR(20) NOT NULL CHECK (status IN ('NEW', 'FILLED', 'REJECTED', 'CANCELLED')),
+    idempotency_key     VARCHAR(100) UNIQUE,
     created_on          TIMESTAMP DEFAULT NOW()
 );
 
