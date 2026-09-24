@@ -16,8 +16,8 @@ services:
 
   trade-db:
     build:
-      context: .
-      dockerfile: db/Dockerfile
+      context: ./db
+      dockerfile: Dockerfile
     container_name: trading-platform-db
     environment:
       POSTGRES_DB: ${DB_NAME:-leapvelocity_trading_db}
