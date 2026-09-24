@@ -6,9 +6,10 @@ import com.leapvelocity.entities.enums.OrderStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public record OrderDto(
-        Long id,
+        UUID id,
         Long accountId,
         String symbol,
         OrderSide side,
