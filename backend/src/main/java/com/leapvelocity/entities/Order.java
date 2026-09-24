@@ -65,6 +65,19 @@ public class Order {
         this.idempotencyKey = idempotencyKey;
         this.createdOn = LocalDateTime.now();
     }
+
+    @PrePersist
+    void ensurePersistentDefaults() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
+        }
+        if (this.status == null) {
+            this.status = OrderStatus.NEW;
+        }
+        if (this.createdOn == null) {
+            this.createdOn = LocalDateTime.now();
+        }
+    }
     
     // Getters and Setters
     public UUID getId() {
