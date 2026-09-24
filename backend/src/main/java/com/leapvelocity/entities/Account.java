@@ -28,8 +28,9 @@ public class Account {
     @Column(nullable = false)
     private AccountStatus status;              // active, suspended, or closed
     
+    @Version
     @Column(nullable = false)
-    private Long version;                      // for optimistic locking
+    private Integer version;                   // for optimistic locking
     
     @Column(name = "last_updated", nullable = false)
     private LocalDateTime lastUpdated;         // last modification timestamp
@@ -43,7 +44,7 @@ public class Account {
         this.holderName = holderName;
         this.cashBalance = cashBalance;
         this.status = status;
-        this.version = 0L;
+        this.version = 0;
         this.lastUpdated = LocalDateTime.now();
     }
 
@@ -119,11 +120,11 @@ public class Account {
         this.status = status;
     }
     
-    public Long getVersion() {
+    public Integer getVersion() {
         return version;
     }
     
-    public void setVersion(Long version) {
+    public void setVersion(Integer version) {
         this.version = version;
     }
     

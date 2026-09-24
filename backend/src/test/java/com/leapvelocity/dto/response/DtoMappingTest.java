@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,7 +33,7 @@ class DtoMappingTest {
         assertEquals("Ada Lovelace", dto.holderName());
         assertEquals(new BigDecimal("1000.00"), dto.cashBalance());
         assertEquals(AccountStatus.ACTIVE, dto.status());
-        assertEquals(0L, dto.version());
+        assertEquals(0, dto.version());
         assertNotNull(dto.lastUpdated());
     }
 
@@ -63,12 +64,12 @@ class DtoMappingTest {
                 new BigDecimal("150.00"),
                 "idem-001"
         );
-        order.setId(3L);
+        order.setId(UUID.fromString("00000000-0000-0000-0000-000000000003"));
         order.setStatus(OrderStatus.FILLED);
 
         OrderDto dto = OrderDto.from(order);
 
-        assertEquals(3L, dto.id());
+        assertEquals(UUID.fromString("00000000-0000-0000-0000-000000000003"), dto.id());
         assertEquals(1L, dto.accountId());
         assertEquals("AAPL", dto.symbol());
         assertEquals(OrderSide.BUY, dto.side());
