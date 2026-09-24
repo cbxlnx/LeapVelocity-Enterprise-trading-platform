@@ -147,6 +147,40 @@ public class PositionUpdateService {
 		}
 	}
 
+	public void reverseSell(Order order) {
+		Position position;
+		String key;
+		String symbol;
+
+		symbol = normalizeSymbol(order.getSymbol());
+		key = positionKey(order.getAccountId(), symbol);
+		if (usesRepository()) {
+			position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
+
+			if (position == null) {
+				position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
+				positionRepository.save(position);
+				return;
+			}
+
+			// Increase quantity by the sold amount
+			position.setQuantity(position.getQuantity().add(order.getQuantity()));
+			positionRepository.save(position);
+			return;
+		}
+
+		position = positionsByAccountAndSymbol.get(key);
+
+		if (position == null) {
+			position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
+			positionsByAccountAndSymbol.put(key, position);
+			return;
+		}
+
+		// Increase quantity by the sold amount
+		position.setQuantity(position.getQuantity().add(order.getQuantity()));
+	}
+
 	private String positionKey(Long accountId, String symbol) {
 		if (accountId == null) {
 			throw new IllegalArgumentException("Account id is required");

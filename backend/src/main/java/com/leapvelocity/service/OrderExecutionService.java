@@ -10,6 +10,7 @@ import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -149,6 +151,43 @@ public class OrderExecutionService {
 			return orderRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
 		}
 		return ordersByIdempotencyKey.get(idempotencyKey);
+	}
+
+	@Transactional
+	public Order cancelOrder(UUID orderId) {
+		Order order;
+
+		if (usesRepository()) {
+			order = orderRepository.findById(orderId)
+					.orElseThrow(() -> new OrderNotFoundException(orderId.toString()));
+		} else {
+			throw new OrderNotFoundException(orderId.toString());
+		}
+
+		// Cannot cancel if already filled, rejected, or already cancelled
+		if (order.getStatus() != OrderStatus.NEW) {
+			throw new IllegalArgumentException(
+					"Cannot cancel order with status: " + order.getStatus());
+		}
+
+		// Get the account
+		Account account = accountRepository.findById(order.getAccountId())
+				.orElseThrow(() -> new AccountNotFoundException(order.getAccountId()));
+
+		// If BUY order, refund the cash to the account
+		if (order.getSide() == OrderSide.BUY) {
+			BigDecimal notional = order.getQuantity().multiply(order.getPrice());
+			account.credit(notional);
+			persistAccount(account);
+		}
+		// If SELL order, refund the position to the account
+		else if (order.getSide() == OrderSide.SELL) {
+			positionUpdateService.reverseSell(order);
+		}
+
+		// Mark order as cancelled
+		order.setStatus(OrderStatus.CANCELLED);
+		return saveOrder(order);
 	}
 
 	private void executeBuy(Order order, Account account, BigDecimal notional) {

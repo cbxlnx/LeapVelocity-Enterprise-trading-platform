@@ -131,6 +131,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles OrderNotFoundException.
+     * Maps to HTTP 404 Not Found with error code ERR_003.
+     */
+    @ExceptionHandler(OrderNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponse> handleOrderNotFoundException(
+            OrderNotFoundException ex,
+            HttpServletRequest request) {
+        logger.warn("Order not found: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.INSTRUMENT_NOT_FOUND,  // Reuse 404 NOT_FOUND error code
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
      * Handles MethodArgumentNotValidException for request validation errors.
      * Maps to HTTP 400 Bad Request with error code ERR_008 and field-level error details.
      */
@@ -160,6 +178,24 @@ public class GlobalExceptionHandler {
                 )
         );
         
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * Handles IllegalArgumentException for invalid business logic operations.
+     * Maps to HTTP 400 Bad Request with error code ERR_007.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+        logger.warn("Invalid argument: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.INVALID_INPUT,
+                request.getRequestURI()
+        );
+        response.setMessage(ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
