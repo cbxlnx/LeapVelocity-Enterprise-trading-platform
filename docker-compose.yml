@@ -1,4 +1,17 @@
 services:
+  auth-stub:
+    build:
+      context: ./auth-stub
+      dockerfile: Dockerfile
+    container_name: trading-platform-auth-stub
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-leapvelocity-shared-secret-key-32-bytes-minimum}
+      JWT_ISSUER: ${JWT_ISSUER:-leapvelocity-auth}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+    ports:
+      - "${AUTH_STUB_PORT:-4000}:4000"
+
   app:
     build:
       context: ./backend
@@ -8,6 +21,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://trade-db:5432/${DB_NAME:-leapvelocity_trading_db}?sslmode=disable
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_SECURITY_JWT_SECRET: ${JWT_SECRET:-leapvelocity-shared-secret-key-32-bytes-minimum}
+      APP_SECURITY_JWT_ISSUER: ${JWT_ISSUER:-leapvelocity-auth}
     ports:
       - "${APP_PORT:-8081}:8081"
     depends_on:
