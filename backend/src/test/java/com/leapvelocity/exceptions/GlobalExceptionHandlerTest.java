@@ -64,4 +64,54 @@ class GlobalExceptionHandlerTest {
         assertEquals(500, response.getStatusCode().value());
         assertEquals(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), response.getBody().getCode());
     }
+
+    @Test
+    void testHandleInsufficientHoldingsException() {
+        // Verifies: InsufficientHoldingsException maps to 422 UNPROCESSABLE_ENTITY with ERR_005
+        InsufficientHoldingsException ex = new InsufficientHoldingsException(
+                1L, "AAPL", new BigDecimal("100"), new BigDecimal("50"));
+        
+        ResponseEntity<ErrorResponse> response = handler.handleInsufficientHoldingsException(ex, request);
+        
+        assertEquals(422, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.INSUFFICIENT_HOLDINGS.getCode(), response.getBody().getCode());
+    }
+
+    @Test
+    void testHandleOrderNotFoundException() {
+        // Verifies: OrderNotFoundException maps to 404 NOT_FOUND with ERR_003
+        OrderNotFoundException ex = new OrderNotFoundException("order-uuid-12345");
+        
+        ResponseEntity<ErrorResponse> response = handler.handleOrderNotFoundException(ex, request);
+        
+        assertEquals(404, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.INSTRUMENT_NOT_FOUND.getCode(), response.getBody().getCode());
+    }
+
+    @Test
+    void testHandleIllegalArgumentException() {
+        // Verifies: IllegalArgumentException maps to 400 BAD_REQUEST with ERR_007
+        IllegalArgumentException ex = new IllegalArgumentException("Quantity must be positive");
+        
+        ResponseEntity<ErrorResponse> response = handler.handleIllegalArgumentException(ex, request);
+        
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.INVALID_INPUT.getCode(), response.getBody().getCode());
+        assertEquals("Quantity must be positive", response.getBody().getMessage());
+    }
+
+    @Test
+    void testHandleAccountNotActiveException() {
+        // Verifies: AccountNotActiveException maps to 403 FORBIDDEN with ERR_002
+        AccountNotActiveException ex = new AccountNotActiveException(1L);
+        
+        ResponseEntity<ErrorResponse> response = handler.handleAccountNotActiveException(ex, request);
+        
+        assertEquals(403, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.ACCOUNT_NOT_ACTIVE.getCode(), response.getBody().getCode());
+    }
 }
