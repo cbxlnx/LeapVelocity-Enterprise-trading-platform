@@ -181,8 +181,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -204,8 +204,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -220,8 +220,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -236,8 +236,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -259,8 +259,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -275,8 +275,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -298,8 +298,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -321,8 +321,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code", equalTo("ERR_008")));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).placeOrder(any());
     }
@@ -341,7 +341,7 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_001")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-404")));
 
         verify(orderExecutionService, times(1)).placeOrder(any(Order.class));
     }
@@ -358,7 +358,7 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code", equalTo("ERR_002")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-403")));
 
         verify(orderExecutionService, times(1)).placeOrder(any(Order.class));
     }
@@ -375,7 +375,7 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_003")));
+                .andExpect(jsonPath("$.code", equalTo("INS-404")));
 
         verify(orderExecutionService, times(1)).placeOrder(any(Order.class));
     }
@@ -391,8 +391,8 @@ class OrderControllerTest {
         mockMvc.perform(post("/api/v1/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code", equalTo("ERR_004")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", equalTo("ORD-400")));
 
         verify(orderExecutionService, times(1)).placeOrder(any(Order.class));
     }
@@ -409,7 +409,7 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code", equalTo("ERR_006")));
+                .andExpect(jsonPath("$.code", equalTo("ORD-409")));
 
         verify(orderExecutionService, times(1)).placeOrder(any(Order.class));
     }
@@ -537,7 +537,7 @@ class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel filled order")
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 422 when trying to cancel filled order")
     void deleteOrderReturns400WhenCancelFilledOrder() throws Exception {
         // Arrange
         UUID orderId = UUID.randomUUID();
@@ -546,7 +546,7 @@ class OrderControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code", notNullValue()))
                 .andExpect(jsonPath("$.message", containsString("Cannot cancel")));
 
@@ -598,7 +598,7 @@ class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel rejected order")
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 422 when trying to cancel rejected order")
     void deleteOrderReturns400WhenCancelRejectedOrder() throws Exception {
         // Arrange
         UUID orderId = UUID.randomUUID();
@@ -607,14 +607,14 @@ class OrderControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code", notNullValue()));
 
         verify(orderExecutionService, times(1)).cancelOrder(orderId);
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/orders/{id} - Returns 400 when trying to cancel cancelled order")
+    @DisplayName("DELETE /api/v1/orders/{id} - Returns 422 when trying to cancel cancelled order")
     void deleteOrderReturns400WhenCancelCancelledOrder() throws Exception {
         // Arrange
         UUID orderId = UUID.randomUUID();
@@ -623,7 +623,7 @@ class OrderControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code", notNullValue()))
                 .andExpect(jsonPath("$.message", containsString("CANCELLED")));
 
@@ -680,7 +680,7 @@ class OrderControllerTest {
 
         // Second delete fails
         mockMvc.perform(delete("/api/v1/orders/{id}", orderId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnprocessableEntity());
 
         verify(orderExecutionService, times(2)).cancelOrder(orderId);
     }
@@ -688,10 +688,11 @@ class OrderControllerTest {
     @Test
     @DisplayName("DELETE /api/v1/orders/{id} - Invalid UUID returns 400")
     void deleteOrderInvalidUuidFormat() throws Exception {
-        // Act & Assert - Invalid UUID format results in framework error (500 Internal Server Error)
+        // Act & Assert - Invalid UUID format results in type mismatch error (422 Unprocessable Entity)
         // The service method is never called due to type conversion failure in Spring
         mockMvc.perform(delete("/api/v1/orders/invalid-uuid-format"))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code", equalTo("VAL-422")));
 
         verify(orderExecutionService, never()).cancelOrder(any(UUID.class));
     }

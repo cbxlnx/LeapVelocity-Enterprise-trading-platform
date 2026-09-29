@@ -7,18 +7,27 @@ import org.springframework.http.HttpStatus;
  * Used for mapping domain exceptions to standardized API error responses.
  */
 public enum ErrorCode {
-    // Client errors (4xx)
-    ACCOUNT_NOT_FOUND("ERR_001", HttpStatus.NOT_FOUND, "Account not found"),
-    ACCOUNT_NOT_ACTIVE("ERR_002", HttpStatus.FORBIDDEN, "Account is not active"),
-    INSTRUMENT_NOT_FOUND("ERR_003", HttpStatus.NOT_FOUND, "Instrument/Symbol not found"),
-    INSUFFICIENT_FUNDS("ERR_004", HttpStatus.UNPROCESSABLE_ENTITY, "Insufficient funds for this transaction"),
-    INSUFFICIENT_HOLDINGS("ERR_005", HttpStatus.UNPROCESSABLE_ENTITY, "Insufficient holdings to sell"),
-    DUPLICATE_ORDER("ERR_006", HttpStatus.CONFLICT, "Order with this idempotency key already exists"),
-    INVALID_INPUT("ERR_007", HttpStatus.BAD_REQUEST, "Invalid input parameters"),
-    VALIDATION_FAILED("ERR_008", HttpStatus.BAD_REQUEST, "Validation failed"),
+    // Client errors (4xx) - Account errors
+    ACCOUNT_NOT_FOUND("ACC-404", HttpStatus.NOT_FOUND, "Account not found"),
+    ACCOUNT_NOT_ACTIVE("ACC-403", HttpStatus.FORBIDDEN, "Account not active"),
+    
+    // Instrument errors
+    INSTRUMENT_NOT_FOUND("INS-404", HttpStatus.NOT_FOUND, "Instrument not found"),
+    
+    // Order errors
+    INSUFFICIENT_FUNDS("ORD-400", HttpStatus.BAD_REQUEST, "Insufficient funds"),
+    INSUFFICIENT_HOLDINGS("ORD-409", HttpStatus.CONFLICT, "Insufficient holdings"),
+    DUPLICATE_ORDER("ORD-409", HttpStatus.CONFLICT, "Duplicate order"),
+    
+    // Validation errors
+    INVALID_INPUT("VAL-422", HttpStatus.UNPROCESSABLE_ENTITY, "Invalid input"),
+    VALIDATION_FAILED("VAL-422", HttpStatus.UNPROCESSABLE_ENTITY, "Validation failed"),
+    
+    // Authentication/Authorization errors
+    UNAUTHORIZED("AUTH-401", HttpStatus.UNAUTHORIZED, "Unauthorised / invalid token"),
     
     // Server errors (5xx)
-    INTERNAL_SERVER_ERROR("ERR_999", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
+    INTERNAL_SERVER_ERROR("ERR-999", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
     ;
 
     private final String code;
