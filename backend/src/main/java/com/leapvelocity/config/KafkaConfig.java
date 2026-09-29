@@ -13,10 +13,7 @@ import java.util.Map;
 /**
  * Kafka Configuration for LeapVelocity Trading Platform.
  * Defines three main topics (orders, trade-events, market-data).
- * 
- * Topic Design Justification:
- * - See docs/KAFKA_DESIGN.md for complete reasoning
- * 
+ *  * 
  * Summary:
  * - THREE topics to optimize partition keys and avoid duplication
  * - orders & trade-events: key=accountId (Settlement/Risk/Fraud need per-account ordering)
