@@ -161,7 +161,7 @@ class AccountControllerTest {
         mockMvc.perform(get("/api/v1/accounts/99")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_001")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-404")));
 
         verify(accountService, times(1)).getAccount(99L);
     }
@@ -239,7 +239,7 @@ class AccountControllerTest {
         mockMvc.perform(get("/api/v1/accounts/99/balance")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_001")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-404")));
 
         verify(accountService, times(1)).getBalance(99L);
     }
@@ -319,7 +319,7 @@ class AccountControllerTest {
         mockMvc.perform(get("/api/v1/accounts/99/positions")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_001")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-404")));
 
         verify(accountService, times(1)).getPositions(99L);
     }
@@ -416,7 +416,7 @@ class AccountControllerTest {
         mockMvc.perform(get("/api/v1/accounts/99/orders")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", equalTo("ERR_001")));
+                .andExpect(jsonPath("$.code", equalTo("ACC-404")));
 
         verify(accountService, times(1)).getOrders(99L);
     }

@@ -13,7 +13,6 @@ import java.util.List;
 public class ErrorResponse {
     private String code;
     private String message;
-    private int status;
     private LocalDateTime timestamp;
     private String path;
     private Object details;
@@ -22,33 +21,32 @@ public class ErrorResponse {
         this.timestamp = LocalDateTime.now();
     }
 
-    public ErrorResponse(String code, String message, int status) {
+    public ErrorResponse(String code, String message) {
         this();
         this.code = code;
         this.message = message;
-        this.status = status;
     }
 
-    public ErrorResponse(String code, String message, int status, String path) {
-        this(code, message, status);
+    public ErrorResponse(String code, String message, String path) {
+        this(code, message);
         this.path = path;
     }
 
     public ErrorResponse(ErrorCode errorCode) {
-        this(errorCode.getCode(), errorCode.getMessage(), errorCode.getHttpStatusCode());
+        this(errorCode.getCode(), errorCode.getMessage());
     }
 
     public ErrorResponse(ErrorCode errorCode, String path) {
-        this(errorCode.getCode(), errorCode.getMessage(), errorCode.getHttpStatusCode(), path);
+        this(errorCode.getCode(), errorCode.getMessage(), path);
     }
 
     public ErrorResponse(ErrorCode errorCode, Object details) {
-        this(errorCode.getCode(), errorCode.getMessage(), errorCode.getHttpStatusCode());
+        this(errorCode.getCode(), errorCode.getMessage());
         this.details = details;
     }
 
     public ErrorResponse(ErrorCode errorCode, String path, Object details) {
-        this(errorCode.getCode(), errorCode.getMessage(), errorCode.getHttpStatusCode(), path);
+        this(errorCode.getCode(), errorCode.getMessage(), path);
         this.details = details;
     }
 
@@ -67,14 +65,6 @@ public class ErrorResponse {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
     }
 
     public LocalDateTime getTimestamp() {
