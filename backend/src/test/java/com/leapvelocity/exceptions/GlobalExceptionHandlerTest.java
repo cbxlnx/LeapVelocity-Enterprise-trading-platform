@@ -41,7 +41,7 @@ class GlobalExceptionHandlerTest {
         
         ResponseEntity<ErrorResponse> response = handler.handleInsufficientFundsException(ex, request);
         
-        assertEquals(422, response.getStatusCode().value());
+        assertEquals(400, response.getStatusCode().value());
         assertEquals(ErrorCode.INSUFFICIENT_FUNDS.getCode(), response.getBody().getCode());
     }
 
@@ -67,13 +67,13 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void testHandleInsufficientHoldingsException() {
-        // Verifies: InsufficientHoldingsException maps to 422 UNPROCESSABLE_ENTITY with ERR_005
+        // Verifies: InsufficientHoldingsException maps to 409 CONFLICT with ORD-409
         InsufficientHoldingsException ex = new InsufficientHoldingsException(
                 1L, "AAPL", new BigDecimal("100"), new BigDecimal("50"));
         
         ResponseEntity<ErrorResponse> response = handler.handleInsufficientHoldingsException(ex, request);
         
-        assertEquals(422, response.getStatusCode().value());
+        assertEquals(409, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(ErrorCode.INSUFFICIENT_HOLDINGS.getCode(), response.getBody().getCode());
     }
@@ -92,12 +92,12 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void testHandleIllegalArgumentException() {
-        // Verifies: IllegalArgumentException maps to 400 BAD_REQUEST with ERR_007
+        // Verifies: IllegalArgumentException maps to 422 UNPROCESSABLE_ENTITY with VAL-422
         IllegalArgumentException ex = new IllegalArgumentException("Quantity must be positive");
         
         ResponseEntity<ErrorResponse> response = handler.handleIllegalArgumentException(ex, request);
         
-        assertEquals(400, response.getStatusCode().value());
+        assertEquals(422, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(ErrorCode.INVALID_INPUT.getCode(), response.getBody().getCode());
         assertEquals("Quantity must be positive", response.getBody().getMessage());
@@ -113,5 +113,32 @@ class GlobalExceptionHandlerTest {
         assertEquals(403, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(ErrorCode.ACCOUNT_NOT_ACTIVE.getCode(), response.getBody().getCode());
+    }
+
+    @Test
+    void testHandleAuthenticationException() {
+        // Verifies: AuthenticationException maps to 401 UNAUTHORIZED with AUTH-401
+        org.springframework.security.core.AuthenticationException ex = 
+                new org.springframework.security.authentication.BadCredentialsException("Invalid token");
+        
+        ResponseEntity<ErrorResponse> response = handler.handleAuthenticationException(ex, request);
+        
+        assertEquals(401, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.UNAUTHORIZED.getCode(), response.getBody().getCode());
+    }
+
+    @Test
+    void testHandleMethodArgumentTypeMismatch() {
+        // Verifies: MethodArgumentTypeMismatchException maps to 422 UNPROCESSABLE_ENTITY with VAL-422
+        Exception ex = new org.springframework.web.method.annotation.MethodArgumentTypeMismatchException(
+                "abc", Long.class, "id", null, null);
+        
+        ResponseEntity<ErrorResponse> response = handler.handleMethodArgumentTypeMismatch(
+                (org.springframework.web.method.annotation.MethodArgumentTypeMismatchException) ex, request);
+        
+        assertEquals(422, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(ErrorCode.INVALID_INPUT.getCode(), response.getBody().getCode());
     }
 }

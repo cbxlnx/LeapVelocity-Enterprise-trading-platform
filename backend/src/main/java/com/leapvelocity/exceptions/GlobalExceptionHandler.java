@@ -78,10 +78,10 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles InsufficientFundsException.
-     * Maps to HTTP 422 Unprocessable Entity with error code ERR_004.
+     * Maps to HTTP 400 Bad Request with error code ORD-400.
      */
     @ExceptionHandler(InsufficientFundsException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ErrorResponse> handleInsufficientFundsException(
             InsufficientFundsException ex,
             HttpServletRequest request) {
@@ -96,10 +96,10 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles InsufficientHoldingsException.
-     * Maps to HTTP 422 Unprocessable Entity with error code ERR_005.
+     * Maps to HTTP 409 Conflict with error code ORD-409.
      */
     @ExceptionHandler(InsufficientHoldingsException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ResponseStatus(HttpStatus.CONFLICT)
     public ResponseEntity<ErrorResponse> handleInsufficientHoldingsException(
             InsufficientHoldingsException ex,
             HttpServletRequest request) {
@@ -150,10 +150,10 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles MethodArgumentNotValidException for request validation errors.
-     * Maps to HTTP 400 Bad Request with error code ERR_008 and field-level error details.
+     * Maps to HTTP 422 Unprocessable Entity with error code VAL-422 and field-level error details.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     public ResponseEntity<ValidationErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
@@ -178,15 +178,15 @@ public class GlobalExceptionHandler {
                 )
         );
         
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 
     /**
      * Handles IllegalArgumentException for invalid business logic operations.
-     * Maps to HTTP 400 Bad Request with error code ERR_007.
+     * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex,
             HttpServletRequest request) {
@@ -196,7 +196,25 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         response.setMessage(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+    }
+
+    /**
+     * Handles authentication/authorization exceptions.
+     * Maps to HTTP 401 Unauthorized with error code AUTH-401.
+     */
+    @ExceptionHandler({org.springframework.security.core.AuthenticationException.class, org.springframework.security.access.AccessDeniedException.class})
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            Exception ex,
+            HttpServletRequest request) {
+        logger.warn("Authentication/Authorization failed: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.UNAUTHORIZED,
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getHttpStatus()).body(response);
     }
 
     /**
@@ -217,8 +235,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus()).body(response);
     }
 
-    /**
-     * Generic exception handler for any unexpected exceptions.
+    /**     * Handles type mismatch errors (e.g., path variable type conversion failure).
+     * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        logger.warn("Type mismatch for parameter {}: expected {} but got '{}'", 
+                ex.getName(), ex.getRequiredType().getSimpleName(), ex.getValue());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.INVALID_INPUT,
+                request.getRequestURI(),
+                String.format("Invalid value for parameter '%s': expected %s", 
+                        ex.getName(), ex.getRequiredType().getSimpleName())
+        );
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getHttpStatus()).body(response);
+    }
+
+    /**     * Generic exception handler for any unexpected exceptions.
      * Maps to HTTP 500 Internal Server Error.
      */
     @ExceptionHandler(Exception.class)

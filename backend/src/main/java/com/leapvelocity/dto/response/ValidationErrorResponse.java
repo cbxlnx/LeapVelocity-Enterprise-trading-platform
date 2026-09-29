@@ -14,7 +14,6 @@ import java.util.List;
 public class ValidationErrorResponse {
     private String code;
     private String message;
-    private int status;
     private LocalDateTime timestamp;
     private String path;
     private List<FieldError> errors;
@@ -29,7 +28,6 @@ public class ValidationErrorResponse {
         this.path = path;
         this.code = ErrorCode.VALIDATION_FAILED.getCode();
         this.message = ErrorCode.VALIDATION_FAILED.getMessage();
-        this.status = ErrorCode.VALIDATION_FAILED.getHttpStatusCode();
     }
 
     public void addFieldError(String field, String message) {
@@ -55,14 +53,6 @@ public class ValidationErrorResponse {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
     }
 
     public LocalDateTime getTimestamp() {
