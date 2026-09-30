@@ -91,7 +91,7 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
-        <!-- Kafka Clients (pulled by spring-kafka, but explicit for clarity) -->
+        <!-- Kafka Clients  -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
