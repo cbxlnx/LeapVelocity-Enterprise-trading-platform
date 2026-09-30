@@ -24,6 +24,8 @@ spring:
       group-id: leapvelocity-consumer-group
       properties:
         spring.json.trusted.packages: '*'
+        spring.json.value.default.type: com.leapvelocity.messaging.ExecutionEvent
+        spring.json.use.type.headers: false
     listener:
       ack-mode: manual_immediate
 

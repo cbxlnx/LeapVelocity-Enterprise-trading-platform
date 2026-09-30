@@ -11,6 +11,7 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -93,9 +94,6 @@ public class OrderExecutionService {
 
 	@Transactional
 	public Order placeOrder(Order order) {
-		BigDecimal notional;
-		Account account;
-
 		validateOrder(order);
 
 		if (isDuplicateOrder(order.getIdempotencyKey())) {
@@ -103,19 +101,10 @@ public class OrderExecutionService {
 			throw new DuplicateOrderException(order.getIdempotencyKey());
 		}
 
-		account = requireActiveAccount(order);
+		requireActiveAccount(order);
 		requireTradableInstrument(order);
 
-		notional = order.getQuantity().multiply(order.getPrice());
-		if (order.getSide() == OrderSide.BUY) {
-			executeBuy(order, account, notional);
-		} else if (order.getSide() == OrderSide.SELL) {
-			executeSell(order, account, notional);
-		} else {
-			throw new IllegalArgumentException("Unsupported order side: " + order.getSide());
-		}
-
-		order.setStatus(OrderStatus.FILLED);
+		order.setStatus(OrderStatus.NEW);
 		Order savedOrder = saveOrder(order);
 		publishOrderEvent(savedOrder);
 		return savedOrder;
@@ -135,6 +124,39 @@ public class OrderExecutionService {
 
 	public Order getOrder(String idempotencyKey) {
 		return orderRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
+	}
+
+	@Transactional
+	public void settleExecution(ExecutionEvent event) {
+		Order order = orderRepository.findById(event.orderId())
+				.orElseThrow(() -> new OrderNotFoundException(event.orderId().toString()));
+
+		if (order.getStatus() != OrderStatus.NEW) {
+			return;
+		}
+
+		if (order.getQuantity().compareTo(event.quantity()) != 0) {
+			order.setStatus(OrderStatus.REJECTED);
+			saveOrder(order);
+			return;
+		}
+
+		Account account = requireActiveAccount(order);
+
+		order.setPrice(event.price());
+
+		BigDecimal notional = event.quantity().multiply(event.price());
+
+		if (order.getSide() == OrderSide.BUY) {
+			executeBuy(order, account, notional);
+		} else if (order.getSide() == OrderSide.SELL) {
+			executeSell(order, account, notional);
+		} else {
+			throw new IllegalArgumentException("Unsupported order side: " + order.getSide());
+		}
+
+		order.setStatus(OrderStatus.FILLED);
+		saveOrder(order);
 	}
 
 	@Transactional

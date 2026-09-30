@@ -31,5 +31,5 @@ engine:
   venue: SIM
   topics:
     orders: orders
-    executions: executions
+    executions: ${ENGINE_TOPICS_EXECUTIONS:trade-events}
     partitions: 3
