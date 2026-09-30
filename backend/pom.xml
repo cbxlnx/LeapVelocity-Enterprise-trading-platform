@@ -91,17 +91,15 @@
             <artifactId>kafka-clients</artifactId>
             <version>3.8.0</version>
         </dependency>
-        <!-- JSON processing for MessageEnvelope serialization -->
+        <!-- JSON processing for serialization -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-
-        <!-- Lombok for boilerplate reduction -->
+        <!-- Spring Data Commons  -->
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-commons</artifactId>
         </dependency>
 
     </dependencies>
