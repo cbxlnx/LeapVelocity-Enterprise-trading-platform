@@ -4,6 +4,7 @@ import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
+import com.leapvelocity.repository.PositionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,9 +13,19 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Comprehensive test suite for PositionUpdateService.
@@ -27,19 +38,54 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Input validation for positions and operations
  * - Edge cases including fractional shares and high-precision decimals
  * 
- * The service uses in-memory HashMap storage, suitable for unit testing.
+ * The service uses a mocked repository backed by a local Map, keeping the tests fast and readable.
  */
 @DisplayName("PositionUpdateService")
 class PositionUpdateServiceTest {
 
     private PositionUpdateService service;
+    private Map<String, Position> positionsByKey;
 
     /**
      * Initializes a fresh service instance before each test.
      */
     @BeforeEach
     void setUp() {
-        service = new PositionUpdateService();
+        PositionRepository positionRepository = mock(PositionRepository.class);
+
+        positionsByKey = new HashMap<>();
+        when(positionRepository.findByAccountIdAndSymbol(anyLong(), anyString())).thenAnswer(invocation ->
+                Optional.ofNullable(positionsByKey.get(positionKey(
+                        invocation.getArgument(0, Long.class),
+                        invocation.getArgument(1, String.class)))));
+        when(positionRepository.findByAccountId(anyLong())).thenAnswer(invocation -> {
+            Long accountId = invocation.getArgument(0, Long.class);
+            List<Position> positions = new ArrayList<>();
+
+            for (Position position : positionsByKey.values()) {
+                if (accountId.equals(position.getAccountId())) {
+                    positions.add(position);
+                }
+            }
+
+            return positions;
+        });
+        when(positionRepository.save(any(Position.class))).thenAnswer(invocation -> {
+            Position position = invocation.getArgument(0, Position.class);
+            positionsByKey.put(positionKey(position.getAccountId(), position.getSymbol()), position);
+            return position;
+        });
+        doAnswer(invocation -> {
+            Position position = invocation.getArgument(0, Position.class);
+            positionsByKey.remove(positionKey(position.getAccountId(), position.getSymbol()));
+            return null;
+        }).when(positionRepository).delete(any(Position.class));
+
+        service = new PositionUpdateService(positionRepository);
+    }
+
+    private String positionKey(Long accountId, String symbol) {
+        return accountId + "|" + symbol.trim();
     }
 
     // ==================== POSITION STORAGE TESTS ====================

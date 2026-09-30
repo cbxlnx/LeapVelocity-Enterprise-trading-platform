@@ -5,132 +5,64 @@ import com.leapvelocity.entities.Position;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.repository.PositionRepository;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PositionUpdateService {
 	private final PositionRepository positionRepository;
-	private final Map<String, Position> positionsByAccountAndSymbol;
-
-	public PositionUpdateService() {
-		this.positionRepository = null;
-		this.positionsByAccountAndSymbol = new HashMap<>();
-	}
 
 	@Autowired
 	public PositionUpdateService(PositionRepository positionRepository) {
 		this.positionRepository = positionRepository;
-		this.positionsByAccountAndSymbol = new HashMap<>();
 	}
 
 	public void addPosition(Position position) {
-		String key;
-
 		if (position == null) {
 			throw new IllegalArgumentException("Position is required");
 		}
+		requireAccountId(position.getAccountId());
 		position.setSymbol(normalizeSymbol(position.getSymbol()));
-		if (usesRepository()) {
-			positionRepository.save(position);
-			return;
-		}
-		key = positionKey(position.getAccountId(), position.getSymbol());
-		positionsByAccountAndSymbol.put(key, position);
+		positionRepository.save(position);
 	}
 
 	public Position getPosition(Long accountId, String symbol) {
-		if (usesRepository()) {
-			return positionRepository.findByAccountIdAndSymbol(accountId, normalizeSymbol(symbol)).orElse(null);
-		}
-		return positionsByAccountAndSymbol.get(positionKey(accountId, symbol));
+		requireAccountId(accountId);
+		return positionRepository.findByAccountIdAndSymbol(accountId, normalizeSymbol(symbol)).orElse(null);
 	}
 
 	public List<Position> getPositionsForAccount(Long accountId) {
-		List<Position> positions;
-
-		if (accountId == null) {
-			throw new IllegalArgumentException("Account id is required");
-		}
-		if (usesRepository()) {
-			return positionRepository.findByAccountId(accountId);
-		}
-
-		positions = new ArrayList<>();
-		for (Position position : positionsByAccountAndSymbol.values()) {
-			if (position.getAccountId() != null && position.getAccountId().equals(accountId)) {
-				positions.add(position);
-			}
-		}
-
-		return positions;
+		requireAccountId(accountId);
+		return positionRepository.findByAccountId(accountId);
 	}
 
 	public void applyBuy(Order order) {
 		Position position;
-		String key;
 		String symbol;
 
+		requireAccountId(order.getAccountId());
 		symbol = normalizeSymbol(order.getSymbol());
-		key = positionKey(order.getAccountId(), symbol);
-		if (usesRepository()) {
-			position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
+		position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
 
-			if (position == null) {
-				position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
-				positionRepository.save(position);
-				return;
-			}
-
-			position.apply(order.getQuantity(), order.getPrice());
+		if (position == null) {
+			position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
 			positionRepository.save(position);
 			return;
 		}
 
-		position = positionsByAccountAndSymbol.get(key);
-
-		if (position == null) {
-			position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
-			positionsByAccountAndSymbol.put(key, position);
-			return;
-		}
-
 		position.apply(order.getQuantity(), order.getPrice());
+		positionRepository.save(position);
 	}
 
 	public void applySell(Order order) {
 		Position position;
-		String key;
 		BigDecimal remainingQuantity;
 		String symbol;
 
+		requireAccountId(order.getAccountId());
 		symbol = normalizeSymbol(order.getSymbol());
-		key = positionKey(order.getAccountId(), symbol);
-		if (usesRepository()) {
-			position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
-			if (position == null) {
-				throw new InsufficientHoldingsException(order.getAccountId(), symbol, order.getQuantity(), BigDecimal.ZERO);
-			}
-
-			if (position.getQuantity().compareTo(order.getQuantity()) < 0) {
-				throw new InsufficientHoldingsException(order.getAccountId(), position.getSymbol(), order.getQuantity(), position.getQuantity());
-			}
-
-			remainingQuantity = position.getQuantity().subtract(order.getQuantity());
-			if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
-				positionRepository.delete(position);
-			} else {
-				position.setQuantity(remainingQuantity);
-				positionRepository.save(position);
-			}
-			return;
-		}
-
-		position = positionsByAccountAndSymbol.get(key);
+		position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
 		if (position == null) {
 			throw new InsufficientHoldingsException(order.getAccountId(), symbol, order.getQuantity(), BigDecimal.ZERO);
 		}
@@ -141,51 +73,35 @@ public class PositionUpdateService {
 
 		remainingQuantity = position.getQuantity().subtract(order.getQuantity());
 		if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
-			positionsByAccountAndSymbol.remove(key);
+			positionRepository.delete(position);
 		} else {
 			position.setQuantity(remainingQuantity);
+			positionRepository.save(position);
 		}
 	}
 
 	public void reverseSell(Order order) {
 		Position position;
-		String key;
 		String symbol;
 
+		requireAccountId(order.getAccountId());
 		symbol = normalizeSymbol(order.getSymbol());
-		key = positionKey(order.getAccountId(), symbol);
-		if (usesRepository()) {
-			position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
+		position = positionRepository.findByAccountIdAndSymbol(order.getAccountId(), symbol).orElse(null);
 
-			if (position == null) {
-				position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
-				positionRepository.save(position);
-				return;
-			}
-
-			// Increase quantity by the sold amount
-			position.setQuantity(position.getQuantity().add(order.getQuantity()));
+		if (position == null) {
+			position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
 			positionRepository.save(position);
 			return;
 		}
 
-		position = positionsByAccountAndSymbol.get(key);
-
-		if (position == null) {
-			position = new Position(order.getAccountId(), symbol, order.getQuantity(), order.getPrice());
-			positionsByAccountAndSymbol.put(key, position);
-			return;
-		}
-
-		// Increase quantity by the sold amount
 		position.setQuantity(position.getQuantity().add(order.getQuantity()));
+		positionRepository.save(position);
 	}
 
-	private String positionKey(Long accountId, String symbol) {
+	private void requireAccountId(Long accountId) {
 		if (accountId == null) {
 			throw new IllegalArgumentException("Account id is required");
 		}
-		return accountId + "|" + normalizeSymbol(symbol);
 	}
 
 	private String normalizeSymbol(String symbol) {
@@ -193,9 +109,5 @@ public class PositionUpdateService {
 			throw new IllegalArgumentException("Position symbol is required");
 		}
 		return symbol.trim();
-	}
-
-	private boolean usesRepository() {
-		return positionRepository != null;
 	}
 }
