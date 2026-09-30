@@ -1,19 +1,21 @@
 package com.leapvelocity.messaging;
 
+import com.leapvelocity.entities.enums.OrderSide;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Message written to the {@code orders} topic: a new order placement.
- * Fields map directly from Order entity.
+ * Message on the {@code orders} topic: an accepted order the execution engine should work.
  */
 public record OrderEvent(
-    UUID orderId,           // Order.id
-    Long accountId,         // Order.accountId
-    String symbol,          // Order.symbol
-    String side,            // Order.side.toString() (BUY or SELL)
-    BigDecimal quantity,    // Order.quantity
-    BigDecimal price,       // Order.price (limit price)
-    Instant createdOn       // Order.createdOn (convert from LocalDateTime)
-) { }
+        UUID orderId,
+        Long accountId,
+        String symbol,
+        OrderSide side,
+        BigDecimal quantity,
+        BigDecimal price,
+        Instant createdOn
+) {
+}
