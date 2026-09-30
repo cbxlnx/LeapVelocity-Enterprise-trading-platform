@@ -13,6 +13,10 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.InstrumentRepository;
+import com.leapvelocity.repository.OrderRepository;
+import com.leapvelocity.repository.PositionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,8 +26,18 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Comprehensive test suite for OrderExecutionService.
@@ -35,8 +49,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Idempotency (duplicate order detection)
  * - Position management (creation, updates, closure)
  * - Complex multi-order integration scenarios
- * service uses in-memory storage (HashMaps), making it suitable
- * for unit testing without mocking.
+ *
+ * The service uses mocked repositories backed by local Maps so the tests stay
+ * focused on service behavior while exercising the JPA-only code path.
  */
 @DisplayName("OrderExecutionService")
 class OrderExecutionServiceTest {
@@ -44,6 +59,10 @@ class OrderExecutionServiceTest {
     private OrderExecutionService service;
     private Account activeAccount;
     private Instrument tradableInstrument;
+    private Map<Long, Account> accountsById;
+    private Map<String, Instrument> instrumentsBySymbol;
+    private Map<String, Order> ordersByIdempotencyKey;
+    private Map<String, Position> positionsByKey;
 
     /**
      * Initializes test fixtures before each test.
@@ -51,13 +70,92 @@ class OrderExecutionServiceTest {
      */
     @BeforeEach
     void setUp() {
-        service = new OrderExecutionService();
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        InstrumentRepository instrumentRepository = mock(InstrumentRepository.class);
+        OrderRepository orderRepository = mock(OrderRepository.class);
+        PositionRepository positionRepository = mock(PositionRepository.class);
+
+        accountsById = new HashMap<>();
+        instrumentsBySymbol = new HashMap<>();
+        ordersByIdempotencyKey = new HashMap<>();
+        positionsByKey = new HashMap<>();
+
+        stubAccountRepository(accountRepository);
+        stubInstrumentRepository(instrumentRepository);
+        stubOrderRepository(orderRepository);
+        stubPositionRepository(positionRepository);
+
+        service = new OrderExecutionService(
+                accountRepository,
+                instrumentRepository,
+                orderRepository,
+                new PositionUpdateService(positionRepository)
+        );
+
         activeAccount = new Account("ACC-001", "Alice", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
         activeAccount.setId(1L);
         tradableInstrument = new Instrument("AAPL", "Apple Inc.", "EQUITY", "USD", true);
 
         service.addAccount(activeAccount);
         service.addInstrument(tradableInstrument);
+    }
+
+    private void stubAccountRepository(AccountRepository accountRepository) {
+        when(accountRepository.findById(anyLong())).thenAnswer(invocation ->
+                Optional.ofNullable(accountsById.get(invocation.getArgument(0, Long.class))));
+        when(accountRepository.existsById(anyLong())).thenAnswer(invocation ->
+                accountsById.containsKey(invocation.getArgument(0, Long.class)));
+        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> {
+            Account account = invocation.getArgument(0, Account.class);
+            accountsById.put(account.getId(), account);
+            return account;
+        });
+    }
+
+    private void stubInstrumentRepository(InstrumentRepository instrumentRepository) {
+        when(instrumentRepository.findBySymbol(anyString())).thenAnswer(invocation ->
+                Optional.ofNullable(instrumentsBySymbol.get(invocation.getArgument(0, String.class))));
+        when(instrumentRepository.save(any(Instrument.class))).thenAnswer(invocation -> {
+            Instrument instrument = invocation.getArgument(0, Instrument.class);
+            instrumentsBySymbol.put(instrument.getSymbol(), instrument);
+            return instrument;
+        });
+    }
+
+    private void stubOrderRepository(OrderRepository orderRepository) {
+        when(orderRepository.existsByIdempotencyKey(anyString())).thenAnswer(invocation ->
+                ordersByIdempotencyKey.containsKey(invocation.getArgument(0, String.class)));
+        when(orderRepository.findByIdempotencyKey(anyString())).thenAnswer(invocation ->
+                Optional.ofNullable(ordersByIdempotencyKey.get(invocation.getArgument(0, String.class))));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order order = invocation.getArgument(0, Order.class);
+            if (order.getId() == null) {
+                order.setId(UUID.randomUUID());
+            }
+            ordersByIdempotencyKey.put(order.getIdempotencyKey(), order);
+            return order;
+        });
+    }
+
+    private void stubPositionRepository(PositionRepository positionRepository) {
+        when(positionRepository.findByAccountIdAndSymbol(anyLong(), anyString())).thenAnswer(invocation ->
+                Optional.ofNullable(positionsByKey.get(positionKey(
+                        invocation.getArgument(0, Long.class),
+                        invocation.getArgument(1, String.class)))));
+        when(positionRepository.save(any(Position.class))).thenAnswer(invocation -> {
+            Position position = invocation.getArgument(0, Position.class);
+            positionsByKey.put(positionKey(position.getAccountId(), position.getSymbol()), position);
+            return position;
+        });
+        doAnswer(invocation -> {
+            Position position = invocation.getArgument(0, Position.class);
+            positionsByKey.remove(positionKey(position.getAccountId(), position.getSymbol()));
+            return null;
+        }).when(positionRepository).delete(any(Position.class));
+    }
+
+    private String positionKey(Long accountId, String symbol) {
+        return accountId + "|" + symbol.trim();
     }
 
     // ==================== BUY ORDER TESTS ====================
