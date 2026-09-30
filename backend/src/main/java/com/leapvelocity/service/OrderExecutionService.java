@@ -11,6 +11,7 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
+import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
@@ -29,18 +30,29 @@ public class OrderExecutionService {
 	private final AccountRepository accountRepository;
 	private final InstrumentRepository instrumentRepository;
 	private final OrderRepository orderRepository;
+	private final OrderEventPublisher orderEventPublisher;
 
 	@Autowired
 	public OrderExecutionService(
 			AccountRepository accountRepository,
 			InstrumentRepository instrumentRepository,
 			OrderRepository orderRepository,
-			PositionUpdateService positionUpdateService) {
+			PositionUpdateService positionUpdateService,
+			OrderEventPublisher orderEventPublisher) {
 		this.positionUpdateService = positionUpdateService;
 		this.orderValidator = new OrderValidator();
 		this.accountRepository = accountRepository;
 		this.instrumentRepository = instrumentRepository;
 		this.orderRepository = orderRepository;
+		this.orderEventPublisher = orderEventPublisher;
+	}
+
+	public OrderExecutionService(
+			AccountRepository accountRepository,
+			InstrumentRepository instrumentRepository,
+			OrderRepository orderRepository,
+			PositionUpdateService positionUpdateService) {
+		this(accountRepository, instrumentRepository, orderRepository, positionUpdateService, null);
 	}
 
 	public void addAccount(Account account) {
@@ -104,7 +116,9 @@ public class OrderExecutionService {
 		}
 
 		order.setStatus(OrderStatus.FILLED);
-		return saveOrder(order);
+		Order savedOrder = saveOrder(order);
+		publishOrderEvent(savedOrder);
+		return savedOrder;
 	}
 
 	public Order execute(Order order) {
@@ -219,6 +233,12 @@ public class OrderExecutionService {
 
 	private Order saveOrder(Order order) {
 		return orderRepository.save(order);
+	}
+
+	private void publishOrderEvent(Order order) {
+		if (orderEventPublisher != null) {
+			orderEventPublisher.publish(order);
+		}
 	}
 
 	private void persistRejectedOrder(Order order) {

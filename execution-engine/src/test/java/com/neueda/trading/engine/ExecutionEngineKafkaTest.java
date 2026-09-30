@@ -51,7 +51,7 @@ class ExecutionEngineKafkaTest {
                 new BigDecimal("25.50"), Instant.now());
 
         try (Consumer<String, String> consumer = executionsConsumer()) {
-            kafkaTemplate.send("orders", order.accountId(), objectMapper.writeValueAsString(order)).get();
+            kafkaTemplate.send("orders", String.valueOf(order.accountId()), objectMapper.writeValueAsString(order)).get();
 
             ConsumerRecord<String, String> record =
                     KafkaTestUtils.getSingleRecord(consumer, "executions", Duration.ofSeconds(20));

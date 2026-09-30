@@ -13,6 +13,7 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
@@ -37,6 +38,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,6 +66,7 @@ class OrderExecutionServiceTest {
     private Map<String, Instrument> instrumentsBySymbol;
     private Map<String, Order> ordersByIdempotencyKey;
     private Map<String, Position> positionsByKey;
+    private OrderEventPublisher orderEventPublisher;
 
     /**
      * Initializes test fixtures before each test.
@@ -74,6 +78,7 @@ class OrderExecutionServiceTest {
         InstrumentRepository instrumentRepository = mock(InstrumentRepository.class);
         OrderRepository orderRepository = mock(OrderRepository.class);
         PositionRepository positionRepository = mock(PositionRepository.class);
+        orderEventPublisher = mock(OrderEventPublisher.class);
 
         accountsById = new HashMap<>();
         instrumentsBySymbol = new HashMap<>();
@@ -89,7 +94,8 @@ class OrderExecutionServiceTest {
                 accountRepository,
                 instrumentRepository,
                 orderRepository,
-                new PositionUpdateService(positionRepository)
+                new PositionUpdateService(positionRepository),
+                orderEventPublisher
         );
 
         activeAccount = new Account("ACC-001", "Alice", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -181,6 +187,7 @@ class OrderExecutionServiceTest {
             assertNotNull(position);
             assertEquals(new BigDecimal("50"), position.getQuantity());
             assertEquals(new BigDecimal("150.00"), position.getAverageCost());
+            verify(orderEventPublisher).publish(result);
         }
 
         @Test
@@ -196,6 +203,7 @@ class OrderExecutionServiceTest {
 
             assertThrows(InsufficientFundsException.class, () -> service.placeOrder(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
+            verify(orderEventPublisher, never()).publish(order);
         }
 
         @Test
