@@ -8,7 +8,7 @@ import java.util.UUID;
 public record ExecutionEvent(
         UUID executionId,
         UUID orderId,
-        String accountId,
+        Long accountId,
         String symbol,
         Side side,
         int quantity,

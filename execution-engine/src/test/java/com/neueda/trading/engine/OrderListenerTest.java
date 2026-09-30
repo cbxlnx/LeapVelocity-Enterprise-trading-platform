@@ -42,14 +42,14 @@ class OrderListenerTest {
     void testOnOrder_WaitsForMarketThenPublishesFillKeyedByAccount() throws Exception {
         @SuppressWarnings("unchecked")
         SendResult<String, String> sent = mock(SendResult.class);
-        when(kafka.send(eq("executions"), eq("ACC-1004"), anyString())).thenReturn(CompletableFuture.completedFuture(sent));
-        OrderEvent order = new OrderEvent(UUID.randomUUID(), "ACC-1004", "VERDA", Side.SELL, 5,
+        when(kafka.send(eq("executions"), eq("4"), anyString())).thenReturn(CompletableFuture.completedFuture(sent));
+        OrderEvent order = new OrderEvent(UUID.randomUUID(), 4L, "VERDA", Side.SELL, 5,
                 new BigDecimal("4.20"), Instant.EPOCH);
 
         listener().onOrder(mapper.writeValueAsString(order));
 
         assertEquals(Duration.ofMillis(750), paused);
-        verify(kafka).send(eq("executions"), eq("ACC-1004"), anyString());
+        verify(kafka).send(eq("executions"), eq("4"), anyString());
     }
 
     @Test
