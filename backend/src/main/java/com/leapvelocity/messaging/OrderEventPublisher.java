@@ -3,6 +3,7 @@ package com.leapvelocity.messaging;
 import com.leapvelocity.entities.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,9 +24,11 @@ public class OrderEventPublisher {
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
     private final String topic;
 
-    public OrderEventPublisher(KafkaTemplate<String, OrderEvent> kafkaTemplate) {
+    public OrderEventPublisher(
+            KafkaTemplate<String, OrderEvent> kafkaTemplate,
+            @Value("${kafka.topics.orders:orders}") String topic) {
         this.kafkaTemplate = kafkaTemplate;
-        this.topic = KafkaTopics.ORDERS;
+        this.topic = topic;
     }
 
     public void publish(Order order) {
@@ -54,7 +57,7 @@ public class OrderEventPublisher {
                 order.getId(),
                 order.getAccountId(),
                 order.getSymbol(),
-                order.getSide(),
+                order.getSide().name(),
                 order.getQuantity(),
                 order.getPrice(),
                 order.getCreatedOn().toInstant(ZoneOffset.UTC)

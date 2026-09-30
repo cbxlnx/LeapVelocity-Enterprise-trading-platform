@@ -11,6 +11,8 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
     ports:
       - "${AUTH_STUB_PORT:-4000}:4000"
+    networks:
+      - trade-net
 
   trade-api:
     build:
@@ -30,7 +32,9 @@ services:
       trade-db:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
+    networks:
+      - trade-net
 
   trade-db:
     build:
@@ -50,6 +54,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - trade-net
 
   kafka:
     image: apache/kafka:latest
@@ -70,6 +76,18 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 10
+    networks:
+      - trade-net
 
 volumes:
   trade-db-data:
+
+networks:
+  trade-net:
+    driver: bridge
