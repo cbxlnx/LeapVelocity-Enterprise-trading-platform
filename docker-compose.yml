@@ -12,11 +12,11 @@ services:
     ports:
       - "${AUTH_STUB_PORT:-4000}:4000"
 
-  app:
+  trade-api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: trading-platform-app
+    container_name: trade-api
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://trade-db:5432/${DB_NAME:-leapvelocity_trading_db}?sslmode=disable
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
@@ -53,7 +53,7 @@ services:
 
   kafka:
     image: apache/kafka:latest
-    container_name: kafka-sprint7
+    container_name: trading-platform-kafka
     ports:
       - "${KAFKA_PORT:-9092}:9092"
     environment:
