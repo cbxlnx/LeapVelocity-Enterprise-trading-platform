@@ -8,7 +8,6 @@ import org.springframework.kafka.config.TopicBuilder;
 
 /**
  * Declares all Kafka topics (3 main + 3 DLQ).
- * Spring's KafkaAdmin creates them on startup if they don't exist.
  */
 @Configuration
 public class KafkaTopics {
