@@ -8,6 +8,7 @@ import com.leapvelocity.entities.enums.AccountStatus;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
@@ -59,6 +60,7 @@ class OrderExecutionServiceEdgeCasesTest {
                 AccountRepository accountRepository = mock(AccountRepository.class);
                 InstrumentRepository instrumentRepository = mock(InstrumentRepository.class);
                 OrderRepository orderRepository = mock(OrderRepository.class);
+                ExecutionRepository executionRepository = mock(ExecutionRepository.class);
                 PositionRepository positionRepository = mock(PositionRepository.class);
 
                 accountsById = new HashMap<>();
@@ -75,6 +77,7 @@ class OrderExecutionServiceEdgeCasesTest {
                                 accountRepository,
                                 instrumentRepository,
                                 orderRepository,
+                                executionRepository,
                                 new PositionUpdateService(positionRepository)
                 );
 

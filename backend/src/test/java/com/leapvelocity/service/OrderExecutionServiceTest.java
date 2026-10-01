@@ -1,6 +1,7 @@
 package com.leapvelocity.service;
 
 import com.leapvelocity.entities.Account;
+import com.leapvelocity.entities.Execution;
 import com.leapvelocity.entities.Instrument;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
@@ -14,6 +15,7 @@ import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
@@ -63,6 +65,7 @@ class OrderExecutionServiceTest {
     private Map<String, Instrument> instrumentsBySymbol;
     private Map<String, Order> ordersByIdempotencyKey;
     private Map<String, Position> positionsByKey;
+    private Map<UUID, Execution> executionsByOrderId;
 
     /**
      * Initializes test fixtures before each test.
@@ -73,22 +76,26 @@ class OrderExecutionServiceTest {
         AccountRepository accountRepository = mock(AccountRepository.class);
         InstrumentRepository instrumentRepository = mock(InstrumentRepository.class);
         OrderRepository orderRepository = mock(OrderRepository.class);
+        ExecutionRepository executionRepository = mock(ExecutionRepository.class);
         PositionRepository positionRepository = mock(PositionRepository.class);
 
         accountsById = new HashMap<>();
         instrumentsBySymbol = new HashMap<>();
         ordersByIdempotencyKey = new HashMap<>();
         positionsByKey = new HashMap<>();
+        executionsByOrderId = new HashMap<>();
 
         stubAccountRepository(accountRepository);
         stubInstrumentRepository(instrumentRepository);
         stubOrderRepository(orderRepository);
+        stubExecutionRepository(executionRepository);
         stubPositionRepository(positionRepository);
 
         service = new OrderExecutionService(
                 accountRepository,
                 instrumentRepository,
                 orderRepository,
+            executionRepository,
                 new PositionUpdateService(positionRepository)
         );
 
@@ -154,6 +161,17 @@ class OrderExecutionServiceTest {
         }).when(positionRepository).delete(any(Position.class));
     }
 
+    private void stubExecutionRepository(ExecutionRepository executionRepository) {
+        when(executionRepository.save(any(Execution.class))).thenAnswer(invocation -> {
+            Execution execution = invocation.getArgument(0, Execution.class);
+            if (execution.getId() == null) {
+                execution.setId(UUID.randomUUID());
+            }
+            executionsByOrderId.put(execution.getOrderId(), execution);
+            return execution;
+        });
+    }
+
     private String positionKey(Long accountId, String symbol) {
         return accountId + "|" + symbol.trim();
     }
@@ -176,6 +194,7 @@ class OrderExecutionServiceTest {
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("2500.00"), activeAccount.getCashBalance());
+            assertNotNull(executionsByOrderId.get(result.getId()));
 
             Position position = service.getPosition(activeAccount.getId(), "AAPL");
             assertNotNull(position);
@@ -196,6 +215,7 @@ class OrderExecutionServiceTest {
 
             assertThrows(InsufficientFundsException.class, () -> service.placeOrder(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
+            assertTrue(executionsByOrderId.isEmpty());
         }
 
         @Test
@@ -234,6 +254,7 @@ class OrderExecutionServiceTest {
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("18000.00"), activeAccount.getCashBalance());
+            assertNotNull(executionsByOrderId.get(result.getId()));
 
             Position updatedPosition = service.getPosition(activeAccount.getId(), "AAPL");
             assertEquals(new BigDecimal("50"), updatedPosition.getQuantity());
