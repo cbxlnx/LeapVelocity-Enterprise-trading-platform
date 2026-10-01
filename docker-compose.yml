@@ -36,6 +36,22 @@ services:
     networks:
       - trade-net
 
+  execution-engine:
+    build:
+      context: ./execution-engine
+      dockerfile: Dockerfile
+    container_name: execution-engine
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: 8082
+    ports:
+      - "${EXECUTION_ENGINE_PORT:-8082}:8082"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - trade-net
+
   trade-db:
     build:
       context: ./db
