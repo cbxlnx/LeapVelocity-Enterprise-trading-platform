@@ -6,7 +6,7 @@ A small Spring Boot service that stands in for a real exchange. It is step
 1. Read an accepted order from the `orders` topic.
 2. "Send it to the market": wait a random delay, then fill the whole order
    at a price at or better than its limit.
-3. Write the fill to the `executions` topic, keyed by account.
+3. Write the fill to the `trade-events` topic, keyed by account.
 
 It has no database and no REST API of its own, only an actuator health
 endpoint used by the Docker health check.
@@ -20,13 +20,13 @@ execution-engine/
 └── src/
     ├── main/java/com/neueda/trading/engine/
     │   ├── ExecutionEngineApplication.java
-    │   ├── OrderListener.java         # @KafkaListener on orders, publishes to executions
+    │   ├── OrderListener.java         # @KafkaListener on orders, publishes to trade-events
     │   ├── SimulatedMarket.java       # fill delay and fill price
     │   ├── EngineProperties.java      # engine.* settings, validated on startup
     │   ├── EngineConfig.java          # beans + topic declarations
     │   ├── Pauser.java                # the wait, as an interface tests can skip
     │   ├── OrderEvent.java            # message contract: orders topic
-    │   ├── ExecutionEvent.java        # message contract: executions topic
+    │   ├── ExecutionEvent.java        # message contract: trade-events topic
     │   └── Side.java
     ├── main/resources/application.yml
     └── test/java/com/neueda/trading/engine/
@@ -54,7 +54,7 @@ constructor, so tests pin both and assert exact results.
 
 The listener sends the fill and waits for Kafka to acknowledge it before
 returning, so the order's offset is only committed once its fill is safely
-on `executions`. If the engine stops mid-order, it works that order again
+on `trade-events`. If the engine stops mid-order, it works that order again
 on restart. That can produce a duplicate fill, which the order service
 ignores. Unreadable messages are logged and skipped.
 

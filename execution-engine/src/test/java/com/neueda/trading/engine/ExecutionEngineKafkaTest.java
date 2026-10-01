@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs the whole engine against an in-process Kafka broker: an order
- * published to {@code orders} comes back as a fill on {@code executions}.
+ * published to {@code orders} comes back as a fill on {@code trade-events}.
  * No Docker needed.
  */
 @SpringBootTest(properties = {
@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "engine.max-delay=0ms",
         "server.port=0"
 })
-@EmbeddedKafka(partitions = 1, topics = {"orders", "executions"})
+@EmbeddedKafka(partitions = 1, topics = {"orders", "trade-events"})
 class ExecutionEngineKafkaTest {
 
     @Autowired
@@ -46,31 +46,31 @@ class ExecutionEngineKafkaTest {
     private EmbeddedKafkaBroker broker;
 
     @Test
-    void testOrderOnOrdersTopic_ProducesFillOnExecutionsTopic() throws Exception {
-        OrderEvent order = new OrderEvent(UUID.randomUUID(), 1L, "ACME", Side.BUY, 10,
+    void testOrderOnOrdersTopic_ProducesFillOnTradeEventsTopic() throws Exception {
+        OrderEvent order = new OrderEvent(UUID.randomUUID(), 1L, "ACME", Side.BUY, new BigDecimal("10"),
                 new BigDecimal("25.50"), Instant.now());
 
-        try (Consumer<String, String> consumer = executionsConsumer()) {
-            kafkaTemplate.send("orders", order.accountId(), objectMapper.writeValueAsString(order)).get();
+        try (Consumer<String, String> consumer = tradeEventsConsumer()) {
+            kafkaTemplate.send("orders", String.valueOf(order.accountId()), objectMapper.writeValueAsString(order)).get();
 
             ConsumerRecord<String, String> record =
-                    KafkaTestUtils.getSingleRecord(consumer, "executions", Duration.ofSeconds(20));
+                    KafkaTestUtils.getSingleRecord(consumer, "trade-events", Duration.ofSeconds(20));
             ExecutionEvent fill = objectMapper.readValue(record.value(), ExecutionEvent.class);
 
             assertEquals("1", record.key());
             assertEquals(order.orderId(), fill.orderId());
-            assertEquals(10, fill.quantity());
+            assertEquals(new BigDecimal("10"), fill.quantity());
             assertTrue(fill.price().compareTo(order.price()) <= 0);
             assertTrue(record.value().contains("\"executedOn\":\""), "timestamps should be ISO strings");
         }
     }
 
-    private Consumer<String, String> executionsConsumer() {
+    private Consumer<String, String> tradeEventsConsumer() {
         Map<String, Object> props = KafkaTestUtils.consumerProps("test-" + UUID.randomUUID(), "true", broker);
         props.put("auto.offset.reset", "earliest");
         Consumer<String, String> consumer = new DefaultKafkaConsumerFactory<>(props,
                 new StringDeserializer(), new StringDeserializer()).createConsumer();
-        broker.consumeFromAnEmbeddedTopic(consumer, "executions");
+        broker.consumeFromAnEmbeddedTopic(consumer, "trade-events");
         return consumer;
     }
 }

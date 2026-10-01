@@ -35,21 +35,21 @@ class OrderListenerTest {
     private OrderListener listener() {
         EngineProperties props = new EngineProperties(Duration.ofMillis(750), Duration.ofMillis(750), 0, "SIM");
         SimulatedMarket market = new SimulatedMarket(props, new Random(1), Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
-        return new OrderListener(market, d -> paused = d, kafka, mapper, "executions");
+        return new OrderListener(market, d -> paused = d, kafka, mapper, "trade-events");
     }
 
     @Test
     void testOnOrder_WaitsForMarketThenPublishesFillKeyedByAccount() throws Exception {
         @SuppressWarnings("unchecked")
         SendResult<String, String> sent = mock(SendResult.class);
-        when(kafka.send(eq("executions"), eq("4"), anyString())).thenReturn(CompletableFuture.completedFuture(sent));
-        OrderEvent order = new OrderEvent(UUID.randomUUID(), 4L, "VERDA", Side.SELL, 5,
+        when(kafka.send(eq("trade-events"), eq("4"), anyString())).thenReturn(CompletableFuture.completedFuture(sent));
+        OrderEvent order = new OrderEvent(UUID.randomUUID(), 4L, "VERDA", Side.SELL, new BigDecimal("5"),
                 new BigDecimal("4.20"), Instant.EPOCH);
 
         listener().onOrder(mapper.writeValueAsString(order));
 
         assertEquals(Duration.ofMillis(750), paused);
-        verify(kafka).send(eq("executions"), eq("4"), anyString());
+        verify(kafka).send(eq("trade-events"), eq("4"), anyString());
     }
 
     @Test

@@ -11,7 +11,7 @@ public record ExecutionEvent(
         Long accountId,
         String symbol,
         Side side,
-        int quantity,
+        BigDecimal quantity,
         BigDecimal price,
         BigDecimal limitPrice,
         String venue,

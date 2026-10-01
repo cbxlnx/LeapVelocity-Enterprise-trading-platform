@@ -31,7 +31,7 @@ public class EngineConfig {
     }
 
     @Bean
-    public NewTopic executionsTopic(@Value("${engine.topics.executions}") String name,
+    public NewTopic tradeEventsTopic(@Value("${engine.topics.trade-events}") String name,
                                     @Value("${engine.topics.partitions}") int partitions) {
         return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
     }

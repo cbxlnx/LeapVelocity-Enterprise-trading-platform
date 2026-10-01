@@ -10,6 +10,7 @@ import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -25,6 +26,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -66,6 +68,8 @@ class OrderExecutionServiceTransactionTest {
         positionRepository = mocks.positionRepository();
         instrumentRepository = mocks.instrumentRepository();
         executionRepository = mocks.executionRepository();
+        com.leapvelocity.messaging.OrderEventPublisher orderEventPublisher =
+            org.mockito.Mockito.mock(com.leapvelocity.messaging.OrderEventPublisher.class);
         
         PositionUpdateService positionUpdateService = new PositionUpdateService(positionRepository);
         service = new OrderExecutionService(
@@ -73,7 +77,8 @@ class OrderExecutionServiceTransactionTest {
                 instrumentRepository,
                 orderRepository,
             executionRepository,
-                positionUpdateService
+            positionUpdateService,
+            orderEventPublisher
         );
 
         // Setup initial data
@@ -83,6 +88,20 @@ class OrderExecutionServiceTransactionTest {
 
         Instrument instrument = new Instrument("TEST", "Test Instrument", "EQUITY", "USD", true);
         mocks.instruments.put("TEST", instrument);
+    }
+
+    private ExecutionEvent executionEvent(Order order, String price) {
+        return new ExecutionEvent(
+                UUID.randomUUID(),
+                order.getId(),
+                order.getAccountId(),
+                order.getSymbol(),
+                order.getSide(),
+                order.getQuantity(),
+                new BigDecimal(price),
+                order.getPrice(),
+                "SIM",
+                Instant.now());
     }
 
     // ==================== ATOMICITY TESTS ====================
@@ -130,17 +149,21 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should complete BUY order only when all conditions met")
         void buyOrderAtomicSuccess() {
-            // Verify: Successful BUY updates BOTH account balance AND position
+            // Verify: Accepted BUY stays NEW until settlement applies both account balance and position changes
             Account account = mocks.accounts.get(1L);
-            BigDecimal initialBalance = account.getCashBalance();
 
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "atomic-buy-success");
 
             service.placeOrder(order);
 
-            // Verify: BOTH updates occurred atomically
-            assertEquals(OrderStatus.FILLED, order.getStatus());
+            assertEquals(OrderStatus.NEW, order.getStatus());
+            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
+            assertNull(service.getPosition(account.getId(), "TEST"));
+            assertEquals(0, mocks.executions.size());
+
+            service.settleExecution(executionEvent(order, "100.00"));
+
             assertEquals(new BigDecimal("5000.00"), account.getCashBalance());
             assertEquals(1, mocks.executions.size());
 
@@ -177,7 +200,7 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should not create position without corresponding order")
         void noUnpairedPositions() {
-            // Verify: If order persistence fails, position update is not applied
+            // Verify: Accepted orders do not mutate positions until settlement
             Account account = mocks.accounts.get(1L);
 
             // Simulate: Order placement that would fail after position update attempt
@@ -186,11 +209,15 @@ class OrderExecutionServiceTransactionTest {
 
             service.placeOrder(order);
 
-            // Verify: Both order and position exist together
-            Position position = service.getPosition(account.getId(), "TEST");
-            assertNotNull(position, "Position should exist when order is placed");
+            assertNull(service.getPosition(account.getId(), "TEST"), "Position should stay absent until settlement");
             assertEquals(1, mocks.orders.size(), "Order should be persisted");
-            assertEquals(1, mocks.executions.size(), "Execution should be persisted for filled orders");
+            assertEquals(0, mocks.executions.size(), "Execution should not exist before settlement");
+
+            service.settleExecution(executionEvent(order, "100.00"));
+
+            Position position = service.getPosition(account.getId(), "TEST");
+            assertNotNull(position, "Position should exist after settlement");
+            assertEquals(1, mocks.executions.size(), "Execution should be persisted after settlement");
         }
 
         @Test
@@ -219,16 +246,18 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should not create duplicate positions for same symbol")
         void noDuplicatePositions() {
-            // Verify: Multiple BUYs create one position that is updated, not duplicated
+            // Verify: Multiple settled BUYs create one position that is updated, not duplicated
             Account account = mocks.accounts.get(1L);
 
             Order order1 = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "consistency-dup-1");
             service.placeOrder(order1);
+                service.settleExecution(executionEvent(order1, "100.00"));
 
             Order order2 = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("25"), new BigDecimal("110.00"), "consistency-dup-2");
             service.placeOrder(order2);
+                service.settleExecution(executionEvent(order2, "110.00"));
 
             // Verify: Single position exists (not multiple)
             Position position = service.getPosition(account.getId(), "TEST");
@@ -247,9 +276,8 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should rollback entire BUY when position update fails")
         void buyRollbackOnPositionFailure() {
-            // Verify: If position update throws exception, entire operation rolls back
+            // Verify: Accepted BUY does not mutate balances or positions before settlement
             Account account = mocks.accounts.get(1L);
-            BigDecimal originalBalance = account.getCashBalance();
 
             // Create order that would succeed but position update might fail
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
@@ -257,16 +285,15 @@ class OrderExecutionServiceTransactionTest {
 
             service.placeOrder(order);
 
-            // Verify: Both account and position updated together (transactional)
-            assertEquals(new BigDecimal("5000.00"), account.getCashBalance());
-            Position position = service.getPosition(account.getId(), "TEST");
-            assertNotNull(position);
+            assertEquals(OrderStatus.NEW, order.getStatus());
+            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
+            assertNull(service.getPosition(account.getId(), "TEST"));
         }
 
         @Test
         @DisplayName("should complete SELL operation atomically (position+account)")
         void sellOperationIsAtomic() {
-            // Verify: SELL order atomically updates position AND account
+            // Verify: SELL settlement updates position AND account together after acceptance
             Account account = mocks.accounts.get(1L);
             Position position = new Position(account.getId(), "TEST", 
                     new BigDecimal("100"), new BigDecimal("100.00"));
@@ -279,6 +306,11 @@ class OrderExecutionServiceTransactionTest {
 
             service.placeOrder(order);
 
+                assertEquals(originalBalance, account.getCashBalance());
+                assertEquals(new BigDecimal("100"), service.getPosition(account.getId(), "TEST").getQuantity());
+
+                service.settleExecution(executionEvent(order, "110.00"));
+
             // Verify: Both updates occurred
             // 50 shares @ $110 = $5500 credit; $10000 + $5500 = $15500
             assertEquals(new BigDecimal("15500.00"), account.getCashBalance());
@@ -289,7 +321,7 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should enlist order cancellation in single transaction")
         void cancelOrderIsTransactional() {
-            // Verify: Cancellation updates order status + refund/position atomically
+            // Verify: Cancellation only updates order status because NEW orders have not mutated state yet
             Account account = mocks.accounts.get(1L);
             
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
@@ -303,9 +335,9 @@ class OrderExecutionServiceTransactionTest {
             // Cancel the order
             service.cancelOrder(order.getId());
 
-            // Verify: Status changed AND balance refunded in same transaction
+            // Verify: Status changed while balance stayed unchanged
             assertEquals(OrderStatus.CANCELLED, order.getStatus());
-            assertEquals(originalBalance.add(new BigDecimal("5000.00")), account.getCashBalance());
+            assertEquals(originalBalance, account.getCashBalance());
         }
     }
 
@@ -319,9 +351,8 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should maintain isolated cash balances across accounts")
         void cashBalanceIsolatedAcrossAccounts() {
-            // Verify: BUY for account 1 doesn't affect account 2's balance
+            // Verify: BUY settlement for account 1 doesn't affect account 2's balance
             Account account1 = mocks.accounts.get(1L);
-            BigDecimal account1OriginalBalance = account1.getCashBalance();
 
             Account account2 = new Account("ACC-002", "Account 2", new BigDecimal("20000.00"), AccountStatus.ACTIVE);
             account2.setId(2L);
@@ -332,6 +363,7 @@ class OrderExecutionServiceTransactionTest {
             Order order1 = new Order(account1.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "isolation-acct1");
             service.placeOrder(order1);
+                service.settleExecution(executionEvent(order1, "100.00"));
 
             // Verify: Account 1 changed, Account 2 unchanged
             assertEquals(new BigDecimal("5000.00"), account1.getCashBalance());
@@ -341,7 +373,7 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should maintain isolated positions across accounts")
         void positionsIsolatedAcrossAccounts() {
-            // Verify: Position creation for account 1 doesn't affect account 2
+            // Verify: Position settlement for account 1 doesn't affect account 2
             Account account1 = mocks.accounts.get(1L);
             Account account2 = new Account("ACC-002", "Account 2", new BigDecimal("20000.00"), AccountStatus.ACTIVE);
             account2.setId(2L);
@@ -350,6 +382,7 @@ class OrderExecutionServiceTransactionTest {
             Order order1 = new Order(account1.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "isolation-pos-1");
             service.placeOrder(order1);
+            service.settleExecution(executionEvent(order1, "100.00"));
 
             // Verify: Account 1 has position, Account 2 doesn't
             Position pos1 = service.getPosition(account1.getId(), "TEST");

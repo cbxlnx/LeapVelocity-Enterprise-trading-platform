@@ -24,7 +24,7 @@ class SimulatedMarketTest {
     }
 
     private static OrderEvent order(Side side, String limit) {
-        return new OrderEvent(UUID.randomUUID(), 1L, "ACME", side, 10, new BigDecimal(limit), NOW);
+        return new OrderEvent(UUID.randomUUID(), 1L, "ACME", side, new BigDecimal("10"), new BigDecimal(limit), NOW);
     }
 
     @Test
@@ -81,7 +81,7 @@ class SimulatedMarketTest {
 
         assertEquals(order.orderId(), fill.orderId());
         assertEquals(1L, fill.accountId());
-        assertEquals(10, fill.quantity());
+        assertEquals(new BigDecimal("10"), fill.quantity());
         assertEquals(new BigDecimal("12.00"), fill.limitPrice());
         assertEquals("SIM", fill.venue());
         assertEquals(NOW, fill.executedOn());

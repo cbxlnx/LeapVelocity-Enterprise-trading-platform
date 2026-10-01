@@ -7,6 +7,7 @@ import com.leapvelocity.entities.Position;
 import com.leapvelocity.entities.enums.AccountStatus;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +64,8 @@ class OrderExecutionServiceEdgeCasesTest {
                 OrderRepository orderRepository = mock(OrderRepository.class);
                 ExecutionRepository executionRepository = mock(ExecutionRepository.class);
                 PositionRepository positionRepository = mock(PositionRepository.class);
+                com.leapvelocity.messaging.OrderEventPublisher orderEventPublisher =
+                                mock(com.leapvelocity.messaging.OrderEventPublisher.class);
 
                 accountsById = new HashMap<>();
                 instrumentsBySymbol = new HashMap<>();
@@ -78,7 +82,8 @@ class OrderExecutionServiceEdgeCasesTest {
                                 instrumentRepository,
                                 orderRepository,
                                 executionRepository,
-                                new PositionUpdateService(positionRepository)
+                                new PositionUpdateService(positionRepository),
+                                orderEventPublisher
                 );
 
         activeAccount = new Account("ACC-EDGE", "Edge Case Trader", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -112,6 +117,10 @@ class OrderExecutionServiceEdgeCasesTest {
         }
 
         private void stubOrderRepository(OrderRepository orderRepository) {
+                when(orderRepository.findById(any(UUID.class))).thenAnswer(invocation ->
+                                ordersByIdempotencyKey.values().stream()
+                                                .filter(order -> order.getId().equals(invocation.getArgument(0, UUID.class)))
+                                                .findFirst());
                 when(orderRepository.existsByIdempotencyKey(anyString())).thenAnswer(invocation ->
                                 ordersByIdempotencyKey.containsKey(invocation.getArgument(0, String.class)));
                 when(orderRepository.findByIdempotencyKey(anyString())).thenAnswer(invocation ->
@@ -147,6 +156,24 @@ class OrderExecutionServiceEdgeCasesTest {
                 return accountId + "|" + symbol.trim();
         }
 
+        private ExecutionEvent executionEvent(Order order, String price) {
+                return new ExecutionEvent(
+                                UUID.randomUUID(),
+                                order.getId(),
+                                order.getAccountId(),
+                                order.getSymbol(),
+                                order.getSide(),
+                                order.getQuantity(),
+                                new BigDecimal(price),
+                                order.getPrice(),
+                                "SIM",
+                                Instant.now());
+        }
+
+        private void settle(Order order, String price) {
+                service.settleExecution(executionEvent(order, price));
+        }
+
     // ==================== EXACTLY SUFFICIENT CASH TESTS ====================
     // Verify system handles orders using exactly the available cash balance
 
@@ -163,6 +190,9 @@ class OrderExecutionServiceEdgeCasesTest {
                     new BigDecimal("100"), new BigDecimal("100.00"), "exact-cash-001");
 
             Order result = service.placeOrder(order);
+
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "100.00");
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, activeAccount.getCashBalance().compareTo(BigDecimal.ZERO));
@@ -185,7 +215,8 @@ class OrderExecutionServiceEdgeCasesTest {
             // First order uses all cash
             Order order1 = new Order(limitedAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("10"), new BigDecimal("100.00"), "zero-bal-001");
-            service.placeOrder(order1);
+            Order acceptedOrder1 = service.placeOrder(order1);
+            settle(acceptedOrder1, "100.00");
             assertEquals(0, limitedAccount.getCashBalance().compareTo(BigDecimal.ZERO));
 
             // Second order should fail (insufficient funds)
@@ -213,6 +244,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "100.00");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, activeAccount.getCashBalance().compareTo(new BigDecimal("9950.00")));
 
@@ -228,10 +262,12 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order1 = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.5"), new BigDecimal("100.00"), "frac-avg-001");
             service.placeOrder(order1);
+            settle(order1, "100.00");
 
             Order order2 = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.25"), new BigDecimal("120.00"), "frac-avg-002");
             service.placeOrder(order2);
+            settle(order2, "120.00");
 
             Position position = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(new BigDecimal("0.75"), position.getQuantity());
@@ -254,6 +290,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("0.5"), new BigDecimal("110.00"), "frac-sell-001");
             service.placeOrder(order);
+            settle(order, "110.00");
 
             Position updated = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(0, updated.getQuantity().compareTo(new BigDecimal("1.0")));
@@ -271,6 +308,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("0.75"), new BigDecimal("110.00"), "frac-all-001");
             service.placeOrder(order);
+            settle(order, "110.00");
 
             assertNull(service.getPosition(activeAccount.getId(), "TEST"));
         }
@@ -292,6 +330,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "1.234567");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
 
             Position position = service.getPosition(activeAccount.getId(), "TEST");
@@ -310,10 +351,12 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order1 = new Order(richAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("100.123456"), "prec-avg-001");
             service.placeOrder(order1);
+            settle(order1, "100.123456");
 
             Order order2 = new Order(richAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.654321"), "prec-avg-002");
             service.placeOrder(order2);
+            settle(order2, "100.654321");
 
             Position position = service.getPosition(richAccount.getId(), "TEST");
             assertEquals(new BigDecimal("150"), position.getQuantity());
@@ -343,6 +386,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "100.00");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
 
             Position position = service.getPosition(richAccount.getId(), "TEST");
@@ -364,6 +410,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "500.00");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("100000000.00"), ultraRichAccount.getCashBalance());
         }
@@ -379,6 +428,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("500000"), new BigDecimal("60.00"), "large-sell-001");
             service.placeOrder(order);
+            settle(order, "60.00");
 
             Position updated = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(new BigDecimal("500000"), updated.getQuantity());
@@ -404,6 +454,7 @@ class OrderExecutionServiceEdgeCasesTest {
                     new BigDecimal("50.5"), new BigDecimal("110.00"), "boundary-exact-001");
 
             assertDoesNotThrow(() -> service.placeOrder(order));
+            settle(order, "110.00");
             assertNull(service.getPosition(activeAccount.getId(), "TEST"));
         }
 
@@ -431,6 +482,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "0.01");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("9999.00"), activeAccount.getCashBalance());
         }
@@ -452,6 +506,9 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            settle(result, "1.234567");
+
             assertEquals(OrderStatus.FILLED, result.getStatus());
             Position position = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(new BigDecimal("0.5"), position.getQuantity());
@@ -472,7 +529,10 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order result = service.placeOrder(order);
 
-            assertEquals(OrderStatus.FILLED, result.getStatus());
+                        assertEquals(OrderStatus.NEW, result.getStatus());
+                        settle(result, "100.00");
+
+                        assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, millionaireAccount.getCashBalance().compareTo(BigDecimal.ZERO));
         }
     }

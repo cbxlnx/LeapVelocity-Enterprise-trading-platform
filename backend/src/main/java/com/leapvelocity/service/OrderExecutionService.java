@@ -10,18 +10,25 @@ import com.leapvelocity.exceptions.AccountNotActiveException;
 import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
+import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
+import com.leapvelocity.messaging.ExecutionEvent;
+import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class OrderExecutionService {
@@ -32,6 +39,7 @@ public class OrderExecutionService {
 	private final InstrumentRepository instrumentRepository;
 	private final OrderRepository orderRepository;
 	private final ExecutionRepository executionRepository;
+	private final OrderEventPublisher orderEventPublisher;
 
 	@Autowired
 	public OrderExecutionService(
@@ -39,13 +47,15 @@ public class OrderExecutionService {
 			InstrumentRepository instrumentRepository,
 			OrderRepository orderRepository,
 			ExecutionRepository executionRepository,
-			PositionUpdateService positionUpdateService) {
+			PositionUpdateService positionUpdateService,
+			OrderEventPublisher orderEventPublisher) {
 		this.positionUpdateService = positionUpdateService;
 		this.orderValidator = new OrderValidator();
 		this.accountRepository = accountRepository;
 		this.instrumentRepository = instrumentRepository;
 		this.orderRepository = orderRepository;
 		this.executionRepository = executionRepository;
+		this.orderEventPublisher = orderEventPublisher;
 	}
 
 	public void addAccount(Account account) {
@@ -101,16 +111,16 @@ public class OrderExecutionService {
 
 		notional = order.getQuantity().multiply(order.getPrice());
 		if (order.getSide() == OrderSide.BUY) {
-			executeBuy(order, account, notional);
+			ensureAcceptedBuy(order, account, notional);
 		} else if (order.getSide() == OrderSide.SELL) {
-			executeSell(order, account, notional);
+			ensureAcceptedSell(order);
 		} else {
 			throw new IllegalArgumentException("Unsupported order side: " + order.getSide());
 		}
 
-		order.setStatus(OrderStatus.FILLED);
+		order.setStatus(OrderStatus.NEW);
 		Order savedOrder = saveOrder(order);
-		persistExecution(savedOrder);
+		publishOrderAfterCommit(savedOrder);
 		return savedOrder;
 	}
 
@@ -124,6 +134,59 @@ public class OrderExecutionService {
 
 	public List<Position> getPositionsForAccount(Long accountId) {
 		return positionUpdateService.getPositionsForAccount(accountId);
+	}
+
+	@Transactional
+	public void settleExecution(ExecutionEvent fill) {
+		Account account;
+		Instrument instrument;
+		BigDecimal notional;
+		Order order;
+
+		if (fill == null) {
+			throw new IllegalArgumentException("Execution event is required");
+		}
+
+		order = orderRepository.findById(fill.orderId()).orElse(null);
+		if (order == null || order.getStatus() != OrderStatus.NEW) {
+			return;
+		}
+
+		if (fill.quantity().compareTo(order.getQuantity()) != 0) {
+			rejectSettledOrder(order);
+			return;
+		}
+
+		account = accountRepository.findById(order.getAccountId()).orElse(null);
+		if (account == null || !account.isActive()) {
+			rejectSettledOrder(order);
+			return;
+		}
+
+		instrument = instrumentRepository.findBySymbol(order.getSymbol()).orElse(null);
+		if (instrument == null || !instrument.isTradable()) {
+			rejectSettledOrder(order);
+			return;
+		}
+
+		notional = fill.quantity().multiply(fill.price());
+		try {
+			if (order.getSide() == OrderSide.BUY) {
+				settleBuy(order, account, fill, notional);
+			} else if (order.getSide() == OrderSide.SELL) {
+				settleSell(order, account, fill, notional);
+			} else {
+				rejectSettledOrder(order);
+				return;
+			}
+		} catch (InsufficientFundsException | InsufficientHoldingsException ex) {
+			rejectSettledOrder(order);
+			return;
+		}
+
+		persistExecution(order, fill);
+		order.setStatus(OrderStatus.FILLED);
+		saveOrder(order);
 	}
 
 	public Order getOrder(String idempotencyKey) {
@@ -143,39 +206,51 @@ public class OrderExecutionService {
 					"Cannot cancel order with status: " + order.getStatus());
 		}
 
-		// Get the account
-		Account account = accountRepository.findById(order.getAccountId())
-				.orElseThrow(() -> new AccountNotFoundException(order.getAccountId()));
-
-		// If BUY order, refund the cash to the account
-		if (order.getSide() == OrderSide.BUY) {
-			BigDecimal notional = order.getQuantity().multiply(order.getPrice());
-			account.credit(notional);
-			persistAccount(account);
-		}
-		// If SELL order, refund the position to the account
-		else if (order.getSide() == OrderSide.SELL) {
-			positionUpdateService.reverseSell(order);
-		}
-
 		// Mark order as cancelled
 		order.setStatus(OrderStatus.CANCELLED);
 		return saveOrder(order);
 	}
 
-	private void executeBuy(Order order, Account account, BigDecimal notional) {
+	private void ensureAcceptedBuy(Order order, Account account, BigDecimal notional) {
 		if (account.getCashBalance().compareTo(notional) < 0) {
 			rejectOrder(order);
 			throw new InsufficientFundsException(order.getAccountId(), notional, account.getCashBalance());
 		}
-
-		account.debit(notional);
-		persistAccount(account);
-		positionUpdateService.applyBuy(order);
 	}
 
-	private void executeSell(Order order, Account account, BigDecimal notional) {
-		positionUpdateService.applySell(order);
+	private void ensureAcceptedSell(Order order) {
+		Position position;
+
+		position = positionUpdateService.getPosition(order.getAccountId(), order.getSymbol());
+		if (position == null) {
+			rejectOrder(order);
+			throw new InsufficientHoldingsException(order.getAccountId(), order.getSymbol(), order.getQuantity(), BigDecimal.ZERO);
+		}
+
+		if (position.getQuantity().compareTo(order.getQuantity()) < 0) {
+			rejectOrder(order);
+			throw new InsufficientHoldingsException(order.getAccountId(), position.getSymbol(), order.getQuantity(), position.getQuantity());
+		}
+	}
+
+	private void settleBuy(Order order, Account account, ExecutionEvent fill, BigDecimal notional) {
+		Order settlementOrder;
+
+		if (account.getCashBalance().compareTo(notional) < 0) {
+			throw new InsufficientFundsException(order.getAccountId(), notional, account.getCashBalance());
+		}
+
+		settlementOrder = settlementOrder(order, fill);
+		account.debit(notional);
+		persistAccount(account);
+		positionUpdateService.applyBuy(settlementOrder);
+	}
+
+	private void settleSell(Order order, Account account, ExecutionEvent fill, BigDecimal notional) {
+		Order settlementOrder;
+
+		settlementOrder = settlementOrder(order, fill);
+		positionUpdateService.applySell(settlementOrder);
 		account.credit(notional);
 		persistAccount(account);
 	}
@@ -212,6 +287,11 @@ public class OrderExecutionService {
 		persistRejectedOrder(order);
 	}
 
+	private void rejectSettledOrder(Order order) {
+		order.setStatus(OrderStatus.REJECTED);
+		saveOrder(order);
+	}
+
 	private void validateOrder(Order order) {
 		orderValidator.validate(order);
 	}
@@ -228,14 +308,49 @@ public class OrderExecutionService {
 		return orderRepository.save(order);
 	}
 
-	private void persistExecution(Order order) {
-		executionRepository.save(new Execution(
+	private void persistExecution(Order order, ExecutionEvent fill) {
+		Execution execution;
+
+		execution = new Execution(
 				order.getId(),
 				order.getAccountId(),
 				order.getSymbol(),
 				order.getSide(),
-				order.getQuantity(),
-				order.getPrice()));
+				fill.quantity(),
+				fill.price());
+		execution.setId(fill.executionId());
+		execution.setExecutedOn(LocalDateTime.ofInstant(fill.executedOn(), ZoneOffset.UTC));
+		executionRepository.save(execution);
+	}
+
+	private void publishOrderAfterCommit(Order order) {
+		if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+			orderEventPublisher.publish(order);
+			return;
+		}
+
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				orderEventPublisher.publish(order);
+			}
+		});
+	}
+
+	private Order settlementOrder(Order order, ExecutionEvent fill) {
+		Order settlementOrder;
+
+		settlementOrder = new Order();
+		settlementOrder.setId(order.getId());
+		settlementOrder.setAccountId(order.getAccountId());
+		settlementOrder.setSymbol(order.getSymbol());
+		settlementOrder.setSide(order.getSide());
+		settlementOrder.setQuantity(order.getQuantity());
+		settlementOrder.setPrice(fill.price());
+		settlementOrder.setStatus(order.getStatus());
+		settlementOrder.setIdempotencyKey(order.getIdempotencyKey());
+		settlementOrder.setCreatedOn(order.getCreatedOn());
+		return settlementOrder;
 	}
 
 	private void persistRejectedOrder(Order order) {

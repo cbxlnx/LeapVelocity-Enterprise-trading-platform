@@ -14,6 +14,7 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -28,6 +29,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -78,6 +80,8 @@ class OrderExecutionServiceTest {
         OrderRepository orderRepository = mock(OrderRepository.class);
         ExecutionRepository executionRepository = mock(ExecutionRepository.class);
         PositionRepository positionRepository = mock(PositionRepository.class);
+        com.leapvelocity.messaging.OrderEventPublisher orderEventPublisher =
+            mock(com.leapvelocity.messaging.OrderEventPublisher.class);
 
         accountsById = new HashMap<>();
         instrumentsBySymbol = new HashMap<>();
@@ -96,7 +100,8 @@ class OrderExecutionServiceTest {
                 instrumentRepository,
                 orderRepository,
             executionRepository,
-                new PositionUpdateService(positionRepository)
+            new PositionUpdateService(positionRepository),
+            orderEventPublisher
         );
 
         activeAccount = new Account("ACC-001", "Alice", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -130,6 +135,10 @@ class OrderExecutionServiceTest {
     }
 
     private void stubOrderRepository(OrderRepository orderRepository) {
+        when(orderRepository.findById(any(UUID.class))).thenAnswer(invocation ->
+            ordersByIdempotencyKey.values().stream()
+                .filter(order -> order.getId().equals(invocation.getArgument(0, UUID.class)))
+                .findFirst());
         when(orderRepository.existsByIdempotencyKey(anyString())).thenAnswer(invocation ->
                 ordersByIdempotencyKey.containsKey(invocation.getArgument(0, String.class)));
         when(orderRepository.findByIdempotencyKey(anyString())).thenAnswer(invocation ->
@@ -176,6 +185,20 @@ class OrderExecutionServiceTest {
         return accountId + "|" + symbol.trim();
     }
 
+    private ExecutionEvent executionEvent(Order order, String price) {
+        return new ExecutionEvent(
+                UUID.randomUUID(),
+                order.getId(),
+                order.getAccountId(),
+                order.getSymbol(),
+                order.getSide(),
+                order.getQuantity(),
+                new BigDecimal(price),
+                order.getPrice(),
+                "SIM",
+                Instant.now());
+    }
+
     // ==================== BUY ORDER TESTS ====================
     // Verify buy orders correctly debit cash and create/update positions
     
@@ -186,11 +209,18 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should debit account and create position on successful buy")
         void buyOrderSuccess() {
-            // Verifies: Cash is debited, position is created with correct qty/cost
+            // Verifies: Order is accepted as NEW, then settlement debits cash and creates position
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-001");
 
             Order result = service.placeOrder(order);
+
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            assertEquals(new BigDecimal("10000.00"), activeAccount.getCashBalance());
+            assertNull(service.getPosition(activeAccount.getId(), "AAPL"));
+            assertTrue(executionsByOrderId.isEmpty());
+
+            service.settleExecution(executionEvent(result, "150.00"));
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("2500.00"), activeAccount.getCashBalance());
@@ -243,7 +273,7 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should credit account and reduce position on successful sell")
         void sellOrderSuccess() {
-            // Verifies: Cash is credited, position quantity decreases correctly
+            // Verifies: Order is accepted as NEW, then settlement credits cash and reduces position
             Position position = new Position(activeAccount.getId(), "AAPL", new BigDecimal("100"), new BigDecimal("150.00"));
             service.addPosition(position);
 
@@ -251,6 +281,13 @@ class OrderExecutionServiceTest {
                     new BigDecimal("50"), new BigDecimal("160.00"), "sell-001");
 
             Order result = service.placeOrder(order);
+
+            assertEquals(OrderStatus.NEW, result.getStatus());
+            assertEquals(new BigDecimal("10000.00"), activeAccount.getCashBalance());
+            assertEquals(new BigDecimal("100"), service.getPosition(activeAccount.getId(), "AAPL").getQuantity());
+            assertTrue(executionsByOrderId.isEmpty());
+
+            service.settleExecution(executionEvent(result, "160.00"));
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("18000.00"), activeAccount.getCashBalance());
@@ -286,14 +323,18 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should remove position when all shares are sold")
         void sellOrderClosesPosition() {
-            // Verifies: Position is removed (null) when quantity reaches zero
+            // Verifies: Position stays until settlement and is removed when settlement consumes the fill
             Position position = new Position(activeAccount.getId(), "AAPL", new BigDecimal("100"), new BigDecimal("150.00"));
             service.addPosition(position);
 
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("100"), new BigDecimal("160.00"), "sell-all");
 
-            service.placeOrder(order);
+            Order acceptedOrder = service.placeOrder(order);
+
+            assertNotNull(service.getPosition(activeAccount.getId(), "AAPL"));
+
+            service.settleExecution(executionEvent(acceptedOrder, "160.00"));
 
             assertNull(service.getPosition(activeAccount.getId(), "AAPL"));
         }
@@ -462,14 +503,19 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should combine multiple buy orders with correct average cost")
         void multipleBuysIncreasePosition() {
-            // Verifies: Multiple buys correctly update position quantity and recalculate average cost
+            // Verifies: Multiple settled buys correctly update position quantity and average cost
             Order order1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
-            service.placeOrder(order1);
+            Order acceptedOrder1 = service.placeOrder(order1);
 
             Order order2 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("15"), new BigDecimal("160.00"), "buy-2");
-            service.placeOrder(order2);
+            Order acceptedOrder2 = service.placeOrder(order2);
+
+            assertNull(service.getPosition(activeAccount.getId(), "AAPL"));
+
+            service.settleExecution(executionEvent(acceptedOrder1, "150.00"));
+            service.settleExecution(executionEvent(acceptedOrder2, "160.00"));
 
             Position position = service.getPosition(activeAccount.getId(), "AAPL");
             assertEquals(new BigDecimal("65"), position.getQuantity());
@@ -479,20 +525,30 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should handle buy, partial sell, buy again sequence correctly")
         void buyPartialSellBuySequence() {
-            // Verifies: Complex sequence of buy/sell/buy maintains correct cash balance and position
+            // Verifies: Complex sequence settles correctly while accepted orders stay NEW first
             Order buy1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
-            service.placeOrder(buy1);
+            Order acceptedBuy1 = service.placeOrder(buy1);
+
+            assertEquals(new BigDecimal("10000.00"), activeAccount.getCashBalance());
+
+            service.settleExecution(executionEvent(acceptedBuy1, "150.00"));
             assertEquals(new BigDecimal("2500.00"), activeAccount.getCashBalance());
 
             Order sell1 = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("20"), new BigDecimal("160.00"), "sell-1");
-            service.placeOrder(sell1);
+            Order acceptedSell1 = service.placeOrder(sell1);
+
+            assertEquals(OrderStatus.NEW, acceptedSell1.getStatus());
+
+            service.settleExecution(executionEvent(acceptedSell1, "160.00"));
             assertEquals(new BigDecimal("5700.00"), activeAccount.getCashBalance());
 
             Order buy2 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("10"), new BigDecimal("155.00"), "buy-2");
-            service.placeOrder(buy2);
+            Order acceptedBuy2 = service.placeOrder(buy2);
+
+            service.settleExecution(executionEvent(acceptedBuy2, "155.00"));
 
             Position position = service.getPosition(activeAccount.getId(), "AAPL");
             assertEquals(new BigDecimal("40"), position.getQuantity());

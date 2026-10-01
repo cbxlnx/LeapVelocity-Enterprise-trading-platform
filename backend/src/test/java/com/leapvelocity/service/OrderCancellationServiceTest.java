@@ -6,7 +6,6 @@ import com.leapvelocity.entities.Position;
 import com.leapvelocity.entities.enums.AccountStatus;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
-import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.AccountNotActiveException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.repository.AccountRepository;
@@ -34,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Characterization tests for order cancellation flow.
  * 
  * Tests verify:
- * - BUY order cancellations: Cash is refunded to account, position unchanged
- * - SELL order cancellations: Cash unchanged, position is restored
+ * - BUY order cancellations: Cash is unchanged and position is unchanged
+ * - SELL order cancellations: Cash unchanged and position is unchanged
  * - Edge cases: Non-existent orders, already-cancelled orders, non-NEW orders
  * - State transitions: Order status correctly moves to CANCELLED
  * - Account state consistency: Cash balance is correct after cancellation
@@ -64,6 +63,8 @@ class OrderCancellationServiceTest {
         positionRepository = mocks.positionRepository();
         instrumentRepository = mocks.instrumentRepository();
         executionRepository = mocks.executionRepository();
+        com.leapvelocity.messaging.OrderEventPublisher orderEventPublisher =
+            org.mockito.Mockito.mock(com.leapvelocity.messaging.OrderEventPublisher.class);
         
         PositionUpdateService positionUpdateService = new PositionUpdateService(positionRepository);
         service = new OrderExecutionService(
@@ -71,7 +72,8 @@ class OrderCancellationServiceTest {
                 instrumentRepository,
                 orderRepository,
             executionRepository,
-                positionUpdateService
+            positionUpdateService,
+            orderEventPublisher
         );
     }
 
@@ -114,14 +116,14 @@ class OrderCancellationServiceTest {
     }
 
     // ==================== SELL ORDER CANCELLATION TESTS ====================
-    // Verify SELL order cancellations restore positions and leave cash unchanged
+    // Verify SELL order cancellations leave positions and cash unchanged
 
     @Nested
     @DisplayName("SELL Order Cancellations")
     class SellOrderCancellationTests {
 
         @Test
-        @DisplayName("should restore position when cancelling NEW SELL order")
+        @DisplayName("should leave position unchanged when cancelling NEW SELL order")
         void cancelNewSellOrderRestoresPosition() {
             // Arrange: Account with position, SELL order in NEW state
             Account account = account(1L, "ACC-001", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -137,12 +139,12 @@ class OrderCancellationServiceTest {
 
             BigDecimal positionQtyBefore = position.getQuantity(); // 100
 
-            // Act: Cancel the SELL order (should restore 50 shares)
+            // Act: Cancel the SELL order
             service.cancelOrder(order.getId());
 
-            // Assert: Position quantity restored
+            // Assert: Position quantity unchanged
             Position restored = mocks.positions.get(1L);
-            assertEquals(positionQtyBefore.add(new BigDecimal("50")), restored.getQuantity()); // 150
+            assertEquals(positionQtyBefore, restored.getQuantity());
         }
 
         @Test
@@ -170,7 +172,7 @@ class OrderCancellationServiceTest {
         }
 
         @Test
-        @DisplayName("should create position if none exists when restoring from SELL cancellation")
+        @DisplayName("should not create position if none exists when cancelling SELL order")
         void cancelSellOrderCreatesPositionIfNoneExists() {
             // Arrange: Account with no position for symbol
             Account account = account(1L, "ACC-001", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -181,14 +183,11 @@ class OrderCancellationServiceTest {
             order.setStatus(OrderStatus.NEW);
             mocks.orders.put(order.getId(), order);
 
-            // Act: Cancel SELL order (should create position with restored quantity)
+            // Act: Cancel SELL order
             service.cancelOrder(order.getId());
 
-            // Assert: New position created with cancelled order quantity
-            Position created = mocks.positions.get(1L);
-            assertNotNull(created);
-            assertEquals(new BigDecimal("100"), created.getQuantity());
-            assertEquals(new BigDecimal("500.00"), created.getAverageCost());
+            // Assert: No position created because nothing was reserved on acceptance
+            assertNull(mocks.positions.get(1L));
         }
     }
 
@@ -258,7 +257,7 @@ class OrderCancellationServiceTest {
         }
 
         @Test
-        @DisplayName("should throw AccountNotFoundException when account no longer exists")
+        @DisplayName("should allow cancellation even when account no longer exists")
         void cancelOrderAccountNotFound() {
             // Arrange: Order exists but associated account doesn't
             Order order = new Order(999L, "AAPL", OrderSide.BUY, new BigDecimal("50"), new BigDecimal("100.00"), "cancel-no-acct");
@@ -268,8 +267,9 @@ class OrderCancellationServiceTest {
             
             // NO account in mocks
 
-            // Act & Assert: Account not found throws exception
-            assertThrows(AccountNotFoundException.class, () -> service.cancelOrder(order.getId()));
+            // Act & Assert: Cancellation still works because NEW orders have not mutated account state
+            Order cancelled = assertDoesNotThrow(() -> service.cancelOrder(order.getId()));
+            assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
         }
     }
 
@@ -341,9 +341,9 @@ class OrderCancellationServiceTest {
             // Act: Cancellation should still work (account exists, just suspended from new orders)
             Order cancelled = service.cancelOrder(order.getId());
 
-            // Assert: Order cancelled, cash refunded
+            // Assert: Order cancelled, cash unchanged
             assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
-            assertEquals(new BigDecimal("15000.00"), account.getCashBalance());
+            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
         }
 
         @Test
@@ -361,9 +361,9 @@ class OrderCancellationServiceTest {
             // Act: Cancellation should still work (account exists, just closed)
             Order cancelled = service.cancelOrder(order.getId());
 
-            // Assert: Order cancelled, cash refunded
+            // Assert: Order cancelled, cash unchanged
             assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
-            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
+            assertEquals(new BigDecimal("5000.00"), account.getCashBalance());
         }
     }
 

@@ -16,11 +16,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * Step 2 of the event flow: reads each order from the {@code orders} topic,
  * works it on the {@link SimulatedMarket}, and writes the fill to the
- * {@code executions} topic keyed by account.
+ * {@code trade-events} topic keyed by account.
  *
  * <p>The fill is sent and acknowledged by Kafka before this method returns,
  * so the order's offset is only committed once its fill is safely on the
- * executions topic: at-least-once. If the engine dies mid-order it works the
+ * trade-events topic: at-least-once. If the engine dies mid-order it works the
  * order again on restart, and the trade API ignores the duplicate fill.
  */
 @Component
@@ -32,15 +32,15 @@ public class OrderListener {
     private final Pauser pauser;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-    private final String executionsTopic;
+    private final String tradeEventsTopic;
 
     public OrderListener(SimulatedMarket market, Pauser pauser, KafkaTemplate<String, String> kafkaTemplate,
-                         ObjectMapper objectMapper, @Value("${engine.topics.executions}") String executionsTopic) {
+                         ObjectMapper objectMapper, @Value("${engine.topics.trade-events}") String tradeEventsTopic) {
         this.market = market;
         this.pauser = pauser;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
-        this.executionsTopic = executionsTopic;
+        this.tradeEventsTopic = tradeEventsTopic;
     }
 
     @KafkaListener(topics = "${engine.topics.orders}", groupId = "${spring.kafka.consumer.group-id}",
@@ -60,7 +60,7 @@ public class OrderListener {
         pauser.pause(market.nextDelay());
         ExecutionEvent fill = market.execute(order);
 
-        kafkaTemplate.send(executionsTopic, String.valueOf(fill.accountId()), objectMapper.writeValueAsString(fill))
+        kafkaTemplate.send(tradeEventsTopic, String.valueOf(fill.accountId()), objectMapper.writeValueAsString(fill))
                 .get(10, TimeUnit.SECONDS);
         log.info("Filled order {} at {} on {}", fill.orderId(), fill.price(), fill.venue());
     }

@@ -40,7 +40,7 @@ public class OrderController {
      * Place a new order for a trading account.
      *
      * @param request The order details (accountId, symbol, side, quantity, price, idempotencyKey)
-     * @return ResponseEntity with the created order details (HTTP 201)
+    * @return ResponseEntity with the accepted order details (HTTP 201)
      * @throws AccountNotFoundException if the account does not exist
      * @throws AccountNotActiveException if the account is not active
      * @throws InstrumentNotFoundException if the instrument is not tradable
@@ -48,9 +48,9 @@ public class OrderController {
      * @throws InsufficientHoldingsException if the account lacks sufficient shares for SELL orders
      * @throws DuplicateOrderException if an order with the same idempotency key already exists
      */
-    @Operation(summary = "Place a new order", description = "Submit a buy or sell order for a trading account. The order is validated and executed immediately if all conditions are met.")
+        @Operation(summary = "Place a new order", description = "Submit a buy or sell order for a trading account. The order is validated, stored as NEW, and sent to the execution engine for asynchronous settlement.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Order placed and executed successfully"),
+            @ApiResponse(responseCode = "201", description = "Order accepted successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid order data (missing fields or validation failed)"),
             @ApiResponse(responseCode = "404", description = "Account or instrument not found"),
             @ApiResponse(responseCode = "409", description = "Duplicate order or insufficient funds/holdings"),
@@ -68,11 +68,11 @@ public class OrderController {
                 request.idempotencyKey()
         );
 
-        // Execute the order through the service
-        Order executedOrder = orderExecutionService.placeOrder(order);
+        // Accept the order and hand it off for asynchronous execution
+        Order acceptedOrder = orderExecutionService.placeOrder(order);
 
         // Convert result back to DTO and return with HTTP 201 Created
-        OrderDto response = OrderDto.from(executedOrder);
+        OrderDto response = OrderDto.from(acceptedOrder);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
