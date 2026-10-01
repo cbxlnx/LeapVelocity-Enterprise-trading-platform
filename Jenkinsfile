@@ -42,11 +42,10 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                withSonarQubeEnv('sonar-server') {
                     sh '''
                         cd backend
                         mvn -B sonar:sonar \
-                        -Dsonar.token=$SONAR_TOKEN \
                         -Dsonar.qualitygate.wait=true
                     '''
                 }
