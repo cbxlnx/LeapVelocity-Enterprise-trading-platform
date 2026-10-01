@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Runs the whole engine against an in-process Kafka broker: an order
- * published to {@code orders} comes back as a fill on {@code executions}.
+ * published to {@code orders} comes back as a fill on {@code trade-events}.
  * No Docker needed.
  */
 @SpringBootTest(properties = {
@@ -33,8 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "engine.max-delay=0ms",
         "server.port=0"
 })
-@EmbeddedKafka(partitions = 1, topics = {"orders", "executions"})
+@EmbeddedKafka(partitions = 1, topics = {"orders", "trade-events"})
 class ExecutionEngineKafkaTest {
+
+    private static final String EXECUTIONS_TOPIC = "trade-events";
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -51,10 +53,10 @@ class ExecutionEngineKafkaTest {
                 new BigDecimal("25.50"), Instant.now());
 
         try (Consumer<String, String> consumer = executionsConsumer()) {
-            kafkaTemplate.send("orders", order.accountId(), objectMapper.writeValueAsString(order)).get();
+            kafkaTemplate.send("orders", String.valueOf(order.accountId()), objectMapper.writeValueAsString(order)).get();
 
             ConsumerRecord<String, String> record =
-                    KafkaTestUtils.getSingleRecord(consumer, "executions", Duration.ofSeconds(20));
+                    KafkaTestUtils.getSingleRecord(consumer, EXECUTIONS_TOPIC, Duration.ofSeconds(20));
             ExecutionEvent fill = objectMapper.readValue(record.value(), ExecutionEvent.class);
 
             assertEquals("1", record.key());
@@ -70,7 +72,7 @@ class ExecutionEngineKafkaTest {
         props.put("auto.offset.reset", "earliest");
         Consumer<String, String> consumer = new DefaultKafkaConsumerFactory<>(props,
                 new StringDeserializer(), new StringDeserializer()).createConsumer();
-        broker.consumeFromAnEmbeddedTopic(consumer, "executions");
+        broker.consumeFromAnEmbeddedTopic(consumer, EXECUTIONS_TOPIC);
         return consumer;
     }
 }

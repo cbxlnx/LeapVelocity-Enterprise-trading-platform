@@ -14,6 +14,8 @@ import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
+import com.leapvelocity.messaging.ExecutionEvent;
+import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -23,8 +25,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +41,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -60,8 +67,10 @@ class OrderExecutionServiceTest {
     private Instrument tradableInstrument;
     private Map<Long, Account> accountsById;
     private Map<String, Instrument> instrumentsBySymbol;
+    private Map<UUID, Order> ordersById;
     private Map<String, Order> ordersByIdempotencyKey;
     private Map<String, Position> positionsByKey;
+    private OrderEventPublisher orderEventPublisher;
     private Map<UUID, Execution> executionsByOrderId;
 
     @BeforeEach
@@ -71,9 +80,11 @@ class OrderExecutionServiceTest {
         OrderRepository orderRepository = mock(OrderRepository.class);
         ExecutionRepository executionRepository = mock(ExecutionRepository.class);
         PositionRepository positionRepository = mock(PositionRepository.class);
+        orderEventPublisher = mock(OrderEventPublisher.class);
 
         accountsById = new HashMap<>();
         instrumentsBySymbol = new HashMap<>();
+        ordersById = new HashMap<>();
         ordersByIdempotencyKey = new HashMap<>();
         positionsByKey = new HashMap<>();
         executionsByOrderId = new HashMap<>();
@@ -89,7 +100,8 @@ class OrderExecutionServiceTest {
                 instrumentRepository,
                 orderRepository,
                 executionRepository,
-                new PositionUpdateService(positionRepository)
+                new PositionUpdateService(positionRepository),
+                orderEventPublisher
         );
 
         activeAccount = new Account("ACC-001", "Alice", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
@@ -127,11 +139,14 @@ class OrderExecutionServiceTest {
                 ordersByIdempotencyKey.containsKey(invocation.getArgument(0, String.class)));
         when(orderRepository.findByIdempotencyKey(anyString())).thenAnswer(invocation ->
                 Optional.ofNullable(ordersByIdempotencyKey.get(invocation.getArgument(0, String.class))));
+        when(orderRepository.findById(any(UUID.class))).thenAnswer(invocation ->
+                Optional.ofNullable(ordersById.get(invocation.getArgument(0, UUID.class))));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0, Order.class);
             if (order.getId() == null) {
                 order.setId(UUID.randomUUID());
             }
+            ordersById.put(order.getId(), order);
             ordersByIdempotencyKey.put(order.getIdempotencyKey(), order);
             return order;
         });
@@ -169,6 +184,27 @@ class OrderExecutionServiceTest {
         return accountId + "|" + symbol.trim();
     }
 
+    private Order placeAndSettle(Order order) {
+        Order savedOrder = service.placeOrder(order);
+        service.settleExecution(executionEventFor(savedOrder));
+        return savedOrder;
+    }
+
+    private ExecutionEvent executionEventFor(Order order) {
+        return new ExecutionEvent(
+                UUID.randomUUID(),
+                order.getId(),
+                order.getAccountId(),
+                order.getSymbol(),
+                order.getSide(),
+                order.getQuantity(),
+                order.getPrice(),
+                order.getPrice(),
+                "TEST",
+                Instant.now()
+        );
+    }
+
     // ==================== BUY ORDER TESTS ====================
     
     @Nested
@@ -181,7 +217,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("2500.00"), activeAccount.getCashBalance());
@@ -191,6 +227,7 @@ class OrderExecutionServiceTest {
             assertNotNull(position);
             assertEquals(new BigDecimal("50"), position.getQuantity());
             assertEquals(new BigDecimal("150.00"), position.getAverageCost());
+            verify(orderEventPublisher).publish(result);
         }
 
         @Test
@@ -203,8 +240,9 @@ class OrderExecutionServiceTest {
             Order order = new Order(poorAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("150.00"), "buy-poor");
 
-            assertThrows(InsufficientFundsException.class, () -> service.placeOrder(order));
+            assertThrows(InsufficientFundsException.class, () -> placeAndSettle(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
+            verify(orderEventPublisher, never()).publish(order);
             assertTrue(executionsByOrderId.isEmpty());
         }
 
@@ -217,7 +255,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "DELISTED", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "buy-delisted");
 
-            assertThrows(InstrumentNotFoundException.class, () -> service.placeOrder(order));
+            assertThrows(InstrumentNotFoundException.class, () -> placeAndSettle(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
         }
     }
@@ -237,7 +275,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("50"), new BigDecimal("160.00"), "sell-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("18000.00"), activeAccount.getCashBalance());
@@ -256,7 +294,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("50"), new BigDecimal("160.00"), "sell-insufficient");
 
-            assertThrows(InsufficientHoldingsException.class, () -> service.placeOrder(order));
+            assertThrows(InsufficientHoldingsException.class, () -> placeAndSettle(order));
         }
 
         @Test
@@ -265,7 +303,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("50"), new BigDecimal("160.00"), "sell-no-position");
 
-            assertThrows(InsufficientHoldingsException.class, () -> service.placeOrder(order));
+            assertThrows(InsufficientHoldingsException.class, () -> placeAndSettle(order));
         }
 
         @Test
@@ -277,7 +315,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("100"), new BigDecimal("160.00"), "sell-all");
 
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             assertNull(service.getPosition(activeAccount.getId(), "AAPL"));
         }
@@ -300,7 +338,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(suspendedAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "order-suspended");
 
-            assertThrows(AccountNotActiveException.class, () -> service.placeOrder(order));
+            assertThrows(AccountNotActiveException.class, () -> placeAndSettle(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
         }
 
@@ -315,7 +353,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(closedAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "order-closed");
 
-            assertThrows(AccountNotActiveException.class, () -> service.placeOrder(order));
+            assertThrows(AccountNotActiveException.class, () -> placeAndSettle(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
         }
 
@@ -325,7 +363,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(999999L, "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "order-no-account");
 
-            assertThrows(AccountNotFoundException.class, () -> service.placeOrder(order));
+            assertThrows(AccountNotFoundException.class, () -> placeAndSettle(order));
             assertEquals(OrderStatus.REJECTED, order.getStatus());
         }
     }
@@ -339,7 +377,7 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for null order")
         void nullOrder() {
-            assertThrows(IllegalArgumentException.class, () -> service.placeOrder(null));
+            assertThrows(IllegalArgumentException.class, () -> placeAndSettle(null));
         }
 
         @Test
@@ -348,7 +386,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(null, "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "null-account");
 
-            assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
+            assertThrows(IllegalArgumentException.class, () -> placeAndSettle(order));
         }
 
         @Test
@@ -357,7 +395,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "blank-symbol");
 
-            assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
+            assertThrows(IllegalArgumentException.class, () -> placeAndSettle(order));
         }
 
         @Test
@@ -366,7 +404,41 @@ class OrderExecutionServiceTest {
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "");
 
-            assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
+            assertThrows(IllegalArgumentException.class, () -> placeAndSettle(order));
+        }
+
+        // ========== Quantity Validation ==========
+        @Nested
+        @DisplayName("Quantity Validation")
+        class QuantityValidationTests {
+
+            @ParameterizedTest
+            @ValueSource(strings = {"0", "-50", "-1"})
+            @DisplayName("should reject zero or negative quantity")
+            void invalidQuantity(String quantity) {
+                // Verifies: Only positive quantities are accepted
+                Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
+                        new BigDecimal(quantity), new BigDecimal("150.00"), "qty-" + quantity);
+
+                assertThrows(IllegalArgumentException.class, () -> placeAndSettle(order));
+            }
+        }
+
+        // ========== Price Validation ==========
+        @Nested
+        @DisplayName("Price Validation")
+        class PriceValidationTests {
+
+            @ParameterizedTest
+            @ValueSource(strings = {"0", "-150", "-0.01"})
+            @DisplayName("should reject zero or negative price")
+            void invalidPrice(String price) {
+                // Verifies: Only positive prices are accepted
+                Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
+                        new BigDecimal("50"), new BigDecimal(price), "price-" + price);
+
+                assertThrows(IllegalArgumentException.class, () -> placeAndSettle(order));
+            }
         }
     }
 
@@ -381,18 +453,18 @@ class OrderExecutionServiceTest {
         void duplicateIdempotencyKey() {
             Order order1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "idem-dup");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             Order order2 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "idem-dup");
 
-            assertThrows(DuplicateOrderException.class, () -> service.placeOrder(order2));
+            assertThrows(DuplicateOrderException.class, () -> placeAndSettle(order2));
             assertEquals(OrderStatus.REJECTED, order2.getStatus());
         }
     }
 
     // ==================== EDGE CASES: EXACTLY SUFFICIENT CASH ====================
-    
+
     @Nested
     @DisplayName("Edge Cases - Exactly Sufficient Cash")
     class ExactlySufficientCashTests {
@@ -410,7 +482,7 @@ class OrderExecutionServiceTest {
             Order order = new Order(exactAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("100.00"), "exact-cash-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, exactAccount.getCashBalance().compareTo(BigDecimal.ZERO));
@@ -424,7 +496,7 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should handle second order rejection when balance is zero")
         void orderRejectedAfterZeroBalance() {
-            Account limitedAccount = new Account("ACC-LIMITED", "Limited Funds", 
+            Account limitedAccount = new Account("ACC-LIMITED", "Limited Funds",
                     new BigDecimal("1000.00"), AccountStatus.ACTIVE);
             limitedAccount.setId(6L);
             service.addAccount(limitedAccount);
@@ -434,14 +506,14 @@ class OrderExecutionServiceTest {
 
             Order order1 = new Order(limitedAccount.getId(), "TEST2", OrderSide.BUY,
                     new BigDecimal("10"), new BigDecimal("100.00"), "zero-bal-001");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
             assertEquals(0, limitedAccount.getCashBalance().compareTo(BigDecimal.ZERO));
 
             Order order2 = new Order(limitedAccount.getId(), "TEST2", OrderSide.BUY,
                     new BigDecimal("1"), new BigDecimal("50.00"), "zero-bal-002");
-            
-            assertThrows(InsufficientFundsException.class, 
-                    () -> service.placeOrder(order2));
+
+            assertThrows(InsufficientFundsException.class,
+                    () -> placeAndSettle(order2));
         }
     }
 
@@ -456,11 +528,11 @@ class OrderExecutionServiceTest {
         void multipleBuysIncreasePosition() {
             Order order1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             Order order2 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("15"), new BigDecimal("160.00"), "buy-2");
-            service.placeOrder(order2);
+            placeAndSettle(order2);
 
             Position position = service.getPosition(activeAccount.getId(), "AAPL");
             assertEquals(new BigDecimal("65"), position.getQuantity());
@@ -472,17 +544,17 @@ class OrderExecutionServiceTest {
         void buyPartialSellBuySequence() {
             Order buy1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
-            service.placeOrder(buy1);
+            placeAndSettle(buy1);
             assertEquals(new BigDecimal("2500.00"), activeAccount.getCashBalance());
 
             Order sell1 = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("20"), new BigDecimal("160.00"), "sell-1");
-            service.placeOrder(sell1);
+            placeAndSettle(sell1);
             assertEquals(new BigDecimal("5700.00"), activeAccount.getCashBalance());
 
             Order buy2 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("10"), new BigDecimal("155.00"), "buy-2");
-            service.placeOrder(buy2);
+            placeAndSettle(buy2);
 
             Position position = service.getPosition(activeAccount.getId(), "AAPL");
             assertEquals(new BigDecimal("40"), position.getQuantity());

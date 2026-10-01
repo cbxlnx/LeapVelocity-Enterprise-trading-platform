@@ -25,11 +25,11 @@ management:
         include: health,info
 
 engine:
-  min-delay: ${ENGINE_MIN_DELAY:500ms}
-  max-delay: ${ENGINE_MAX_DELAY:2000ms}
+  min-delay: ${ENGINE_MIN_DELAY:10000ms}
+  max-delay: ${ENGINE_MAX_DELAY:15000ms}
   max-price-improvement-bps: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:50}
   venue: SIM
   topics:
     orders: orders
-    executions: executions
+    executions: ${ENGINE_TOPICS_EXECUTIONS:trade-events}
     partitions: 3

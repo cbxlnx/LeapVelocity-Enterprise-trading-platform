@@ -36,6 +36,22 @@ services:
     networks:
       - trade-net
 
+  execution-engine:
+    build:
+      context: ./execution-engine
+      dockerfile: Dockerfile
+    container_name: trading-platform-execution-engine
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      ENGINE_MIN_DELAY: ${ENGINE_MIN_DELAY:-10000ms}
+      ENGINE_MAX_DELAY: ${ENGINE_MAX_DELAY:-15000ms}
+      ENGINE_MAX_PRICE_IMPROVEMENT_BPS: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:-50}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - trade-net
+
   trade-db:
     build:
       context: ./db
