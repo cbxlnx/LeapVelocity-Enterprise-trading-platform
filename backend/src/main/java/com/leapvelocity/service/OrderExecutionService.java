@@ -1,5 +1,6 @@
 package com.leapvelocity.service;
 import com.leapvelocity.entities.Account;
+import com.leapvelocity.entities.Execution;
 import com.leapvelocity.entities.Instrument;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
@@ -12,6 +13,7 @@ import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import java.math.BigDecimal;
@@ -29,18 +31,21 @@ public class OrderExecutionService {
 	private final AccountRepository accountRepository;
 	private final InstrumentRepository instrumentRepository;
 	private final OrderRepository orderRepository;
+	private final ExecutionRepository executionRepository;
 
 	@Autowired
 	public OrderExecutionService(
 			AccountRepository accountRepository,
 			InstrumentRepository instrumentRepository,
 			OrderRepository orderRepository,
+			ExecutionRepository executionRepository,
 			PositionUpdateService positionUpdateService) {
 		this.positionUpdateService = positionUpdateService;
 		this.orderValidator = new OrderValidator();
 		this.accountRepository = accountRepository;
 		this.instrumentRepository = instrumentRepository;
 		this.orderRepository = orderRepository;
+		this.executionRepository = executionRepository;
 	}
 
 	public void addAccount(Account account) {
@@ -104,7 +109,9 @@ public class OrderExecutionService {
 		}
 
 		order.setStatus(OrderStatus.FILLED);
-		return saveOrder(order);
+		Order savedOrder = saveOrder(order);
+		persistExecution(savedOrder);
+		return savedOrder;
 	}
 
 	public Order execute(Order order) {
@@ -219,6 +226,16 @@ public class OrderExecutionService {
 
 	private Order saveOrder(Order order) {
 		return orderRepository.save(order);
+	}
+
+	private void persistExecution(Order order) {
+		executionRepository.save(new Execution(
+				order.getId(),
+				order.getAccountId(),
+				order.getSymbol(),
+				order.getSide(),
+				order.getQuantity(),
+				order.getPrice()));
 	}
 
 	private void persistRejectedOrder(Order order) {

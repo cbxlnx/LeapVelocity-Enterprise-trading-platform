@@ -10,6 +10,7 @@ import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.AccountNotActiveException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
@@ -53,6 +54,7 @@ class OrderCancellationServiceTest {
     private OrderRepository orderRepository;
     private PositionRepository positionRepository;
     private InstrumentRepository instrumentRepository;
+    private ExecutionRepository executionRepository;
 
     @BeforeEach
     void setUp() {
@@ -61,12 +63,14 @@ class OrderCancellationServiceTest {
         orderRepository = mocks.orderRepository();
         positionRepository = mocks.positionRepository();
         instrumentRepository = mocks.instrumentRepository();
+        executionRepository = mocks.executionRepository();
         
         PositionUpdateService positionUpdateService = new PositionUpdateService(positionRepository);
         service = new OrderExecutionService(
                 accountRepository,
                 instrumentRepository,
                 orderRepository,
+            executionRepository,
                 positionUpdateService
         );
     }
@@ -369,6 +373,15 @@ class OrderCancellationServiceTest {
         private final Map<UUID, Order> orders = new HashMap<>();
         private final Map<Long, Account> accounts = new HashMap<>();
         private final Map<Long, Position> positions = new HashMap<>();
+
+        private ExecutionRepository executionRepository() {
+            return proxy(ExecutionRepository.class, (proxy, method, args) -> {
+                if (method.getName().equals("save")) {
+                    return args[0];
+                }
+                return unsupported(method);
+            });
+        }
 
         private OrderRepository orderRepository() {
             return proxy(OrderRepository.class, (proxy, method, args) -> {
