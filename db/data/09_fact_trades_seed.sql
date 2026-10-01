@@ -4,9 +4,10 @@
 TRUNCATE TABLE analytics.fact_trades RESTART IDENTITY CASCADE;
 
 INSERT INTO analytics.fact_trades
-    (account_key, instrument_key, date_key, side, quantity, price, status)
+    (source_execution_id, account_key, instrument_key, date_key, side, quantity, price, status)
 VALUES
     (
+        '10000000-0000-0000-0000-000000000001',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 1),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GLBEQ1'),
         20260816,
@@ -16,6 +17,7 @@ VALUES
         'FILLED'
     ),
     (
+        '10000000-0000-0000-0000-000000000004',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 2),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'USEQUITY'),
         20260801,
@@ -25,6 +27,7 @@ VALUES
         'FILLED'
     ),
     (
+        '10000000-0000-0000-0000-000000000007',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 3),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'CORPB1'),
         20260811,
@@ -34,6 +37,7 @@ VALUES
         'FILLED'
     ),
     (
+        '10000000-0000-0000-0000-00000000000a',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 4),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GILT10'),
         20260905,
@@ -43,6 +47,7 @@ VALUES
         'FILLED'
     ),
     (
+        '10000000-0000-0000-0000-00000000000b',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 5),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'EMMARKET'),
         20260722,
@@ -52,6 +57,7 @@ VALUES
         'FILLED'
     ),
     (
+        '10000000-0000-0000-0000-00000000000f',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 6),
         (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GLBEQ1'),
         20260920,
