@@ -26,7 +26,7 @@ pipeline {
         
         stage('Build Java App Image') {
             steps {
-                sh 'docker build -t ${DOCKER_APP_IMAGE} -f backend/Dockerfile .'
+                sh 'docker build -t ${DOCKER_APP_IMAGE} -f backend/Dockerfile backend/'
             }
         }
         
