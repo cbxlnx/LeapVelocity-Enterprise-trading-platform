@@ -1,6 +1,7 @@
 package com.leapvelocity.service;
 
 import com.leapvelocity.entities.Account;
+import com.leapvelocity.entities.Execution;
 import com.leapvelocity.entities.Instrument;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
@@ -10,6 +11,7 @@ import com.leapvelocity.entities.enums.OrderStatus;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
@@ -54,6 +56,7 @@ class OrderExecutionServiceTransactionTest {
     private OrderRepository orderRepository;
     private PositionRepository positionRepository;
     private InstrumentRepository instrumentRepository;
+    private ExecutionRepository executionRepository;
 
     @BeforeEach
     void setUp() {
@@ -62,12 +65,14 @@ class OrderExecutionServiceTransactionTest {
         orderRepository = mocks.orderRepository();
         positionRepository = mocks.positionRepository();
         instrumentRepository = mocks.instrumentRepository();
+        executionRepository = mocks.executionRepository();
         
         PositionUpdateService positionUpdateService = new PositionUpdateService(positionRepository);
         service = new OrderExecutionService(
                 accountRepository,
                 instrumentRepository,
                 orderRepository,
+            executionRepository,
                 positionUpdateService
         );
 
@@ -102,6 +107,7 @@ class OrderExecutionServiceTransactionTest {
             // Verify: Balance unchanged (no partial debit occurred)
             assertEquals(originalBalance, account.getCashBalance());
             assertEquals(OrderStatus.REJECTED, order.getStatus());
+            assertEquals(0, mocks.executions.size());
         }
 
         @Test
@@ -136,6 +142,7 @@ class OrderExecutionServiceTransactionTest {
             // Verify: BOTH updates occurred atomically
             assertEquals(OrderStatus.FILLED, order.getStatus());
             assertEquals(new BigDecimal("5000.00"), account.getCashBalance());
+            assertEquals(1, mocks.executions.size());
 
             Position position = service.getPosition(account.getId(), "TEST");
             assertNotNull(position);
@@ -183,6 +190,7 @@ class OrderExecutionServiceTransactionTest {
             Position position = service.getPosition(account.getId(), "TEST");
             assertNotNull(position, "Position should exist when order is placed");
             assertEquals(1, mocks.orders.size(), "Order should be persisted");
+            assertEquals(1, mocks.executions.size(), "Execution should be persisted for filled orders");
         }
 
         @Test
@@ -357,6 +365,7 @@ class OrderExecutionServiceTransactionTest {
 
     private static class RepositoryMocks {
         final Map<UUID, Order> orders = new HashMap<>();
+        final Map<UUID, Execution> executions = new HashMap<>();
         final Map<Long, Account> accounts = new HashMap<>();
         final Map<Long, Position> positions = new HashMap<>();
         final Map<String, Object> instruments = new HashMap<>();
@@ -373,6 +382,20 @@ class OrderExecutionServiceTransactionTest {
                 }
                 if (method.getName().equals("existsById")) {
                     return accounts.containsKey(args[0]);
+                }
+                return unsupported(method);
+            });
+        }
+
+        ExecutionRepository executionRepository() {
+            return proxy(ExecutionRepository.class, (proxy, method, args) -> {
+                if (method.getName().equals("save")) {
+                    Execution execution = (Execution) args[0];
+                    if (execution.getId() == null) {
+                        execution.setId(UUID.randomUUID());
+                    }
+                    executions.put(execution.getOrderId(), execution);
+                    return execution;
                 }
                 return unsupported(method);
             });

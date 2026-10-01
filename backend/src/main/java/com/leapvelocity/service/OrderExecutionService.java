@@ -1,5 +1,6 @@
 package com.leapvelocity.service;
 import com.leapvelocity.entities.Account;
+import com.leapvelocity.entities.Execution;
 import com.leapvelocity.entities.Instrument;
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.Position;
@@ -14,6 +15,7 @@ import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.messaging.OrderEventPublisher;
 import com.leapvelocity.repository.AccountRepository;
+import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import java.math.BigDecimal;
@@ -32,12 +34,14 @@ public class OrderExecutionService {
 	private final InstrumentRepository instrumentRepository;
 	private final OrderRepository orderRepository;
 	private final OrderEventPublisher orderEventPublisher;
+	private final ExecutionRepository executionRepository;
 
 	@Autowired
 	public OrderExecutionService(
 			AccountRepository accountRepository,
 			InstrumentRepository instrumentRepository,
 			OrderRepository orderRepository,
+			ExecutionRepository executionRepository,
 			PositionUpdateService positionUpdateService,
 			OrderEventPublisher orderEventPublisher) {
 		this.positionUpdateService = positionUpdateService;
@@ -45,6 +49,7 @@ public class OrderExecutionService {
 		this.accountRepository = accountRepository;
 		this.instrumentRepository = instrumentRepository;
 		this.orderRepository = orderRepository;
+		this.executionRepository = executionRepository;
 		this.orderEventPublisher = orderEventPublisher;
 	}
 
@@ -52,8 +57,17 @@ public class OrderExecutionService {
 			AccountRepository accountRepository,
 			InstrumentRepository instrumentRepository,
 			OrderRepository orderRepository,
+			ExecutionRepository executionRepository,
 			PositionUpdateService positionUpdateService) {
-		this(accountRepository, instrumentRepository, orderRepository, positionUpdateService, null);
+		this(accountRepository, instrumentRepository, orderRepository, executionRepository, positionUpdateService, null);
+	}
+
+	public OrderExecutionService(
+			AccountRepository accountRepository,
+			InstrumentRepository instrumentRepository,
+			OrderRepository orderRepository,
+			PositionUpdateService positionUpdateService) {
+		this(accountRepository, instrumentRepository, orderRepository, null, positionUpdateService, null);
 	}
 
 	public void addAccount(Account account) {
@@ -156,7 +170,8 @@ public class OrderExecutionService {
 		}
 
 		order.setStatus(OrderStatus.FILLED);
-		saveOrder(order);
+		Order savedOrder = saveOrder(order);
+		persistExecution(savedOrder);
 	}
 
 	@Transactional
@@ -261,6 +276,19 @@ public class OrderExecutionService {
 		if (orderEventPublisher != null) {
 			orderEventPublisher.publish(order);
 		}
+	}
+
+	private void persistExecution(Order order) {
+		if (executionRepository == null) {
+			return;
+		}
+		executionRepository.save(new Execution(
+				order.getId(),
+				order.getAccountId(),
+				order.getSymbol(),
+				order.getSide(),
+				order.getQuantity(),
+				order.getPrice()));
 	}
 
 	private void persistRejectedOrder(Order order) {
