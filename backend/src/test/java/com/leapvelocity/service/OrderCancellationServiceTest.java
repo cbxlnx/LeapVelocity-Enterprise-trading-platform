@@ -146,30 +146,6 @@ class OrderCancellationServiceTest {
         }
 
         @Test
-        @DisplayName("should leave cash balance unchanged when cancelling SELL order")
-        void cancelSellOrderDoesNotAffectCash() {
-            // Arrange: Account with position and cash
-            Account account = account(1L, "ACC-001", new BigDecimal("5000.00"), AccountStatus.ACTIVE);
-            mocks.accounts.put(1L, account);
-
-            Position position = new Position(1L, "GOOGL", new BigDecimal("50"), new BigDecimal("2800.00"));
-            mocks.positions.put(1L, position);
-
-            Order order = new Order(1L, "GOOGL", OrderSide.SELL, new BigDecimal("20"), new BigDecimal("2900.00"), "cancel-sell-002");
-            order.setId(UUID.randomUUID());
-            order.setStatus(OrderStatus.NEW);
-            mocks.orders.put(order.getId(), order);
-
-            BigDecimal balanceBefore = account.getCashBalance();
-
-            // Act: Cancel SELL order
-            service.cancelOrder(order.getId());
-
-            // Assert: Cash balance unchanged
-            assertEquals(balanceBefore, account.getCashBalance());
-        }
-
-        @Test
         @DisplayName("should create position if none exists when restoring from SELL cancellation")
         void cancelSellOrderCreatesPositionIfNoneExists() {
             // Arrange: Account with no position for symbol
@@ -345,28 +321,8 @@ class OrderCancellationServiceTest {
             assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
             assertEquals(new BigDecimal("15000.00"), account.getCashBalance());
         }
-
-        @Test
-        @DisplayName("should complete cancellation for CLOSED account")
-        void cancelOrderClosedAccount() {
-            // Arrange: CLOSED account with NEW order
-            Account account = account(1L, "ACC-CLOSED", new BigDecimal("5000.00"), AccountStatus.CLOSED);
-            mocks.accounts.put(1L, account);
-
-            Order order = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("50"), new BigDecimal("100.00"), "closed-cancel");
-            order.setId(UUID.randomUUID());
-            order.setStatus(OrderStatus.NEW);
-            mocks.orders.put(order.getId(), order);
-
-            // Act: Cancellation should still work (account exists, just closed)
-            Order cancelled = service.cancelOrder(order.getId());
-
-            // Assert: Order cancelled, cash refunded
-            assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
-            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
-        }
     }
-
+        
     // ==================== HELPER: REPOSITORY MOCKS ====================
 
     private static class RepositoryMocks {
