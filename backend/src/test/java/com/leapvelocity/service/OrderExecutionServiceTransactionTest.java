@@ -10,6 +10,7 @@ import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
 import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InsufficientHoldingsException;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -25,6 +26,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -85,6 +87,27 @@ class OrderExecutionServiceTransactionTest {
         mocks.instruments.put("TEST", instrument);
     }
 
+    private Order placeAndSettle(Order order) {
+        Order savedOrder = service.placeOrder(order);
+        service.settleExecution(executionEventFor(savedOrder));
+        return savedOrder;
+    }
+
+    private ExecutionEvent executionEventFor(Order order) {
+        return new ExecutionEvent(
+                UUID.randomUUID(),
+                order.getId(),
+                order.getAccountId(),
+                order.getSymbol(),
+                order.getSide(),
+                order.getQuantity(),
+                order.getPrice(),
+                order.getPrice(),
+                "TEST",
+                Instant.now()
+        );
+    }
+
     // ==================== ATOMICITY TESTS ====================
     // Verify operations complete fully or fail completely (all-or-nothing)
 
@@ -102,7 +125,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("1000"), new BigDecimal("100.00"), "atomic-buy-insuff");
 
-            assertThrows(InsufficientFundsException.class, () -> service.placeOrder(order));
+            assertThrows(InsufficientFundsException.class, () -> placeAndSettle(order));
 
             // Verify: Balance unchanged (no partial debit occurred)
             assertEquals(originalBalance, account.getCashBalance());
@@ -120,7 +143,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("100"), new BigDecimal("150.00"), "atomic-sell-insuff");
 
-            assertThrows(InsufficientHoldingsException.class, () -> service.placeOrder(order));
+            assertThrows(InsufficientHoldingsException.class, () -> placeAndSettle(order));
 
             // Verify: Balance unchanged, no position created
             assertEquals(originalBalance, account.getCashBalance());
@@ -137,7 +160,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "atomic-buy-success");
 
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             // Verify: BOTH updates occurred atomically
             assertEquals(OrderStatus.FILLED, order.getStatus());
@@ -165,7 +188,7 @@ class OrderExecutionServiceTransactionTest {
                     new BigDecimal("50"), new BigDecimal("100.00"), "consistency-invalid-acct");
 
             try {
-                service.placeOrder(order);
+                placeAndSettle(order);
             } catch (Exception e) {
                 // Expected - account not found
             }
@@ -184,7 +207,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "consistency-pos-order");
 
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             // Verify: Both order and position exist together
             Position position = service.getPosition(account.getId(), "TEST");
@@ -224,11 +247,11 @@ class OrderExecutionServiceTransactionTest {
 
             Order order1 = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "consistency-dup-1");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             Order order2 = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("25"), new BigDecimal("110.00"), "consistency-dup-2");
-            service.placeOrder(order2);
+            placeAndSettle(order2);
 
             // Verify: Single position exists (not multiple)
             Position position = service.getPosition(account.getId(), "TEST");
@@ -255,7 +278,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "boundary-pos-fail");
 
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             // Verify: Both account and position updated together (transactional)
             assertEquals(new BigDecimal("5000.00"), account.getCashBalance());
@@ -277,7 +300,7 @@ class OrderExecutionServiceTransactionTest {
             Order order = new Order(account.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("50"), new BigDecimal("110.00"), "boundary-sell-atomic");
 
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             // Verify: Both updates occurred
             // 50 shares @ $110 = $5500 credit; $10000 + $5500 = $15500
@@ -331,7 +354,7 @@ class OrderExecutionServiceTransactionTest {
             // Account 1 places BUY order
             Order order1 = new Order(account1.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "isolation-acct1");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             // Verify: Account 1 changed, Account 2 unchanged
             assertEquals(new BigDecimal("5000.00"), account1.getCashBalance());
@@ -349,7 +372,7 @@ class OrderExecutionServiceTransactionTest {
 
             Order order1 = new Order(account1.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.00"), "isolation-pos-1");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             // Verify: Account 1 has position, Account 2 doesn't
             Position pos1 = service.getPosition(account1.getId(), "TEST");

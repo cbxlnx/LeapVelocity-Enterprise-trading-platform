@@ -7,6 +7,7 @@ import com.leapvelocity.entities.Position;
 import com.leapvelocity.entities.enums.AccountStatus;
 import com.leapvelocity.entities.enums.OrderSide;
 import com.leapvelocity.entities.enums.OrderStatus;
+import com.leapvelocity.messaging.ExecutionEvent;
 import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +54,7 @@ class OrderExecutionServiceEdgeCasesTest {
     private Instrument tradableInstrument;
         private Map<Long, Account> accountsById;
         private Map<String, Instrument> instrumentsBySymbol;
+        private Map<UUID, Order> ordersById;
         private Map<String, Order> ordersByIdempotencyKey;
         private Map<String, Position> positionsByKey;
 
@@ -65,6 +68,7 @@ class OrderExecutionServiceEdgeCasesTest {
 
                 accountsById = new HashMap<>();
                 instrumentsBySymbol = new HashMap<>();
+                ordersById = new HashMap<>();
                 ordersByIdempotencyKey = new HashMap<>();
                 positionsByKey = new HashMap<>();
 
@@ -116,11 +120,14 @@ class OrderExecutionServiceEdgeCasesTest {
                                 ordersByIdempotencyKey.containsKey(invocation.getArgument(0, String.class)));
                 when(orderRepository.findByIdempotencyKey(anyString())).thenAnswer(invocation ->
                                 Optional.ofNullable(ordersByIdempotencyKey.get(invocation.getArgument(0, String.class))));
+                when(orderRepository.findById(any(UUID.class))).thenAnswer(invocation ->
+                                Optional.ofNullable(ordersById.get(invocation.getArgument(0, UUID.class))));
                 when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
                         Order order = invocation.getArgument(0, Order.class);
                         if (order.getId() == null) {
                                 order.setId(UUID.randomUUID());
                         }
+                        ordersById.put(order.getId(), order);
                         ordersByIdempotencyKey.put(order.getIdempotencyKey(), order);
                         return order;
                 });
@@ -147,6 +154,27 @@ class OrderExecutionServiceEdgeCasesTest {
                 return accountId + "|" + symbol.trim();
         }
 
+        private Order placeAndSettle(Order order) {
+                Order savedOrder = service.placeOrder(order);
+                service.settleExecution(executionEventFor(savedOrder));
+                return savedOrder;
+        }
+
+        private ExecutionEvent executionEventFor(Order order) {
+                return new ExecutionEvent(
+                                UUID.randomUUID(),
+                                order.getId(),
+                                order.getAccountId(),
+                                order.getSymbol(),
+                                order.getSide(),
+                                order.getQuantity(),
+                                order.getPrice(),
+                                order.getPrice(),
+                                "TEST",
+                                Instant.now()
+                );
+        }
+
     // ==================== EXACTLY SUFFICIENT CASH TESTS ====================
     // Verify system handles orders using exactly the available cash balance
 
@@ -162,7 +190,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("100.00"), "exact-cash-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, activeAccount.getCashBalance().compareTo(BigDecimal.ZERO));
@@ -185,7 +213,7 @@ class OrderExecutionServiceEdgeCasesTest {
             // First order uses all cash
             Order order1 = new Order(limitedAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("10"), new BigDecimal("100.00"), "zero-bal-001");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
             assertEquals(0, limitedAccount.getCashBalance().compareTo(BigDecimal.ZERO));
 
             // Second order should fail (insufficient funds)
@@ -193,7 +221,7 @@ class OrderExecutionServiceEdgeCasesTest {
                     new BigDecimal("1"), new BigDecimal("50.00"), "zero-bal-002");
             
             assertThrows(com.leapvelocity.exceptions.InsufficientFundsException.class, 
-                    () -> service.placeOrder(order2));
+                    () -> placeAndSettle(order2));
         }
     }
 
@@ -211,7 +239,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.5"), new BigDecimal("100.00"), "frac-buy-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, activeAccount.getCashBalance().compareTo(new BigDecimal("9950.00")));
@@ -227,11 +255,11 @@ class OrderExecutionServiceEdgeCasesTest {
             // Buy 0.5 @ $100 + 0.25 @ $120 = (50 + 30) / 0.75 = 106.66666...
             Order order1 = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.5"), new BigDecimal("100.00"), "frac-avg-001");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             Order order2 = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.25"), new BigDecimal("120.00"), "frac-avg-002");
-            service.placeOrder(order2);
+            placeAndSettle(order2);
 
             Position position = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(new BigDecimal("0.75"), position.getQuantity());
@@ -253,7 +281,7 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("0.5"), new BigDecimal("110.00"), "frac-sell-001");
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             Position updated = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(0, updated.getQuantity().compareTo(new BigDecimal("1.0")));
@@ -270,7 +298,7 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("0.75"), new BigDecimal("110.00"), "frac-all-001");
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             assertNull(service.getPosition(activeAccount.getId(), "TEST"));
         }
@@ -290,7 +318,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("1.234567"), "precision-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
 
@@ -309,11 +337,11 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order order1 = new Order(richAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("100.123456"), "prec-avg-001");
-            service.placeOrder(order1);
+            placeAndSettle(order1);
 
             Order order2 = new Order(richAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("100.654321"), "prec-avg-002");
-            service.placeOrder(order2);
+            placeAndSettle(order2);
 
             Position position = service.getPosition(richAccount.getId(), "TEST");
             assertEquals(new BigDecimal("150"), position.getQuantity());
@@ -341,7 +369,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(richAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("1000000"), new BigDecimal("100.00"), "large-qty-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
 
@@ -362,7 +390,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(ultraRichAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("1000000"), new BigDecimal("500.00"), "large-notional-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("100000000.00"), ultraRichAccount.getCashBalance());
@@ -378,7 +406,7 @@ class OrderExecutionServiceEdgeCasesTest {
 
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("500000"), new BigDecimal("60.00"), "large-sell-001");
-            service.placeOrder(order);
+            placeAndSettle(order);
 
             Position updated = service.getPosition(activeAccount.getId(), "TEST");
             assertEquals(new BigDecimal("500000"), updated.getQuantity());
@@ -403,7 +431,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.SELL,
                     new BigDecimal("50.5"), new BigDecimal("110.00"), "boundary-exact-001");
 
-            assertDoesNotThrow(() -> service.placeOrder(order));
+            assertDoesNotThrow(() -> placeAndSettle(order));
             assertNull(service.getPosition(activeAccount.getId(), "TEST"));
         }
 
@@ -419,7 +447,7 @@ class OrderExecutionServiceEdgeCasesTest {
                     new BigDecimal("50.51"), new BigDecimal("110.00"), "boundary-over-001");
 
             assertThrows(com.leapvelocity.exceptions.InsufficientHoldingsException.class, 
-                    () -> service.placeOrder(order));
+                    () -> placeAndSettle(order));
         }
 
         @Test
@@ -429,7 +457,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100"), new BigDecimal("0.01"), "boundary-min-price-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(new BigDecimal("9999.00"), activeAccount.getCashBalance());
@@ -450,7 +478,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(activeAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("0.5"), new BigDecimal("1.234567"), "complex-frac-precision-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             Position position = service.getPosition(activeAccount.getId(), "TEST");
@@ -470,7 +498,7 @@ class OrderExecutionServiceEdgeCasesTest {
             Order order = new Order(millionaireAccount.getId(), "TEST", OrderSide.BUY,
                     new BigDecimal("100000"), new BigDecimal("100.00"), "complex-large-exact-001");
 
-            Order result = service.placeOrder(order);
+            Order result = placeAndSettle(order);
 
             assertEquals(OrderStatus.FILLED, result.getStatus());
             assertEquals(0, millionaireAccount.getCashBalance().compareTo(BigDecimal.ZERO));

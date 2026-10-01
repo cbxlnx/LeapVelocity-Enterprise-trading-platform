@@ -10,6 +10,7 @@ import com.leapvelocity.exceptions.AccountNotActiveException;
 import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.DuplicateOrderException;
 import com.leapvelocity.exceptions.InsufficientFundsException;
+import com.leapvelocity.exceptions.InsufficientHoldingsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.messaging.ExecutionEvent;
@@ -117,6 +118,7 @@ public class OrderExecutionService {
 
 		requireActiveAccount(order);
 		requireTradableInstrument(order);
+		validateCanSettle(order);
 
 		order.setStatus(OrderStatus.NEW);
 		Order savedOrder = saveOrder(order);
@@ -222,6 +224,33 @@ public class OrderExecutionService {
 		positionUpdateService.applySell(order);
 		account.credit(notional);
 		persistAccount(account);
+	}
+
+	private void validateCanSettle(Order order) {
+		Account account = accountRepository.findById(order.getAccountId())
+				.orElseThrow(() -> new AccountNotFoundException(order.getAccountId()));
+		BigDecimal notional = order.getQuantity().multiply(order.getPrice());
+
+		if (order.getSide() == OrderSide.BUY) {
+			if (account.getCashBalance().compareTo(notional) < 0) {
+				rejectOrder(order);
+				throw new InsufficientFundsException(order.getAccountId(), notional, account.getCashBalance());
+			}
+			return;
+		}
+
+		if (order.getSide() == OrderSide.SELL) {
+			Position position = positionUpdateService.getPosition(order.getAccountId(), order.getSymbol());
+			BigDecimal availableQuantity = position == null ? BigDecimal.ZERO : position.getQuantity();
+			if (availableQuantity.compareTo(order.getQuantity()) < 0) {
+				rejectOrder(order);
+				throw new InsufficientHoldingsException(
+						order.getAccountId(), order.getSymbol(), order.getQuantity(), availableQuantity);
+			}
+			return;
+		}
+
+		throw new IllegalArgumentException("Unsupported order side: " + order.getSide());
 	}
 
 	private Account requireActiveAccount(Order order) {
