@@ -39,10 +39,48 @@ pipeline {
                 '''
             }
         }
+
+        stage('Quality Gate') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                        cd backend
+                        mvn -B sonar:sonar \
+                        -Dsonar.token=$SONAR_TOKEN \
+                        -Dsonar.qualitygate.wait=true
+                    '''
+                }
+            }
+        }
+
+        stage('Security Scans') {
+            parallel {
+                stage('Dependency Vulnerabilities') {
+                    steps {
+                        sh '''
+                            cd backend
+                            mvn -B dependency-check:check
+                        '''
+                    }
+                }
+                
+                stage('Secret Detection') {
+                    steps {
+                        sh '''                            
+                            docker run --rm -v $(pwd):/repo -w /repo \
+                            zricethezav/gitleaks:latest detect \
+                            --verbose
+                        '''
+                    }
+                }
+            }
+        }
         
         stage('Push Image') {
             when {
                 branch 'main'
+                branch 'develop'
+                branch pattern: 'feat/.*', comparator: 'REGEXP'
             }
             steps {
                 sh 'echo "Image ${DOCKER_APP_IMAGE} ready for deployment"'

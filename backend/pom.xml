@@ -18,6 +18,8 @@
         <junit.version>5.10.2</junit.version>
         <jakarta.validation.version>3.0.2</jakarta.validation.version>
         <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
+        <sonar.projectKey>leapvelocity-backend</sonar.projectKey>
+        <sonar.projectName>LeapVelocity Backend</sonar.projectName>
     </properties>
 
     <dependencies>
@@ -92,6 +94,7 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        
     </dependencies>
 
     <build>
@@ -104,6 +107,19 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.10.0.2594</version>
+            </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.0.0</version>
+                <configuration>
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                </configuration>
             </plugin>
         </plugins>
     </build>
