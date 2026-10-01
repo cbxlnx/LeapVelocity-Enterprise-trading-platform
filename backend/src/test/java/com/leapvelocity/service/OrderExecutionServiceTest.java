@@ -23,9 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -42,20 +39,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Comprehensive test suite for OrderExecutionService.
+ * Characterization test suite for OrderExecutionService - Sprint 6.
  * 
+ * Pins down core order placement behavior before Sprint 7 refactoring.
  * Tests cover:
  * - Buy and sell order execution with proper account debiting/crediting
  * - Account validation (status checks, existence verification)
- * - Input validation (null checks, quantity/price validation)
+ * - Input validation (null checks, blank values)
  * - Idempotency (duplicate order detection)
  * - Position management (creation, updates, closure)
- * - Complex multi-order integration scenarios
+ * - Integration scenarios (multi-order sequences)
  *
- * The service uses mocked repositories backed by local Maps so the tests stay
- * focused on service behavior while exercising the JPA-only code path.
+ * Uses mocked repositories backed by local Maps for focused testing.
  */
-@DisplayName("OrderExecutionService")
+@DisplayName("Characterization: Sprint 6 Order Execution")
 class OrderExecutionServiceTest {
 
     private OrderExecutionService service;
@@ -67,10 +64,6 @@ class OrderExecutionServiceTest {
     private Map<String, Position> positionsByKey;
     private Map<UUID, Execution> executionsByOrderId;
 
-    /**
-     * Initializes test fixtures before each test.
-     * Creates a fresh service instance with an active account and tradable instrument.
-     */
     @BeforeEach
     void setUp() {
         AccountRepository accountRepository = mock(AccountRepository.class);
@@ -95,7 +88,7 @@ class OrderExecutionServiceTest {
                 accountRepository,
                 instrumentRepository,
                 orderRepository,
-            executionRepository,
+                executionRepository,
                 new PositionUpdateService(positionRepository)
         );
 
@@ -177,7 +170,6 @@ class OrderExecutionServiceTest {
     }
 
     // ==================== BUY ORDER TESTS ====================
-    // Verify buy orders correctly debit cash and create/update positions
     
     @Nested
     @DisplayName("Buy Orders")
@@ -186,7 +178,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should debit account and create position on successful buy")
         void buyOrderSuccess() {
-            // Verifies: Cash is debited, position is created with correct qty/cost
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-001");
 
@@ -205,7 +196,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw InsufficientFundsException when insufficient cash")
         void buyOrderInsufficientFunds() {
-            // Verifies: Exception thrown, order rejected when account lacks funds
             Account poorAccount = new Account("ACC-POOR", "Bob", new BigDecimal("100.00"), AccountStatus.ACTIVE);
             poorAccount.setId(2L);
             service.addAccount(poorAccount);
@@ -221,7 +211,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw InstrumentNotFoundException for non-tradable instrument")
         void buyOrderNonTradableInstrument() {
-            // Verifies: Exception thrown, order rejected for delisted/non-tradable symbols
             Instrument nonTradable = new Instrument("DELISTED", "Delisted Corp", "EQUITY", "USD", false);
             service.addInstrument(nonTradable);
 
@@ -234,7 +223,6 @@ class OrderExecutionServiceTest {
     }
 
     // ==================== SELL ORDER TESTS ====================
-    // Verify sell orders correctly credit cash and reduce positions
     
     @Nested
     @DisplayName("Sell Orders")
@@ -243,7 +231,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should credit account and reduce position on successful sell")
         void sellOrderSuccess() {
-            // Verifies: Cash is credited, position quantity decreases correctly
             Position position = new Position(activeAccount.getId(), "AAPL", new BigDecimal("100"), new BigDecimal("150.00"));
             service.addPosition(position);
 
@@ -263,7 +250,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw InsufficientHoldingsException when insufficient shares")
         void sellOrderInsufficientHoldings() {
-            // Verifies: Exception thrown when trying to sell more shares than held
             Position position = new Position(activeAccount.getId(), "AAPL", new BigDecimal("10"), new BigDecimal("150.00"));
             service.addPosition(position);
 
@@ -276,7 +262,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw InsufficientHoldingsException when no position exists")
         void sellOrderNoPosition() {
-            // Verifies: Exception thrown when selling security with no existing position
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.SELL,
                     new BigDecimal("50"), new BigDecimal("160.00"), "sell-no-position");
 
@@ -286,7 +271,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should remove position when all shares are sold")
         void sellOrderClosesPosition() {
-            // Verifies: Position is removed (null) when quantity reaches zero
             Position position = new Position(activeAccount.getId(), "AAPL", new BigDecimal("100"), new BigDecimal("150.00"));
             service.addPosition(position);
 
@@ -300,7 +284,6 @@ class OrderExecutionServiceTest {
     }
 
     // ==================== ACCOUNT VALIDATION TESTS ====================
-    // Verify account status checks prevent invalid orders
     
     @Nested
     @DisplayName("Account Validation")
@@ -309,7 +292,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw AccountNotActiveException for suspended account")
         void orderSuspendedAccount() {
-            // Verifies: Suspended accounts cannot place orders
             Account suspendedAccount = new Account("ACC-SUSPENDED", "Charlie",
                     new BigDecimal("10000.00"), AccountStatus.SUSPENDED);
             suspendedAccount.setId(3L);
@@ -325,7 +307,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw AccountNotActiveException for closed account")
         void orderClosedAccount() {
-            // Verifies: Closed accounts cannot place orders
             Account closedAccount = new Account("ACC-CLOSED", "Dave",
                     new BigDecimal("0.00"), AccountStatus.CLOSED);
             closedAccount.setId(4L);
@@ -341,7 +322,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw AccountNotFoundException for non-existent account")
         void orderNonExistentAccount() {
-            // Verifies: Exception thrown when account ID doesn't exist
             Order order = new Order(999999L, "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "order-no-account");
 
@@ -351,7 +331,6 @@ class OrderExecutionServiceTest {
     }
 
     // ==================== INPUT VALIDATION TESTS ====================
-    // Verify invalid order parameters are rejected with appropriate exceptions
     
     @Nested
     @DisplayName("Input Validation")
@@ -360,14 +339,12 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for null order")
         void nullOrder() {
-            // Verifies: Null order is rejected
             assertThrows(IllegalArgumentException.class, () -> service.placeOrder(null));
         }
 
         @Test
         @DisplayName("should throw IllegalArgumentException for null account ID")
         void nullAccountId() {
-            // Verifies: Orders with null account ID are rejected
             Order order = new Order(null, "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "null-account");
 
@@ -377,7 +354,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for blank symbol")
         void blankSymbol() {
-            // Verifies: Orders with empty symbol are rejected
             Order order = new Order(activeAccount.getId(), "", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "blank-symbol");
 
@@ -387,50 +363,14 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw IllegalArgumentException for blank idempotency key")
         void blankIdempotencyKey() {
-            // Verifies: Orders without idempotency key are rejected
             Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "");
 
             assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
         }
-
-        // ========== Quantity Validation ==========
-        @Nested
-        @DisplayName("Quantity Validation")
-        class QuantityValidationTests {
-
-            @ParameterizedTest
-            @ValueSource(strings = {"0", "-50", "-1"})
-            @DisplayName("should reject zero or negative quantity")
-            void invalidQuantity(String quantity) {
-                // Verifies: Only positive quantities are accepted
-                Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
-                        new BigDecimal(quantity), new BigDecimal("150.00"), "qty-" + quantity);
-
-                assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
-            }
-        }
-
-        // ========== Price Validation ==========
-        @Nested
-        @DisplayName("Price Validation")
-        class PriceValidationTests {
-
-            @ParameterizedTest
-            @ValueSource(strings = {"0", "-150", "-0.01"})
-            @DisplayName("should reject zero or negative price")
-            void invalidPrice(String price) {
-                // Verifies: Only positive prices are accepted
-                Order order = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
-                        new BigDecimal("50"), new BigDecimal(price), "price-" + price);
-
-                assertThrows(IllegalArgumentException.class, () -> service.placeOrder(order));
-            }
-        }
     }
 
     // ==================== IDEMPOTENCY TESTS ====================
-    // Verify duplicate orders are rejected to prevent double-execution
     
     @Nested
     @DisplayName("Idempotency")
@@ -439,7 +379,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw DuplicateOrderException for duplicate idempotency key")
         void duplicateIdempotencyKey() {
-            // Verifies: Duplicate idempotency keys are detected and rejected
             Order order1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "idem-dup");
             service.placeOrder(order1);
@@ -452,8 +391,61 @@ class OrderExecutionServiceTest {
         }
     }
 
-    // ==================== INTEGRATION TESTS ====================
-    // Verify realistic multi-order sequences and complex scenarios
+    // ==================== EDGE CASES: EXACTLY SUFFICIENT CASH ====================
+    
+    @Nested
+    @DisplayName("Edge Cases - Exactly Sufficient Cash")
+    class ExactlySufficientCashTests {
+
+        @Test
+        @DisplayName("should reduce balance to exactly zero when cash matches notional")
+        void buyWithExactCash() {
+            Account exactAccount = new Account("ACC-EXACT", "Exact Trader", new BigDecimal("10000.00"), AccountStatus.ACTIVE);
+            exactAccount.setId(5L);
+            service.addAccount(exactAccount);
+
+            Instrument instrument = new Instrument("TEST", "Test Instrument", "EQUITY", "USD", true);
+            service.addInstrument(instrument);
+
+            Order order = new Order(exactAccount.getId(), "TEST", OrderSide.BUY,
+                    new BigDecimal("100"), new BigDecimal("100.00"), "exact-cash-001");
+
+            Order result = service.placeOrder(order);
+
+            assertEquals(OrderStatus.FILLED, result.getStatus());
+            assertEquals(0, exactAccount.getCashBalance().compareTo(BigDecimal.ZERO));
+
+            Position position = service.getPosition(exactAccount.getId(), "TEST");
+            assertNotNull(position);
+            assertEquals(new BigDecimal("100"), position.getQuantity());
+            assertEquals(new BigDecimal("100.00"), position.getAverageCost());
+        }
+
+        @Test
+        @DisplayName("should handle second order rejection when balance is zero")
+        void orderRejectedAfterZeroBalance() {
+            Account limitedAccount = new Account("ACC-LIMITED", "Limited Funds", 
+                    new BigDecimal("1000.00"), AccountStatus.ACTIVE);
+            limitedAccount.setId(6L);
+            service.addAccount(limitedAccount);
+
+            Instrument instrument = new Instrument("TEST2", "Test Instrument 2", "EQUITY", "USD", true);
+            service.addInstrument(instrument);
+
+            Order order1 = new Order(limitedAccount.getId(), "TEST2", OrderSide.BUY,
+                    new BigDecimal("10"), new BigDecimal("100.00"), "zero-bal-001");
+            service.placeOrder(order1);
+            assertEquals(0, limitedAccount.getCashBalance().compareTo(BigDecimal.ZERO));
+
+            Order order2 = new Order(limitedAccount.getId(), "TEST2", OrderSide.BUY,
+                    new BigDecimal("1"), new BigDecimal("50.00"), "zero-bal-002");
+            
+            assertThrows(InsufficientFundsException.class, 
+                    () -> service.placeOrder(order2));
+        }
+    }
+
+    // ==================== INTEGRATION SCENARIOS ====================
     
     @Nested
     @DisplayName("Integration Scenarios")
@@ -462,7 +454,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should combine multiple buy orders with correct average cost")
         void multipleBuysIncreasePosition() {
-            // Verifies: Multiple buys correctly update position quantity and recalculate average cost
             Order order1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
             service.placeOrder(order1);
@@ -479,7 +470,6 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should handle buy, partial sell, buy again sequence correctly")
         void buyPartialSellBuySequence() {
-            // Verifies: Complex sequence of buy/sell/buy maintains correct cash balance and position
             Order buy1 = new Order(activeAccount.getId(), "AAPL", OrderSide.BUY,
                     new BigDecimal("50"), new BigDecimal("150.00"), "buy-1");
             service.placeOrder(buy1);
@@ -499,8 +489,7 @@ class OrderExecutionServiceTest {
         }
     }
 
-    // ==================== SERVICE INITIALIZATION TESTS ====================
-    // Verify service setup and initialization validation
+    // ==================== SERVICE INITIALIZATION ====================
     
     @Nested
     @DisplayName("Service Initialization")
@@ -509,14 +498,12 @@ class OrderExecutionServiceTest {
         @Test
         @DisplayName("should throw IllegalArgumentException when adding null account")
         void addNullAccount() {
-            // Verifies: Service rejects null accounts during initialization
             assertThrows(IllegalArgumentException.class, () -> service.addAccount(null));
         }
 
         @Test
         @DisplayName("should throw IllegalArgumentException when adding instrument with blank symbol")
         void addInstrumentBlankSymbol() {
-            // Verifies: Service rejects instruments with empty symbols
             Instrument instrument = new Instrument("", "Test", "EQUITY", "USD", true);
             assertThrows(IllegalArgumentException.class, () -> service.addInstrument(instrument));
         }

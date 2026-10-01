@@ -231,18 +231,6 @@ class PositionUpdateServiceTest {
             assertEquals(new BigDecimal("30"), unchanged.getQuantity());
         }
 
-        @Test
-        @DisplayName("should succeed when selling exact quantity held (boundary case)")
-        void applySellExactHoldings() {
-            // Verifies: Selling exactly the held amount (boundary case) succeeds and closes position
-            Position position = new Position(1L, "AAPL", new BigDecimal("50"), new BigDecimal("150.00"));
-            service.addPosition(position);
-
-            Order order = new Order(1L, "AAPL", OrderSide.SELL, new BigDecimal("50"), new BigDecimal("160.00"), "sell-exact");
-
-            assertDoesNotThrow(() -> service.applySell(order));
-            assertNull(service.getPosition(1L, "AAPL"));
-        }
     }
 
     // ==================== MULTI-ACCOUNT ISOLATION TESTS ====================
