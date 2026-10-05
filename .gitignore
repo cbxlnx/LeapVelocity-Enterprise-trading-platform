@@ -7,3 +7,5 @@ target/
 .env
 .venv
 analysis/data/
+db/scripts/backups/
+analysis/scripts/__pycache__/
