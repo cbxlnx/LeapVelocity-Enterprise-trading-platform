@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_APP_IMAGE = "team-skeleton:latest"
+        DOCKER_APP_IMAGE = "leapvelocity-backend:latest"
     }
     
     stages {
@@ -20,13 +20,13 @@ pipeline {
         
         stage('Build') {
             steps {
-                sh 'mvn -B clean package'
+                sh 'mvn -B -f backend/pom.xml clean package'
             }
         }
         
         stage('Build Java App Image') {
             steps {
-                sh 'docker build -t ${DOCKER_APP_IMAGE} .'
+                sh 'docker build -t ${DOCKER_APP_IMAGE} -f backend/Dockerfile backend/'
             }
         }
         
@@ -34,15 +34,52 @@ pipeline {
             steps {
                 sh '''
                     # Verify JAR exists and is valid
-                    test -f /build/target/team-skeleton.jar && echo "✓ JAR built successfully"
-                    jar tf /build/target/team-skeleton.jar | head -5
+                    test -n "$(find backend/target -maxdepth 1 -name '*.jar' -print -quit)" && echo "✓ JAR built successfully"
+                    jar tf "$(find backend/target -maxdepth 1 -name '*.jar' -print -quit)" | head -5
                 '''
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                        cd backend
+                        mvn -B sonar:sonar \
+                        -Dsonar.qualitygate.wait=true
+                    '''
+                }
+            }
+        }
+
+        stage('Security Scans') {
+            parallel {
+                stage('Dependency Vulnerabilities') {
+                    steps {
+                        sh '''
+                            cd backend
+                            mvn -B dependency-check:check
+                        '''
+                    }
+                }
+                
+                stage('Secret Detection') {
+                    steps {
+                        sh '''                            
+                            docker run --rm -v $(pwd):/repo -w /repo \
+                            zricethezav/gitleaks:latest detect \
+                            --verbose
+                        '''
+                    }
+                }
             }
         }
         
         stage('Push Image') {
             when {
                 branch 'main'
+                branch 'develop'
+                branch pattern: 'feat/.*', comparator: 'REGEXP'
             }
             steps {
                 sh 'echo "Image ${DOCKER_APP_IMAGE} ready for deployment"'

@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: trading-platform
+  datasource:
+    url: jdbc:postgresql://localhost:5432/leapvelocity_trading_db?sslmode=disable
+    username: postgres
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  kafka:
+    bootstrap-servers: kafka:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      group-id: leapvelocity-consumer-group
+      properties:
+        spring.json.trusted.packages: '*'
+        spring.json.value.default.type: com.leapvelocity.messaging.ExecutionEvent
+        spring.json.use.type.headers: false
+    listener:
+      ack-mode: manual_immediate
+
+server:
+  port: 8081
+  shutdown: graceful
+
+app:
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:leapvelocity-shared-secret-key-32-bytes-minimum}
+      issuer: ${APP_SECURITY_JWT_ISSUER:leapvelocity-auth}
+      expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:30}
+
+kafka:
+  topics:
+    orders: orders
+    trade-events: trade-events
+    market-data: market-data
+    orders-dlq: orders-dlq
+    trade-events-dlq: trade-events-dlq
+    market-data-dlq: market-data-dlq
+    partitions: 3
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.springframework.kafka: DEBUG
+    org.springframework.context: DEBUG
+    com.leapvelocity.config: DEBUG

@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+target
+backend/target
+*.class
+*.jar
+.env
+.venv
+analysis/data
