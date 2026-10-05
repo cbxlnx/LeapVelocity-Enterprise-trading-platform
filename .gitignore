@@ -8,4 +8,4 @@ target/
 .venv
 analysis/data/
 db/scripts/backups/
-analysis/scripts/__pycache__/
+analysis/scripts/__pycache__
