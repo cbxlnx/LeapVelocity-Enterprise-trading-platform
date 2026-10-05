@@ -6,6 +6,6 @@ target/
 .vscode/
 .env
 .venv
-db/scripts/backups/
 analysis/data/
+db/scripts/backups/
 analysis/scripts/__pycache__
