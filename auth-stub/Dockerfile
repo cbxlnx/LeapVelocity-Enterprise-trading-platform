@@ -1,12 +1,17 @@
-FROM node:22-alpine
-
+# Build stage
+FROM node:20-alpine AS build
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
 
-COPY package.json .
-RUN npm install --omit=dev
-
-COPY server.js .
-
+# Runtime stage
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
 EXPOSE 4000
-
-CMD ["npm", "start"]
+ENV PORT=4000
+CMD ["node", "dist/main.js"]

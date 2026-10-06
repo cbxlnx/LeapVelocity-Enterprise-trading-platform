@@ -7,5 +7,7 @@ target/
 .env
 .venv
 analysis/data/
-db/scripts/backups/
 analysis/scripts/__pycache__
+auth-stub/node_modules
+auth-stub/dist
+db/scripts/backups/
