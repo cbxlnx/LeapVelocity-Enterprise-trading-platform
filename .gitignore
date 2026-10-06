@@ -9,3 +9,5 @@ target/
 db/scripts/backups/
 analysis/data/
 analysis/scripts/__pycache__
+auth-stub/node_modules
+auth-stub/dist
