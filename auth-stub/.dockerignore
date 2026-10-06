@@ -5,9 +5,7 @@ dist
 .gitignore
 .env
 .env.example
-src
 test
 jest.config.js
-tsconfig.json
 README.md
 .DS_Store

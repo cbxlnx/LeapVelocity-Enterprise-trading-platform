@@ -13,7 +13,7 @@ public record PlaceOrderRequestDto(
         @Schema(description = "Account ID placing the order", example = "1")
         @NotNull Long accountId,
         
-        @Schema(description = "Trading symbol (ticker) of the instrument", example = "AAPL")
+		@Schema(description = "Trading symbol (ticker) of the instrument", example = "USEQUITY")
         @NotBlank String symbol,
         
         @Schema(description = "Order direction: BUY or SELL", example = "BUY")
