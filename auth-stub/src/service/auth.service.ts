@@ -1,19 +1,33 @@
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import { randomUUID } from "crypto";
+import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import type { SignOptions } from "jsonwebtoken";
+import {
+  DEFAULT_ACCESS_TOKEN_EXPIRES_IN,
+  DEFAULT_REFRESH_TOKEN_EXPIRES_IN,
+} from "../config/jwt.config";
 
 interface StoredUser {
   passwordHash: string;
+  roles: string[];
   refreshToken: string | null;
 }
 
 const SALT_ROUNDS = 12;
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly users = new Map<string, StoredUser>();
 
-  constructor() {
-    void this.register("dave", "mission123");
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.seedUser("dave", "mission123", ["TRADER"]);
   }
 
   async register(username: string, password: string): Promise<{ username: string; registered: true }> {
@@ -21,7 +35,7 @@ export class AuthService {
       throw new ConflictException(`${username} is already registered`);
     }
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    this.users.set(username, { passwordHash, refreshToken: null });
+    this.users.set(username, { passwordHash, roles: ["TRADER"], refreshToken: null });
     return { username, registered: true };
   }
 
@@ -31,8 +45,8 @@ export class AuthService {
     if (!user || !passwordMatches) {
       throw new UnauthorizedException("invalid username or password");
     }
-    const accessToken = this.issueStubToken("access", username);
-    const refreshToken = this.issueStubToken("refresh", username);
+    const accessToken = this.issueAccessToken(username, user.roles);
+    const refreshToken = this.issueRefreshToken(username, user.roles);
     user.refreshToken = refreshToken;
     return { accessToken, refreshToken };
   }
@@ -42,15 +56,48 @@ export class AuthService {
     if (!entry) {
       throw new UnauthorizedException("invalid or expired refresh token");
     }
-    const [username] = entry;
-    return { accessToken: this.issueStubToken("access", username) };
+    const [username, user] = entry;
+    return { accessToken: this.issueAccessToken(username, user.roles) };
   }
 
   private findByRefreshToken(refreshToken: string): [string, StoredUser] | undefined {
     return [...this.users.entries()].find(([, u]) => u.refreshToken === refreshToken);
   }
 
-  private issueStubToken(kind: "access" | "refresh", username: string): string {
-    return `stub-${kind}-token-for-${username}-${Math.random().toString(36).slice(2, 10)}`;
+  private async seedUser(username: string, password: string, roles: string[]): Promise<void> {
+    if (this.users.has(username)) {
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    this.users.set(username, { passwordHash, roles, refreshToken: null });
+  }
+
+  private issueAccessToken(username: string, roles: string[]): string {
+    return this.jwtService.sign(
+      { sub: username, roles },
+      {
+        expiresIn: this.accessTokenExpiresIn,
+        jwtid: randomUUID(),
+      },
+    );
+  }
+
+  private issueRefreshToken(username: string, roles: string[]): string {
+    return this.jwtService.sign(
+      { sub: username, roles, type: "refresh" },
+      {
+        expiresIn: this.refreshTokenExpiresIn,
+        jwtid: randomUUID(),
+      },
+    );
+  }
+
+  private get accessTokenExpiresIn(): SignOptions["expiresIn"] {
+    return this.configService.get<string>("JWT_EXPIRES_IN") ?? DEFAULT_ACCESS_TOKEN_EXPIRES_IN;
+  }
+
+  private get refreshTokenExpiresIn(): SignOptions["expiresIn"] {
+    return this.configService.get<string>("REFRESH_TOKEN_EXPIRES_IN") ?? DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
   }
 }

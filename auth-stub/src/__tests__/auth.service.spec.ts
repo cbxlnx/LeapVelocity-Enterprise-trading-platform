@@ -1,13 +1,39 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { ConfigModule } from "@nestjs/config";
+import { JwtModule } from "@nestjs/jwt";
 import { AuthService } from "../service/auth.service";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
-import * as bcrypt from "bcrypt";
+import { verify, type JwtPayload } from "jsonwebtoken";
+import { DEFAULT_JWT_ISSUER, DEFAULT_JWT_SECRET } from "../config/jwt.config";
+
+function decodeJwt(token: string): JwtPayload {
+  const payload = verify(token, DEFAULT_JWT_SECRET, {
+    algorithms: ["HS256"],
+    issuer: DEFAULT_JWT_ISSUER,
+  });
+
+  if (typeof payload === "string") {
+    throw new Error("Expected JWT payload object");
+  }
+
+  return payload;
+}
 
 describe("AuthService", () => {
   let service: AuthService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        JwtModule.register({
+          secret: DEFAULT_JWT_SECRET,
+          signOptions: {
+            algorithm: "HS256",
+            issuer: DEFAULT_JWT_ISSUER,
+          },
+        }),
+      ],
       providers: [AuthService],
     }).compile();
 
@@ -86,6 +112,20 @@ describe("AuthService", () => {
       expect(result).toHaveProperty("refreshToken");
       expect(typeof result.accessToken).toBe("string");
       expect(typeof result.refreshToken).toBe("string");
+
+      const accessPayload = decodeJwt(result.accessToken);
+      const refreshPayload = decodeJwt(result.refreshToken);
+
+      expect(accessPayload.sub).toBe("testuser");
+      expect(accessPayload.roles).toEqual(["TRADER"]);
+      expect(accessPayload.exp).toBeDefined();
+      expect(accessPayload.jti).toBeDefined();
+
+      expect(refreshPayload.sub).toBe("testuser");
+      expect(refreshPayload.roles).toEqual(["TRADER"]);
+      expect(refreshPayload.type).toBe("refresh");
+      expect(refreshPayload.exp).toBeDefined();
+      expect(refreshPayload.jti).toBeDefined();
     });
 
     it("should generate different tokens on each login", async () => {
