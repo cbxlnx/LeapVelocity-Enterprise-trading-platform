@@ -2,6 +2,8 @@ package com.neueda.trading.engine;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.neueda.trading.engine.exceptions.PermanentFailureException;
+import com.neueda.trading.engine.exceptions.TemporaryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +24,12 @@ import java.util.concurrent.TimeoutException;
  * so the order's offset is only committed once its fill is safely on the
  * executions topic: at-least-once. If the engine dies mid-order it works the
  * order again on restart, and the trade API ignores the duplicate fill.
+ *
+ * <p>Failure Handling:
+ * - **Permanent Failures** (e.g., invalid JSON): Thrown as {@link PermanentFailureException}
+ *   and immediately sent to the Dead Letter Topic by the error handler.
+ * - **Temporary Failures** (e.g., Kafka send timeout): Thrown as {@link TemporaryFailureException}
+ *   and retried with exponential backoff until the retry budget is exhausted, then sent to DLT.
  */
 @Component
 public class OrderListener {
@@ -44,24 +52,59 @@ public class OrderListener {
     }
 
     @KafkaListener(topics = "${engine.topics.orders}", groupId = "${spring.kafka.consumer.group-id}",
-            concurrency = "${engine.topics.partitions}")
-    public void onOrder(String message) throws InterruptedException, ExecutionException, TimeoutException,
-            JsonProcessingException {
+            concurrency = "${engine.topics.partitions}", errorHandler = "orderListenerErrorHandler")
+    public void onOrder(String message) throws PermanentFailureException, TemporaryFailureException, InterruptedException {
         OrderEvent order;
         try {
             order = objectMapper.readValue(message, OrderEvent.class);
         } catch (JsonProcessingException e) {
-            log.error("Skipping unreadable order message: {}", message, e);
-            return;
+            // Invalid message format is a permanent failure - no point retrying
+            String errorMsg = "Skipping unreadable order message: " + message;
+            log.error(errorMsg, e);
+            throw new PermanentFailureException(errorMsg, e);
         }
 
         log.info("Working order {}: {} {} {} limit {}", order.orderId(), order.side(), order.quantity(),
                 order.symbol(), order.price());
-        pauser.pause(market.nextDelay());
+
+        try {
+            pauser.pause(market.nextDelay());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        }
+
         ExecutionEvent fill = market.execute(order);
 
-        kafkaTemplate.send(executionsTopic, String.valueOf(fill.accountId()), objectMapper.writeValueAsString(fill))
-                .get(10, TimeUnit.SECONDS);
-        log.info("Filled order {} at {} on {}", fill.orderId(), fill.price(), fill.venue());
+        try {
+            String executionJson = objectMapper.writeValueAsString(fill);
+            kafkaTemplate.send(executionsTopic, String.valueOf(fill.accountId()), executionJson)
+                    .get(10, TimeUnit.SECONDS);
+            log.info("Filled order {} at {} on {}", fill.orderId(), fill.price(), fill.venue());
+        } catch (JsonProcessingException e) {
+            // Serialization errors are permanent - message cannot be recovered
+            String errorMsg = "Failed to serialize execution for order " + order.orderId();
+            log.error(errorMsg, e);
+            throw new PermanentFailureException(errorMsg, e);
+        } catch (TimeoutException e) {
+            // Timeout publishing fill is a temporary failure - should retry
+            String errorMsg = "Timeout sending execution to topic '" + executionsTopic + "' for order " + order.orderId();
+            log.warn(errorMsg, e);
+            throw new TemporaryFailureException(errorMsg, e);
+        } catch (ExecutionException e) {
+            // Check if the underlying cause indicates a permanent or temporary failure
+            Throwable cause = e.getCause();
+            if (cause instanceof org.apache.kafka.common.errors.SerializationException) {
+                // Serialization errors are permanent
+                String errorMsg = "Failed to serialize execution for order " + order.orderId();
+                log.error(errorMsg, cause);
+                throw new PermanentFailureException(errorMsg, cause);
+            } else {
+                // Other execution errors are treated as temporary
+                String errorMsg = "Failed to send execution for order " + order.orderId();
+                log.warn(errorMsg, cause);
+                throw new TemporaryFailureException(errorMsg, cause);
+            }
+        }
     }
 }
