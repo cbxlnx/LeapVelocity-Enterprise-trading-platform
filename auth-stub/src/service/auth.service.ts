@@ -94,10 +94,10 @@ export class AuthService implements OnModuleInit {
   }
 
   private get accessTokenExpiresIn(): SignOptions["expiresIn"] {
-    return this.configService.get<string>("JWT_EXPIRES_IN") ?? DEFAULT_ACCESS_TOKEN_EXPIRES_IN;
+    return this.configService.get<SignOptions["expiresIn"]>("JWT_EXPIRES_IN") ?? DEFAULT_ACCESS_TOKEN_EXPIRES_IN;
   }
 
   private get refreshTokenExpiresIn(): SignOptions["expiresIn"] {
-    return this.configService.get<string>("REFRESH_TOKEN_EXPIRES_IN") ?? DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
+    return this.configService.get<SignOptions["expiresIn"]>("REFRESH_TOKEN_EXPIRES_IN") ?? DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
   }
 }
