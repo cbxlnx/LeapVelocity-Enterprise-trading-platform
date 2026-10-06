@@ -101,6 +101,20 @@ services:
     networks:
       - trade-net
 
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    container_name: trading-platform-kafka-ui
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - trade-net
+
 volumes:
   trade-db-data:
 

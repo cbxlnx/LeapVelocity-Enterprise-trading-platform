@@ -18,6 +18,13 @@ server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
 
+logging:
+  level:
+    root: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: INFO
+    com.neueda.trading.engine: INFO
+
 management:
   endpoints:
     web:
@@ -32,4 +39,11 @@ engine:
   topics:
     orders: orders
     executions: ${ENGINE_TOPICS_EXECUTIONS:trade-events}
+    dead-letter: ${ENGINE_TOPICS_DEAD_LETTER:orders-dlq}
     partitions: 3
+  retry:
+    max-retries: ${ENGINE_RETRY_MAX_RETRIES:4}
+    initial-backoff: ${ENGINE_RETRY_INITIAL_BACKOFF:1s}
+    backoff-multiplier: ${ENGINE_RETRY_BACKOFF_MULTIPLIER:2.0}
+    max-backoff: ${ENGINE_RETRY_MAX_BACKOFF:8s}
+
