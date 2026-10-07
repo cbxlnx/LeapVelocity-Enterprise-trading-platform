@@ -114,7 +114,9 @@ class SecurityConfigTest {
 
     private JWTClaimsSet.Builder claims() {
         return new JWTClaimsSet.Builder().subject("42").issuer("leapvelocity-auth")
-                .claim("username", "testuser").issueTime(new Date())
+                .claim("username", "testuser")
+                .claim("accountId", 1)
+                .issueTime(new Date())
                 .expirationTime(Date.from(Instant.now().plusSeconds(60)));
     }
 
