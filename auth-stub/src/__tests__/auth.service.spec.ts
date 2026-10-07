@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { AuthService } from "../service/auth.service";
 import { TokenService } from "../service/token.service";
+import { ThrottleService } from "../service/throttle.service";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { verify, type JwtPayload } from "jsonwebtoken";
 import { DEFAULT_JWT_ISSUER } from "../config/jwt.config";
@@ -59,7 +60,7 @@ describe("AuthService", () => {
           },
         }),
       ],
-      providers: [AuthService, TokenService, UserRepository],
+      providers: [AuthService, TokenService, UserRepository, ThrottleService],
     }).compile();
 
     service = module.get<AuthService>(AuthService);

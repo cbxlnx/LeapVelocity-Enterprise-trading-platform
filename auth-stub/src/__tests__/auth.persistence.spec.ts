@@ -10,6 +10,7 @@ import { DEFAULT_JWT_ISSUER } from "../config/jwt.config";
 import { UserRepository } from "../repository/user.repository";
 import { AuthService } from "../service/auth.service";
 import { TokenService } from "../service/token.service";
+import { ThrottleService } from "../service/throttle.service";
 import { startTestDatabase, type TestDatabase } from "./support/test-database";
 
 const jwt = new JwtService({
@@ -27,7 +28,7 @@ describe("Authentication persistence", () => {
     const config = new ConfigService({ DATABASE_URL: database.url });
     repository = new UserRepository(config);
     await repository.onModuleInit();
-    service = new AuthService(new TokenService(jwt, config), repository);
+    service = new AuthService(new TokenService(jwt, config), repository, new ThrottleService(config));
   }
 
   beforeAll(async () => {
