@@ -8,6 +8,7 @@ import { AuthService } from "./service/auth.service";
 import { UserRepository } from "./repository/user.repository";
 import { JwtAuthGuard } from "./guard/jwt-auth.guard";
 import { TokenService } from "./service/token.service";
+import { ThrottleService } from "./service/throttle.service";
 
 function requiredJwtSecret(configService: ConfigService): string {
   const secret = configService.get<string>("JWT_SECRET");
@@ -38,6 +39,6 @@ function requiredJwtSecret(configService: ConfigService): string {
     }),
   ],
   controllers: [AuthController, HealthController],
-  providers: [AuthService, TokenService, UserRepository, JwtAuthGuard],
+  providers: [AuthService, TokenService, UserRepository, JwtAuthGuard, ThrottleService],
 })
 export class AppModule {}
