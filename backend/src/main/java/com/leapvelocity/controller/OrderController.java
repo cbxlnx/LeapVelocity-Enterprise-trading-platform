@@ -3,6 +3,7 @@ package com.leapvelocity.controller;
 import com.leapvelocity.dto.request.PlaceOrderRequestDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.entities.Order;
+import com.leapvelocity.security.AccountAccessAuthorizer;
 import com.leapvelocity.service.OrderExecutionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,6 +59,8 @@ public class OrderController {
     })
     @PostMapping
     public ResponseEntity<OrderDto> placeOrder(@Valid @RequestBody PlaceOrderRequestDto request) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(request.accountId());
+
         // Convert DTO to Order entity
         Order order = new Order(
                 request.accountId(),

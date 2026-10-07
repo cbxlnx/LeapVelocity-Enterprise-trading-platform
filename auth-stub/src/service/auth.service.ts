@@ -25,9 +25,6 @@ export class AuthService {
   ) {}
 
   async register(username: string, password: string): Promise<{ username: string; registered: true }> {
-    if (await this.users.findByUsername(username)) {
-      throw new ConflictException(`${username} is already registered`);
-    }
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     if (!(await this.users.create(username, passwordHash))) {
       throw new ConflictException(`${username} is already registered`);

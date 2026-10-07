@@ -25,6 +25,7 @@ public enum ErrorCode {
     
     // Authentication/Authorization errors
     UNAUTHORIZED("AUTH-401", HttpStatus.UNAUTHORIZED, "Unauthorised / invalid token"),
+    FORBIDDEN("AUTH-403", HttpStatus.FORBIDDEN, "Forbidden"),
     
     // Server errors (5xx)
     INTERNAL_SERVER_ERROR("ERR-999", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
