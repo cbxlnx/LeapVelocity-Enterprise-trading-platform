@@ -2,12 +2,18 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { AuthService } from "../service/auth.service";
+import { TokenService } from "../service/token.service";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { verify, type JwtPayload } from "jsonwebtoken";
-import { DEFAULT_JWT_ISSUER, DEFAULT_JWT_SECRET } from "../config/jwt.config";
+import { DEFAULT_JWT_ISSUER } from "../config/jwt.config";
+import { UserRepository } from "../repository/user.repository";
+import { startTestDatabase, type TestDatabase } from "./support/test-database";
+import * as bcrypt from "bcrypt";
+
+const TEST_JWT_SECRET = "test-secret-key-32-bytes-minimum";
 
 function decodeJwt(token: string): JwtPayload {
-  const payload = verify(token, DEFAULT_JWT_SECRET, {
+  const payload = verify(token, TEST_JWT_SECRET, {
     algorithms: ["HS256"],
     issuer: DEFAULT_JWT_ISSUER,
   });
@@ -21,23 +27,43 @@ function decodeJwt(token: string): JwtPayload {
 
 describe("AuthService", () => {
   let service: AuthService;
+  let module: TestingModule;
+  let database: TestDatabase;
+
+  beforeAll(async () => {
+    database = await startTestDatabase();
+  }, 30000);
+
+  afterEach(async () => {
+    await module?.close();
+  });
+
+  afterAll(async () => {
+    await database?.close();
+  });
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    await database.db.exec("DELETE FROM users");
+    module = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          load: [() => ({ DATABASE_URL: database.url, JWT_ISSUER: DEFAULT_JWT_ISSUER })],
+        }),
         JwtModule.register({
-          secret: DEFAULT_JWT_SECRET,
+          secret: TEST_JWT_SECRET,
           signOptions: {
             algorithm: "HS256",
             issuer: DEFAULT_JWT_ISSUER,
           },
         }),
       ],
-      providers: [AuthService],
+      providers: [AuthService, TokenService, UserRepository],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    await module.init();
   });
 
   describe("register", () => {
@@ -54,6 +80,9 @@ describe("AuthService", () => {
       const username = "hashtest";
       const password = "password123";
       await service.register(username, password);
+      const user = await module.get(UserRepository).findByUsername(username);
+      expect(user?.passwordHash).not.toBe(password);
+      expect(await bcrypt.compare(password, user!.passwordHash)).toBe(true);
       // Verify by trying to login
       const loginResult = await service.login(username, password);
       expect(loginResult).toHaveProperty("accessToken");
@@ -102,7 +131,7 @@ describe("AuthService", () => {
 
   describe("login", () => {
     beforeEach(async () => {
-      await service.register("dave", "mission123");
+      await service.register("testtrader", "traderPass123");
       await service.register("testuser", "password123");
     });
 
@@ -116,12 +145,15 @@ describe("AuthService", () => {
       const accessPayload = decodeJwt(result.accessToken);
       const refreshPayload = decodeJwt(result.refreshToken);
 
-      expect(accessPayload.sub).toBe("testuser");
+      const user = await module.get(UserRepository).findByUsername("testuser");
+      expect(accessPayload.sub).toBe(user!.id);
+      expect(accessPayload.username).toBe("testuser");
       expect(accessPayload.roles).toEqual(["TRADER"]);
       expect(accessPayload.exp).toBeDefined();
       expect(accessPayload.jti).toBeDefined();
 
-      expect(refreshPayload.sub).toBe("testuser");
+      expect(refreshPayload.sub).toBe(user!.id);
+      expect(refreshPayload.username).toBe("testuser");
       expect(refreshPayload.roles).toEqual(["TRADER"]);
       expect(refreshPayload.type).toBe("refresh");
       expect(refreshPayload.exp).toBeDefined();
@@ -158,7 +190,7 @@ describe("AuthService", () => {
     });
 
     it("should verify password using bcrypt.compare", async () => {
-      const result = await service.login("dave", "mission123");
+      const result = await service.login("testtrader", "traderPass123");
       expect(result.accessToken).toBeDefined();
     });
 
@@ -168,8 +200,8 @@ describe("AuthService", () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it("should handle pre-registered user (dave)", async () => {
-      const result = await service.login("dave", "mission123");
+    it("should handle a trader user", async () => {
+      const result = await service.login("testtrader", "traderPass123");
       expect(result).toHaveProperty("accessToken");
       expect(result).toHaveProperty("refreshToken");
     });
@@ -182,33 +214,39 @@ describe("AuthService", () => {
 
     it("should refresh access token with valid refresh token", async () => {
       const { refreshToken } = await service.login("refreshtest", "password123");
-      const result = service.refresh(refreshToken);
+      const result = await service.refresh(refreshToken);
       expect(result).toHaveProperty("accessToken");
       expect(typeof result.accessToken).toBe("string");
     });
 
     it("should throw UnauthorizedException for invalid refresh token", async () => {
       const invalidToken = "invalid-token-xyz";
-      expect(() => service.refresh(invalidToken)).toThrow(
+      await expect(service.refresh(invalidToken)).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
+    it("should reject an access token sent to refresh", async () => {
+      const { accessToken } = await service.login("refreshtest", "password123");
+
+      await expect(service.refresh(accessToken)).rejects.toThrow(UnauthorizedException);
+    });
+
     it("should throw UnauthorizedException for non-existent token", async () => {
       const fakeToken = "stub-refresh-token-for-fakeuser-abc12345";
-      expect(() => service.refresh(fakeToken)).toThrow(UnauthorizedException);
+      await expect(service.refresh(fakeToken)).rejects.toThrow(UnauthorizedException);
     });
 
     it("should generate new access token different from previous", async () => {
       const loginResult = await service.login("refreshtest", "password123");
       const token1 = loginResult.accessToken;
-      const refreshResult = service.refresh(loginResult.refreshToken);
+      const refreshResult = await service.refresh(loginResult.refreshToken);
       expect(refreshResult.accessToken).not.toBe(token1);
     });
 
-    it("should throw error with message", () => {
+    it("should throw error with message", async () => {
       try {
-        service.refresh("invalid-token");
+        await service.refresh("invalid-token");
         fail("Should have thrown UnauthorizedException");
       } catch (error : any) {
         expect(error.message).toContain("invalid or expired refresh token");
@@ -317,7 +355,7 @@ describe("AuthService", () => {
       expect(loginResult.refreshToken).toBeDefined();
 
       // Refresh
-      const refreshResult = service.refresh(loginResult.refreshToken);
+      const refreshResult = await service.refresh(loginResult.refreshToken);
       expect(refreshResult.accessToken).toBeDefined();
       expect(refreshResult.accessToken).not.toBe(loginResult.accessToken);
     });

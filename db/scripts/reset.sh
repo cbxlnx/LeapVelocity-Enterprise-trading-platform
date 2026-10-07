@@ -45,6 +45,7 @@ DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS positions CASCADE;
 DROP TABLE IF EXISTS instruments CASCADE;
 DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 EOF
 
 echo -e "${YELLOW}Recreating schema and seed data...${NC}"

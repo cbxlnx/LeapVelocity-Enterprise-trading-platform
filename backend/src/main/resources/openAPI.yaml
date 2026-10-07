@@ -347,4 +347,4 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authentication (to be implemented)
+      description: Unexpired NestJS-issued access JWT required; signature and issuer are verified by Spring Security

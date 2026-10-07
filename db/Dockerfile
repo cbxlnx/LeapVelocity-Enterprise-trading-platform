@@ -4,7 +4,8 @@ FROM postgres:16-alpine
 COPY tables/ /docker-entrypoint-initdb.d/tables/
 COPY data/ /docker-entrypoint-initdb.d/data/
 COPY docker-entrypoint-init.sh /docker-entrypoint-initdb.d/00-run-sql.sh
-RUN chmod +x /docker-entrypoint-initdb.d/00-run-sql.sh
+RUN sed -i 's/\r$//' /docker-entrypoint-initdb.d/00-run-sql.sh && \
+    chmod +x /docker-entrypoint-initdb.d/00-run-sql.sh
 
 # IP restrictions
 ENV POSTGRES_PASSWORD=${DB_PASSWORD:-change_me}

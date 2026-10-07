@@ -2,8 +2,26 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { AuthController } from "./controller/auth.controller";
-import { DEFAULT_JWT_ISSUER, DEFAULT_JWT_SECRET } from "./config/jwt.config";
+import { HealthController } from "./controller/health.controller";
+import { DEFAULT_JWT_ISSUER } from "./config/jwt.config";
 import { AuthService } from "./service/auth.service";
+import { UserRepository } from "./repository/user.repository";
+import { JwtAuthGuard } from "./guard/jwt-auth.guard";
+import { TokenService } from "./service/token.service";
+
+function requiredJwtSecret(configService: ConfigService): string {
+  const secret = configService.get<string>("JWT_SECRET");
+
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required");
+  }
+
+  if (Buffer.byteLength(secret, "utf8") < 32) {
+    throw new Error("JWT_SECRET must be at least 32 bytes for HS256");
+  }
+
+  return secret;
+}
 
 @Module({
   imports: [
@@ -11,7 +29,7 @@ import { AuthService } from "./service/auth.service";
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>("JWT_SECRET") ?? DEFAULT_JWT_SECRET,
+        secret: requiredJwtSecret(configService),
         signOptions: {
           algorithm: "HS256",
           issuer: configService.get<string>("JWT_ISSUER") ?? DEFAULT_JWT_ISSUER,
@@ -19,7 +37,7 @@ import { AuthService } from "./service/auth.service";
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService],
+  controllers: [AuthController, HealthController],
+  providers: [AuthService, TokenService, UserRepository, JwtAuthGuard],
 })
 export class AppModule {}

@@ -36,7 +36,7 @@ server:
 app:
   security:
     jwt:
-      secret: ${APP_SECURITY_JWT_SECRET:leapvelocity-shared-secret-key-32-bytes-minimum}
+      secret: ${APP_SECURITY_JWT_SECRET}
       issuer: ${APP_SECURITY_JWT_ISSUER:leapvelocity-auth}
       expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:30}
 
