@@ -12,3 +12,4 @@ analysis/scripts/*.pyc
 db/scripts/backups/
 auth-stub/node_modules
 auth-stub/dist
+auth-stub/coverage/

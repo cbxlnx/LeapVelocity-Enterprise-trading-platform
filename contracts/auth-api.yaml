@@ -1,258 +1,231 @@
-openapi: 3.0.3
-info:
-  title: Authentication Service API
-  description: >
-    API for managing user authentication and JWT token operations.
-    All error responses follow the platform ErrorResponse envelope.
-  version: 1.0.0
-  license:
-    name: Internal use only
-
-servers:
-  - url: /api/v1/auth
-
+openapi: 3.0.0
 paths:
-  /login:
-    post:
-      summary: Authenticate user and issue JWT token
-      tags:
-        - auth
-      operationId: login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequestDto'
+  /auth/me:
+    get:
+      operationId: AuthController_me
+      parameters: []
       responses:
         '200':
-          description: Authentication successful, JWT token issued
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponseDto'
-        '400':
-          description: Invalid request (missing username or password)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/CurrentUserResponseDto'
         '401':
-          description: Unauthorized - invalid username or password
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /register:
-    post:
-      summary: Register a new user
+                $ref: '#/components/schemas/AuthErrorResponseDto'
+      security:
+        - bearer: []
       tags:
         - auth
-      operationId: register
+  /auth/register:
+    post:
+      operationId: AuthController_register
+      parameters: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequestDto'
+              $ref: '#/components/schemas/RegisterDto'
       responses:
         '201':
-          description: User successfully registered
+          description: ''
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegisterResponseDto'
         '400':
-          description: Invalid request (missing or invalid fields)
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AuthErrorResponseDto'
         '409':
-          description: Conflict - user already exists
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /refresh:
-    post:
-      summary: Refresh JWT token using a valid or expired token
+                $ref: '#/components/schemas/AuthErrorResponseDto'
       tags:
         - auth
-      operationId: refresh
-      security:
-        - bearerAuth: []
+  /auth/login:
+    post:
+      operationId: AuthController_login
+      parameters: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshRequestDto'
+              $ref: '#/components/schemas/LoginDto'
       responses:
         '200':
-          description: Token successfully refreshed
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponseDto'
+                $ref: '#/components/schemas/LoginResponseDto'
         '400':
-          description: Invalid request (missing token)
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AuthErrorResponseDto'
         '401':
-          description: Unauthorized - invalid or malformed token
+          description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
+                $ref: '#/components/schemas/AuthErrorResponseDto'
+      tags:
+        - auth
+  /auth/refresh:
+    post:
+      operationId: AuthController_refresh
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshDto'
+      responses:
+        '200':
+          description: Requires an unexpired refreshToken in the request body.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: '#/components/schemas/AccessTokenResponseDto'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponseDto'
+        '401':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthErrorResponseDto'
+      tags:
+        - auth
   /health:
     get:
-      summary: Service health check
-      tags:
-        - health
-      operationId: health
+      operationId: HealthController_health
+      parameters: []
       responses:
         '200':
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponseDto'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+          description: ''
+      tags:
+        - Health
+info:
+  title: Authentication Service API
+  description: >-
+    Centralized authentication. Trading business endpoints belong to the
+    separate Spring Boot API.
+  version: 1.0.0
+  contact: {}
+tags: []
+servers: []
 components:
-  schemas:
-    LoginRequestDto:
-      type: object
-      required: [username, password]
-      properties:
-        username:
-          type: string
-          description: User's username
-          example: john
-        password:
-          type: string
-          description: User's password (plaintext in request)
-          example: password
-
-    RegisterRequestDto:
-      type: object
-      required: [username, password]
-      properties:
-        username:
-          type: string
-          description: Desired username (must be unique)
-          example: newuser
-        password:
-          type: string
-          description: User's password (plaintext in request)
-          example: securepassword
-
-    RefreshRequestDto:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          description: Current JWT token (valid or expired)
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-    TokenResponseDto:
-      type: object
-      required: [token, expiresIn]
-      properties:
-        token:
-          type: string
-          description: JWT access token
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        expiresIn:
-          type: string
-          description: Token expiration time
-          example: 1h
-
-    RegisterResponseDto:
-      type: object
-      required: [userId, username, message]
-      properties:
-        userId:
-          type: string
-          description: Unique ID of newly created user
-          example: user123
-        username:
-          type: string
-          description: Username of registered user
-          example: newuser
-        message:
-          type: string
-          description: Registration success message
-          example: User registered successfully
-
-    HealthResponseDto:
-      type: object
-      required: [status]
-      properties:
-        status:
-          type: string
-          description: Service status
-          example: up
-
-    ErrorResponse:
-      type: object
-      required: [code, message]
-      properties:
-        code:
-          type: string
-          description: Error code (e.g., AUTH-401, AUTH-409, VAL-400)
-          example: AUTH-401
-        message:
-          type: string
-          description: Human-readable error message
-          example: Invalid username or password
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp when error occurred
-          example: 2026-10-06T14:30:00Z
-        path:
-          type: string
-          description: API path that generated the error
-          example: /api/v1/auth/login
-        details:
-          type: object
-          description: Additional error details for debugging
-          example: { "field": "username", "reason": "not found" }
-
   securitySchemes:
-    bearerAuth:
-      type: http
+    bearer:
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token for /refresh endpoint
+      type: http
+  schemas:
+    CurrentUserResponseDto:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+        - username
+    AuthErrorResponseDto:
+      type: object
+      properties:
+        statusCode:
+          type: number
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+      required:
+        - statusCode
+        - message
+        - error
+    RegisterDto:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 128
+        password:
+          type: string
+          minLength: 8
+          description: Maximum 72 UTF-8 bytes (bcrypt limit).
+          format: password
+          writeOnly: true
+      required:
+        - username
+        - password
+    RegisterResponseDto:
+      type: object
+      properties:
+        username:
+          type: string
+        registered:
+          type: boolean
+          example: true
+      required:
+        - username
+        - registered
+    LoginDto:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 128
+        password:
+          type: string
+          description: Maximum 72 UTF-8 bytes (bcrypt limit).
+          format: password
+          writeOnly: true
+      required:
+        - username
+        - password
+    LoginResponseDto:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required:
+        - accessToken
+        - refreshToken
+    RefreshDto:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: Unexpired refresh JWT returned by login.
+      required:
+        - refreshToken
+    AccessTokenResponseDto:
+      type: object
+      properties:
+        accessToken:
+          type: string
+      required:
+        - accessToken

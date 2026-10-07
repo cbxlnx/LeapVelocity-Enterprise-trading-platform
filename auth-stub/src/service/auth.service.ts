@@ -1,56 +1,59 @@
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import { createHash } from "crypto";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
-
-interface StoredUser {
-  passwordHash: string;
-  refreshToken: string | null;
-}
+import { UserRepository } from "../repository/user.repository";
+import { TokenService } from "./token.service";
+import type { AuthenticatedUser } from "../types/authenticated-user";
 
 const SALT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
-  private readonly users = new Map<string, StoredUser>();
-
-  constructor() {
-    void this.register("dave", "mission123");
-  }
+  constructor(
+    private readonly tokens: TokenService,
+    private readonly users: UserRepository,
+  ) {}
 
   async register(username: string, password: string): Promise<{ username: string; registered: true }> {
-    if (this.users.has(username)) {
+    if (await this.users.findByUsername(username)) {
       throw new ConflictException(`${username} is already registered`);
     }
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    this.users.set(username, { passwordHash, refreshToken: null });
+    if (!(await this.users.create(username, passwordHash))) {
+      throw new ConflictException(`${username} is already registered`);
+    }
     return { username, registered: true };
   }
 
   async login(username: string, password: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const user = this.users.get(username);
+    const user = await this.users.findByUsername(username);
     const passwordMatches = user ? await bcrypt.compare(password, user.passwordHash) : false;
     if (!user || !passwordMatches) {
       throw new UnauthorizedException("invalid username or password");
     }
-    const accessToken = this.issueStubToken("access", username);
-    const refreshToken = this.issueStubToken("refresh", username);
-    user.refreshToken = refreshToken;
+    const accessToken = this.tokens.issue(user);
+    const refreshToken = this.tokens.issue(user, "refresh");
+    await this.users.storeRefreshTokenHash(user.id, this.hashToken(refreshToken));
     return { accessToken, refreshToken };
   }
 
-  refresh(refreshToken: string): { accessToken: string } {
-    const entry = this.findByRefreshToken(refreshToken);
-    if (!entry) {
+  async refresh(refreshToken: string): Promise<{ accessToken: string }> {
+    const payload = this.tokens.verify(refreshToken, "refresh");
+    const user = await this.users.findByRefreshTokenHash(payload.sub, this.hashToken(refreshToken));
+
+    if (!user) {
       throw new UnauthorizedException("invalid or expired refresh token");
     }
-    const [username] = entry;
-    return { accessToken: this.issueStubToken("access", username) };
+
+    return { accessToken: this.tokens.issue(user) };
   }
 
-  private findByRefreshToken(refreshToken: string): [string, StoredUser] | undefined {
-    return [...this.users.entries()].find(([, u]) => u.refreshToken === refreshToken);
+  validate(accessToken: string): AuthenticatedUser {
+    const payload = this.tokens.verify(accessToken);
+    return { username: payload.username };
   }
 
-  private issueStubToken(kind: "access" | "refresh", username: string): string {
-    return `stub-${kind}-token-for-${username}-${Math.random().toString(36).slice(2, 10)}`;
+  private hashToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
   }
 }

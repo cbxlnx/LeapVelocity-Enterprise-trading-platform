@@ -1,11 +1,10 @@
 node_modules
 npm-debug.log
 dist
+coverage
 .git
 .gitignore
 .env
 .env.example
-test
-jest.config.js
 README.md
 .DS_Store
