@@ -124,8 +124,37 @@ services:
     networks:
       - trade-net
 
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube-sprint7
+    ports:
+      - "8082:9000"
+    environment:
+      SONAR_JAVA_OPTS: -Xmx512m -Xms256m
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - trade-net
+      
 volumes:
   trade-db-data:
+  sonarqube_data:
+    external: true
+    name: leapvelocity-enterprise-trading-platform_sonarqube_data
+  sonarqube_logs:
+    external: true
+    name: leapvelocity-enterprise-trading-platform_sonarqube_logs
+  sonarqube_extensions:
+    external: true
+    name: leapvelocity-enterprise-trading-platform_sonarqube_extensions
 
 networks:
   trade-net:
