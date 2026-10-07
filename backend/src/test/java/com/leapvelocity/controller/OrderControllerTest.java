@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExc
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
@@ -79,7 +80,7 @@ class OrderControllerTest {
                 "IDEM-001"
         );
         executedOrder.setStatus(OrderStatus.FILLED);
-        executedOrder.setCreatedOn(LocalDateTime.now());
+        executedOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         // Setup the expected response
         expectedResponse = OrderDto.from(executedOrder);
@@ -496,12 +497,12 @@ class OrderControllerTest {
         Order newOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
         newOrder.setId(orderId);
         newOrder.setStatus(OrderStatus.NEW);
-        newOrder.setCreatedOn(LocalDateTime.now());
+        newOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         Order cancelledOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -561,7 +562,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "AAPL", OrderSide.SELL, new BigDecimal("50"), new BigDecimal("200"), "IDEM-SELL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -581,7 +582,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "MSFT", OrderSide.SELL, new BigDecimal("75"), new BigDecimal("300"), "IDEM-SELL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -635,7 +636,7 @@ class OrderControllerTest {
     void deleteOrderResponseIncludesAllFields() throws Exception {
         // Arrange
         UUID orderId = UUID.randomUUID();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         Order cancelledOrder = new Order(2L, "GOOGL", OrderSide.BUY, new BigDecimal("10"), new BigDecimal("2800"), "IDEM-GOOGL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
@@ -666,7 +667,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "TSLA", OrderSide.BUY, new BigDecimal("5"), new BigDecimal("250"), "IDEM-TSLA");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         // First call succeeds, second throws exception
         when(orderExecutionService.cancelOrder(orderId))

@@ -10,6 +10,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Entity
@@ -51,7 +52,7 @@ public class Execution {
         this.side = side;
         this.quantity = quantity;
         this.price = price;
-        this.executedOn = LocalDateTime.now();
+        this.executedOn = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     @PrePersist
@@ -60,7 +61,7 @@ public class Execution {
             this.id = UUID.randomUUID();
         }
         if (this.executedOn == null) {
-            this.executedOn = LocalDateTime.now();
+            this.executedOn = LocalDateTime.now(ZoneOffset.UTC);
         }
     }
 

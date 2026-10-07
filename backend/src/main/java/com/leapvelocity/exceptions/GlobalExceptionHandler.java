@@ -235,24 +235,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus()).body(response);
     }
 
-    /**     * Handles type mismatch errors (e.g., path variable type conversion failure).
-     * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
-     */
-    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
-            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
-            HttpServletRequest request) {
-        logger.warn("Type mismatch for parameter {}: expected {} but got '{}'", 
-                ex.getName(), ex.getRequiredType().getSimpleName(), ex.getValue());
+        /**
+         * Handles type mismatch errors (e.g., path variable type conversion failure).
+         * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
+         */
+        @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+        @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+        public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+                org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+                HttpServletRequest request) {
+        Class<?> requiredType = ex.getRequiredType();
+        String expectedType = requiredType != null ? requiredType.getSimpleName() : "unknown";
+
+        logger.warn(
+                "Type mismatch for parameter {}: expected {} but got '{}'",
+                ex.getName(),
+                expectedType,
+                ex.getValue());
+
         ErrorResponse response = new ErrorResponse(
                 ErrorCode.INVALID_INPUT,
                 request.getRequestURI(),
-                String.format("Invalid value for parameter '%s': expected %s", 
-                        ex.getName(), ex.getRequiredType().getSimpleName())
+                String.format(
+                        "Invalid value for parameter '%s': expected %s",
+                        ex.getName(),
+                        expectedType)
         );
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getHttpStatus()).body(response);
-    }
+        }
 
     /**     * Generic exception handler for any unexpected exceptions.
      * Maps to HTTP 500 Internal Server Error.

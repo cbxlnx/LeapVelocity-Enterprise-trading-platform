@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -67,7 +68,7 @@ class AccountControllerTest {
                 new BigDecimal("250000.00"),
                 AccountStatus.ACTIVE,
                 1,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
         );
 
         testBalance = new AccountBalanceDto(
@@ -82,9 +83,9 @@ class AccountControllerTest {
 
         testOrders = List.of(
                 new OrderDto(UUID.randomUUID(), 1L, "AAPL", OrderSide.BUY, new BigDecimal("100.00"), new BigDecimal("150.25"),
-                        OrderStatus.FILLED, "IDEM-001", LocalDateTime.now()),
+                        OrderStatus.FILLED, "IDEM-001", LocalDateTime.now(ZoneOffset.UTC)),
                 new OrderDto(UUID.randomUUID(), 1L, "MSFT", OrderSide.SELL, new BigDecimal("50.00"), new BigDecimal("380.50"),
-                        OrderStatus.FILLED, "IDEM-002", LocalDateTime.now().minusHours(1))
+                        OrderStatus.FILLED, "IDEM-002", LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
         );
     }
 
@@ -134,7 +135,7 @@ class AccountControllerTest {
                 new BigDecimal("500000.00"),
                 AccountStatus.ACTIVE,
                 1,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
         );
         when(accountService.getAccount(2L)).thenReturn(account2);
 
