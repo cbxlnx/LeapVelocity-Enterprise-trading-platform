@@ -74,7 +74,7 @@ public class OrderListener {
             throw e;
         }
 
-        ExecutionEvent fill = market.execute(order);
+        ExecutionEvent fill = market.placeOrder(order);
 
         try {
             String executionJson = objectMapper.writeValueAsString(fill);

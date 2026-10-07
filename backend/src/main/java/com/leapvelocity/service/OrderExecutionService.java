@@ -126,10 +126,6 @@ public class OrderExecutionService {
 		return savedOrder;
 	}
 
-	public Order execute(Order order) {
-		return placeOrder(order);
-	}
-
 	public Position getPosition(Long accountId, String symbol) {
 		return positionUpdateService.getPosition(accountId, symbol);
 	}
