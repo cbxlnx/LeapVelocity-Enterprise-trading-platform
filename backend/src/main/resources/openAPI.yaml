@@ -224,6 +224,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         quantity:
           type: number
           format: double
@@ -255,6 +256,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         side:
           type: string
           enum: [BUY, SELL]
@@ -325,6 +327,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         quantity:
           type: number
           format: double

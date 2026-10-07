@@ -17,7 +17,7 @@ public record OrderDto(
         @Schema(description = "Account ID that placed this order", example = "1")
         Long accountId,
         
-        @Schema(description = "Trading symbol of the instrument", example = "AAPL")
+		@Schema(description = "Trading symbol of the instrument", example = "USEQUITY")
         String symbol,
         
         @Schema(description = "Order side: BUY or SELL", example = "BUY")
