@@ -23,6 +23,12 @@ pipeline {
                 sh 'mvn -B -f backend/pom.xml clean package'
             }
         }
+
+        stage('Test') {
+            steps {
+                sh 'mvn -B -f backend/pom.xml test'
+            }
+        }
         
         stage('Build Java App Image') {
             steps {
@@ -44,8 +50,8 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''
-                        cd backend
                         mvn -B sonar:sonar \
+                        -Dsonar.projectKey=leapvelocity-platform \
                         -Dsonar.qualitygate.wait=true
                     '''
                 }

@@ -10,6 +10,6 @@ analysis/data/
 analysis/scripts/__pycache__/
 analysis/scripts/*.pyc
 db/scripts/backups/
-auth-stub/node_modules
-auth-stub/dist
-auth-stub/coverage/
+auth-service/node_modules
+auth-service/dist
+auth-service/coverage/
