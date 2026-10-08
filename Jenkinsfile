@@ -63,15 +63,21 @@ pipeline {
                 stage('Dependency Vulnerabilities') {
                     steps {
                         sh '''
-                            cd backend
-                            mvn -B dependency-check:check
+                            docker run --rm \
+                            -v $(pwd):/workspace \
+                            -w /workspace \
+                            aquasec/trivy:0.57.1 fs \
+                            --exit-code 1 \
+                            --severity HIGH,CRITICAL \
+                            --scanners vuln \
+                            .
                         '''
                     }
                 }
-                
+
                 stage('Secret Detection') {
                     steps {
-                        sh '''                            
+                        sh '''
                             docker run --rm -v $(pwd):/repo -w /repo \
                             zricethezav/gitleaks:latest detect \
                             --verbose
