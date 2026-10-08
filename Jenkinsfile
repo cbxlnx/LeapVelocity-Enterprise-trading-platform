@@ -20,13 +20,13 @@ pipeline {
         
         stage('Build') {
             steps {
-                sh 'mvn -B -f backend/pom.xml clean package'
+                sh 'mvn -B clean package -pl backend,execution-engine'
             }
         }
 
         stage('Test') {
             steps {
-                sh 'mvn -B -f backend/pom.xml test'
+                sh 'mvn -B test -pl backend,execution-engine'
             }
         }
         

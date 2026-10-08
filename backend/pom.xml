@@ -18,8 +18,6 @@
         <junit.version>5.10.2</junit.version>
         <jakarta.validation.version>3.0.2</jakarta.validation.version>
         <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
-        <sonar.projectKey>leapvelocity-backend</sonar.projectKey>
-        <sonar.projectName>LeapVelocity Backend</sonar.projectName>
     </properties>
 
     <dependencies>

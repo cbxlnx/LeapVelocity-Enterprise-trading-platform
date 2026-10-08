@@ -22,5 +22,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <sonar.projectKey>leapvelocity-platform</sonar.projectKey>
+        <sonar.projectName>LeapVelocity Enterprise Platform</sonar.projectName>
     </properties>
 </project>
