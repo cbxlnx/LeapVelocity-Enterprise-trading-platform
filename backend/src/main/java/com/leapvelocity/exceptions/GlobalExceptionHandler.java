@@ -203,9 +203,9 @@ public class GlobalExceptionHandler {
      * Handles authentication/authorization exceptions.
      * Maps to HTTP 401 Unauthorized with error code AUTH-401.
      */
-    @ExceptionHandler({org.springframework.security.core.AuthenticationException.class, org.springframework.security.access.AccessDeniedException.class})
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+        @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+        @ResponseStatus(HttpStatus.UNAUTHORIZED)
+        public ResponseEntity<ErrorResponse> handleAuthenticationException(
             Exception ex,
             HttpServletRequest request) {
         logger.warn("Authentication/Authorization failed: {}", ex.getMessage());
@@ -216,6 +216,24 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getHttpStatus()).body(response);
     }
+
+        /**
+         * Handles authorization failures after authentication succeeds.
+         * Maps to HTTP 403 Forbidden with error code AUTH-403.
+         */
+        @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+        @ResponseStatus(HttpStatus.FORBIDDEN)
+        public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+                        org.springframework.security.access.AccessDeniedException ex,
+                        HttpServletRequest request) {
+                logger.warn("Access denied: {}", ex.getMessage());
+                ErrorResponse response = new ErrorResponse(
+                                ErrorCode.FORBIDDEN,
+                                request.getRequestURI(),
+                                ex.getMessage()
+                );
+                return ResponseEntity.status(ErrorCode.FORBIDDEN.getHttpStatus()).body(response);
+        }
 
     /**
      * Generic exception handler for any unexpected RuntimeExceptions.

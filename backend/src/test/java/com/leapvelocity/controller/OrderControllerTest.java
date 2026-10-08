@@ -14,10 +14,15 @@ import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.service.OrderExecutionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
@@ -84,7 +89,26 @@ class OrderControllerTest {
 
         // Setup the expected response
         expectedResponse = OrderDto.from(executedOrder);
+
+                authenticateAs(1L);
     }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
+        }
+
+        private void authenticateAs(long accountId) {
+                Jwt jwt = Jwt.withTokenValue("test-token")
+                                .header("alg", "HS256")
+                                .claim("sub", "42")
+                                .claim("username", "order-owner")
+                                .claim("accountId", accountId)
+                                .claim("roles", java.util.List.of("TRADER"))
+                                .build();
+                JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, java.util.List.of(new SimpleGrantedAuthority("ROLE_TRADER")));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
     // =============== Happy Path Tests ===============
 
@@ -161,6 +185,27 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders - Returns 403 when placing an order for another account")
+    void postOrdersReturns403WhenCrossAccount() throws Exception {
+        PlaceOrderRequestDto crossAccountRequest = new PlaceOrderRequestDto(
+                2L,
+                "AAPL",
+                OrderSide.BUY,
+                new BigDecimal("100.00"),
+                new BigDecimal("150.25"),
+                "IDEM-CROSS-001"
+        );
+
+        mockMvc.perform(post("/api/v1/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(crossAccountRequest)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+        verifyNoInteractions(orderExecutionService);
     }
 
     // =============== Validation Error Tests ===============
