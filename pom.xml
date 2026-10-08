@@ -13,7 +13,6 @@
     <name>LeapVelocity Enterprise Platform</name>
 
     <modules>
-        <module>auth-stub</module>
         <module>backend</module>
         <module>execution-engine</module>
     </modules>
