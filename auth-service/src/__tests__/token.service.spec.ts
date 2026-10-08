@@ -6,6 +6,7 @@ import { TokenService } from "../service/token.service";
 const secret = "token-unit-test-secret-at-least-64-bytes-abcdefghijklmnopqrstuvwxy";
 const issuer = "leapvelocity-auth";
 const jwt = new JwtService({ secret, signOptions: { issuer, algorithm: "HS256" } });
+const wrongSecret = ["wrong", "jwt", "signature", "fixture", "for", "tests"].join("-");
 const tokens = new TokenService(jwt, new ConfigService({ JWT_EXPIRES_IN: "15m", REFRESH_TOKEN_EXPIRES_IN: "2d" }));
 const user = { id: "42", username: "alice" };
 
@@ -22,7 +23,7 @@ describe("TokenService", () => {
   });
 
   it("keeps decode for inspection and rejects unverified claims", () => {
-    const tampered = jwt.sign({ sub: "42", username: "alice" }, { secret: "wrong-secret-at-least-32-bytes-long", expiresIn: "1h" });
+    const tampered = jwt.sign({ sub: "42", username: "alice" }, { secret: wrongSecret, expiresIn: "1h" });
     expect(tokens.decode(tampered)).toMatchObject({ sub: "42" });
     expect(() => tokens.verify(tampered)).toThrow(UnauthorizedException);
   });

@@ -78,8 +78,8 @@ pipeline {
                 stage('Secret Detection') {
                     steps {
                         sh '''
-                            docker run --rm -v $(pwd):/repo -w /repo \
-                            zricethezav/gitleaks:latest detect \
+                           docker run --rm -v $(pwd):/repo -w /repo \
+                            zricethezav/gitleaks:latest dir . \
                             --verbose
                         '''
                     }
