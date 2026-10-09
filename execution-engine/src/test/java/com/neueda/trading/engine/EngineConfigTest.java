@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,7 +48,8 @@ class EngineConfigTest {
     void pauserBeanAcceptsZeroDelay() throws Exception {
         Pauser pauser = config.pauser();
 
-        pauser.pause(Duration.ZERO);
+        assertNotNull(pauser);
+        assertDoesNotThrow(() -> pauser.pause(Duration.ZERO));
     }
 
     @Test
