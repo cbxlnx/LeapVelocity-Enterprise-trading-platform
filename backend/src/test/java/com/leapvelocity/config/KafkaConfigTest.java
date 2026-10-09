@@ -15,8 +15,8 @@ import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 
 import java.util.Map;
 
@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SuppressWarnings("deprecation")
 class KafkaConfigTest {
 
     private final KafkaProducerConfig producerConfig = new KafkaProducerConfig();
@@ -46,11 +45,11 @@ class KafkaConfigTest {
         Map<String, Object> properties = ((DefaultKafkaProducerFactory<String, OrderEvent>) factory).getConfigurationProperties();
         assertEquals("kafka:9092", properties.get(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
         assertEquals(StringSerializer.class, properties.get(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG));
-        assertEquals(JsonSerializer.class, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+        assertEquals(JacksonJsonSerializer.class, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
         assertEquals("all", properties.get(ProducerConfig.ACKS_CONFIG));
         assertEquals(3, properties.get(ProducerConfig.RETRIES_CONFIG));
         assertEquals(true, properties.get(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG));
-        assertEquals(false, properties.get(JsonSerializer.ADD_TYPE_INFO_HEADERS));
+        assertEquals(false, properties.get(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS));
     }
 
     @Test
@@ -70,11 +69,11 @@ class KafkaConfigTest {
         Map<String, Object> properties = ((DefaultKafkaConsumerFactory<String, ExecutionEvent>) factory).getConfigurationProperties();
         assertEquals("kafka:9092", properties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
         assertEquals(StringDeserializer.class, properties.get(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG));
-        assertEquals(JsonDeserializer.class, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+        assertEquals(JacksonJsonDeserializer.class, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
         assertEquals("earliest", properties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG));
-        assertEquals(ExecutionEvent.class.getName(), properties.get(JsonDeserializer.VALUE_DEFAULT_TYPE));
-        assertEquals(false, properties.get(JsonDeserializer.USE_TYPE_INFO_HEADERS));
-        assertTrue(String.valueOf(properties.get(JsonDeserializer.TRUSTED_PACKAGES)).contains("com.leapvelocity.messaging"));
+        assertEquals(ExecutionEvent.class.getName(), properties.get(JacksonJsonDeserializer.VALUE_DEFAULT_TYPE));
+        assertEquals(false, properties.get(JacksonJsonDeserializer.USE_TYPE_INFO_HEADERS));
+        assertTrue(String.valueOf(properties.get(JacksonJsonDeserializer.TRUSTED_PACKAGES)).contains("com.leapvelocity.messaging"));
     }
 
     @Test
