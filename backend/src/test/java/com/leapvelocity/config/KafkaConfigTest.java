@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SuppressWarnings("deprecation")
 class KafkaConfigTest {
 
     private final KafkaProducerConfig producerConfig = new KafkaProducerConfig();
