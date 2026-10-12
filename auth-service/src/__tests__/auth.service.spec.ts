@@ -45,6 +45,7 @@ describe("AuthService", () => {
 
   beforeEach(async () => {
     await database.db.exec("DELETE FROM users");
+    await database.db.exec("DELETE FROM accounts");
     module = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -75,6 +76,23 @@ describe("AuthService", () => {
     it("should register a new user", async () => {
       const result = await service.register("testuser", "password123");
       expect(result).toEqual({ username: "testuser", registered: true });
+
+      const user = await module.get(UserRepository).findByUsername("testuser");
+      expect(user?.accountId).toBeGreaterThan(0);
+
+      const account = await database.db.query<{
+        account_id: string;
+        holder_name: string;
+        cash_balance: string;
+        status: string;
+      }>("SELECT account_id, holder_name, cash_balance::text AS cash_balance, status FROM accounts WHERE id = $1", [user!.accountId]);
+      expect(account.rows).toHaveLength(1);
+      expect(account.rows[0]).toMatchObject({
+        account_id: expect.stringMatching(/^ACC-\d{3,}$/),
+        holder_name: "testuser",
+        cash_balance: "100000.00",
+        status: "ACTIVE",
+      });
     });
 
     it("should hash password using bcrypt", async () => {
@@ -149,12 +167,14 @@ describe("AuthService", () => {
       const user = await module.get(UserRepository).findByUsername("testuser");
       expect(accessPayload.sub).toBe(user!.id);
       expect(accessPayload.username).toBe("testuser");
+      expect(accessPayload.accountId).toBe(user!.accountId);
       expect(accessPayload.roles).toEqual(["TRADER"]);
       expect(accessPayload.exp).toBeDefined();
       expect(accessPayload.jti).toBeDefined();
 
       expect(refreshPayload.sub).toBe(user!.id);
       expect(refreshPayload.username).toBe("testuser");
+      expect(refreshPayload.accountId).toBe(user!.accountId);
       expect(refreshPayload.roles).toEqual(["TRADER"]);
       expect(refreshPayload.type).toBe("refresh");
       expect(refreshPayload.exp).toBeDefined();
@@ -393,6 +413,27 @@ describe("AuthService", () => {
         expect(result.accessToken).toBeDefined();
         expect(result.refreshToken).toBeDefined();
       });
+    });
+
+    it("should create exactly one linked account for a conflicting concurrent registration", async () => {
+      const results = await Promise.allSettled([
+        service.register("raceuser", "password123"),
+        service.register("raceuser", "password456"),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+
+      const userCount = await database.db.query<{ count: string }>(
+        "SELECT COUNT(*)::text AS count FROM users WHERE username = $1",
+        ["raceuser"],
+      );
+      const accountCount = await database.db.query<{ count: string }>(
+        "SELECT COUNT(*)::text AS count FROM accounts WHERE holder_name = $1",
+        ["raceuser"],
+      );
+
+      expect(userCount.rows[0].count).toBe("1");
+      expect(accountCount.rows[0].count).toBe("1");
     });
   });
 });

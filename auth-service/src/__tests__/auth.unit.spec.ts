@@ -21,11 +21,12 @@ describe("AuthService unit", () => {
     expect(bcrypt.getRounds(hash)).toBe(12);
   });
 
-  it("rejects existing users before hashing and handles insertion conflicts", async () => {
-    users.findByUsername.mockResolvedValueOnce({ id: "42" });
+  it("hashes before attempting transactional insert and handles insertion conflicts", async () => {
+    users.create.mockResolvedValueOnce(undefined);
     await expect(auth.register("alice", "password123")).rejects.toThrow(ConflictException);
-    expect(users.create).not.toHaveBeenCalled();
-    users.create.mockResolvedValue(false);
+    expect(users.create).toHaveBeenCalledWith("alice", expect.any(String));
+
+    users.create.mockResolvedValueOnce(undefined);
     await expect(auth.register("alice", "password123")).rejects.toThrow(ConflictException);
   });
 

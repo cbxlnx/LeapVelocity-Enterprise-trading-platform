@@ -63,11 +63,25 @@ describe("Authentication persistence", () => {
     expect(await bcrypt.compare(password, user.password_hash)).toBe(true);
     expect(user.password_hash).not.toBe(password);
     expect(user.refresh_token_hash).toBe(createHash("sha256").update(tokens.refreshToken).digest("hex"));
-    expect(user.account_id).toBeNull();
+    expect(user.account_id).not.toBeNull();
     expect(user.created_at).toBeDefined();
     expect(user.updated_at).toBeDefined();
     expect(JSON.stringify(stored.rows)).not.toContain(tokens.accessToken);
     expect(JSON.stringify(stored.rows)).not.toContain(tokens.refreshToken);
+
+    const account = await database.db.query<{
+      account_id: string;
+      holder_name: string;
+      cash_balance: string;
+      status: string;
+    }>("SELECT account_id, holder_name, cash_balance::text AS cash_balance, status FROM accounts WHERE id = $1", [user.account_id]);
+    expect(account.rows).toHaveLength(1);
+    expect(account.rows[0]).toMatchObject({
+      account_id: expect.stringMatching(/^ACC-\d{3,}$/),
+      holder_name: "persistentuser",
+      cash_balance: "100000.00",
+      status: "ACTIVE",
+    });
 
     await repository.onModuleDestroy();
     await database.close();
@@ -86,8 +100,10 @@ describe("Authentication persistence", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     const rejected = results.find((result) => result.status === "rejected");
     expect(rejected?.reason).toBeInstanceOf(ConflictException);
-    const stored = await database.db.query("SELECT id FROM users WHERE username = $1", ["sameusername"]);
-    expect(stored.rows).toHaveLength(1);
+    const stored = await database.db.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM users WHERE username = $1", ["sameusername"]);
+    const accounts = await database.db.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM accounts WHERE holder_name = $1", ["sameusername"]);
+    expect(stored.rows[0].count).toBe("1");
+    expect(accounts.rows[0].count).toBe("1");
   });
 
   it("invalidates the previous refresh token when the user logs in again", async () => {

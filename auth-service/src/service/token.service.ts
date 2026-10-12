@@ -8,6 +8,7 @@ import { DEFAULT_ACCESS_TOKEN_EXPIRES_IN, DEFAULT_REFRESH_TOKEN_EXPIRES_IN, DEFA
 export interface VerifiedToken extends JwtPayload {
   sub: string;
   username: string;
+  accountId?: number;
   exp: number;
 }
 
@@ -15,13 +16,19 @@ export interface VerifiedToken extends JwtPayload {
 export class TokenService {
   constructor(private readonly jwt: JwtService, private readonly config: ConfigService) {}
 
-  issue(user: { id: string; username: string }, type: "access" | "refresh" = "access"): string {
+  issue(user: { id: string; username: string; accountId: number | null }, type: "access" | "refresh" = "access"): string {
     const expiresIn = type === "access"
       ? this.config.get<SignOptions["expiresIn"]>("JWT_EXPIRES_IN") ?? DEFAULT_ACCESS_TOKEN_EXPIRES_IN
       : this.config.get<SignOptions["expiresIn"]>("REFRESH_TOKEN_EXPIRES_IN") ?? DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
     return this.jwt.sign(
       // Preserve the existing TRADER claim; no role hierarchy is introduced.
-      { sub: user.id, username: user.username, roles: ["TRADER"], ...(type === "refresh" ? { type } : {}) },
+      {
+        sub: user.id,
+        username: user.username,
+        accountId: user.accountId ?? undefined,
+        roles: ["TRADER"],
+        ...(type === "refresh" ? { type } : {}),
+      },
       { algorithm: "HS256", issuer: this.issuer, expiresIn, jwtid: randomUUID() },
     );
   }
@@ -33,6 +40,7 @@ export class TokenService {
         !payload || typeof payload !== "object" ||
         typeof payload.sub !== "string" || !payload.sub.trim() ||
         typeof payload.username !== "string" || !payload.username.trim() ||
+        (payload.accountId !== undefined && (!Number.isInteger(payload.accountId) || payload.accountId < 1)) ||
         typeof payload.exp !== "number" || !Number.isFinite(payload.exp) ||
         payload.type !== (type === "refresh" ? "refresh" : undefined)
       ) {

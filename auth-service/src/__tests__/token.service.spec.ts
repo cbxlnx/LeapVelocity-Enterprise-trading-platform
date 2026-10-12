@@ -8,13 +8,13 @@ const issuer = "leapvelocity-auth";
 const jwt = new JwtService({ secret, signOptions: { issuer, algorithm: "HS256" } });
 const wrongSecret = ["wrong", "jwt", "signature", "fixture", "for", "tests"].join("-");
 const tokens = new TokenService(jwt, new ConfigService({ JWT_EXPIRES_IN: "15m", REFRESH_TOKEN_EXPIRES_IN: "2d" }));
-const user = { id: "42", username: "alice" };
+const user = { id: "42", username: "alice", accountId: 7 };
 
 describe("TokenService", () => {
   it("issues minimal signed tokens with configured lifetimes", () => {
     const access = tokens.verify(tokens.issue(user));
     const refresh = tokens.verify(tokens.issue(user, "refresh"), "refresh");
-    expect(access).toMatchObject({ sub: "42", username: "alice", iss: issuer, roles: ["TRADER"] });
+    expect(access).toMatchObject({ sub: "42", username: "alice", accountId: 7, iss: issuer, roles: ["TRADER"] });
     expect(access.exp - access.iat!).toBe(15 * 60);
     expect(refresh.exp - refresh.iat!).toBe(2 * 24 * 60 * 60);
     expect(access).not.toHaveProperty("password");

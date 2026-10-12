@@ -6,6 +6,14 @@ export interface StoredUser {
   id: string;
   username: string;
   passwordHash: string;
+  accountId: number | null;
+}
+
+interface StoredUserRow {
+  id: string;
+  username: string;
+  passwordHash: string;
+  accountId: string | null;
 }
 
 @Injectable()
@@ -56,22 +64,62 @@ export class UserRepository implements OnModuleInit, OnModuleDestroy {
     await this.pool.end();
   }
 
-  async create(username: string, passwordHash: string): Promise<boolean> {
-    const result = await this.pool.query(
-      `INSERT INTO public.users (username, password_hash)
-       VALUES ($1, $2) ON CONFLICT (username) DO NOTHING RETURNING id`,
-      [username, passwordHash],
-    );
-    return result.rows.length === 1;
+  async create(username: string, passwordHash: string): Promise<StoredUser | undefined> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const accountIdResult = await client.query<{ id: string }>(
+        `SELECT nextval(pg_get_serial_sequence('public.accounts', 'id'))::text AS id`,
+      );
+      const accountId = Number(accountIdResult.rows[0]?.id);
+
+      if (!Number.isInteger(accountId) || accountId < 1) {
+        throw new Error("Failed to reserve account identity");
+      }
+
+      const businessAccountId = `ACC-${String(accountId).padStart(3, "0")}`;
+
+      await client.query(
+        `INSERT INTO public.accounts (id, account_id, holder_name, cash_balance, status)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [accountId, businessAccountId, username, "100000.00", "ACTIVE"],
+      );
+
+      const result = await client.query<StoredUserRow>(
+        `INSERT INTO public.users (username, password_hash, account_id)
+         VALUES ($1, $2, $3)
+         RETURNING id::text AS id,
+                   username,
+                   password_hash AS "passwordHash",
+                   account_id::text AS "accountId"`,
+        [username, passwordHash, accountId],
+      );
+
+      await client.query("COMMIT");
+      return this.mapStoredUser(result.rows[0]);
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (this.isUniqueViolation(error)) {
+        return undefined;
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async findByUsername(username: string): Promise<StoredUser | undefined> {
-    const result = await this.pool.query<StoredUser>(
-      `SELECT id::text, username, password_hash AS "passwordHash"
+    const result = await this.pool.query<StoredUserRow>(
+      `SELECT id::text AS id,
+              username,
+              password_hash AS "passwordHash",
+              account_id::text AS "accountId"
        FROM public.users WHERE username = $1`,
       [username],
     );
-    return result.rows[0];
+    return result.rows[0] ? this.mapStoredUser(result.rows[0]) : undefined;
   }
 
   async storeRefreshTokenHash(userId: string, tokenHash: string): Promise<void> {
@@ -82,11 +130,27 @@ export class UserRepository implements OnModuleInit, OnModuleDestroy {
   }
 
   async findByRefreshTokenHash(userId: string, tokenHash: string): Promise<StoredUser | undefined> {
-    const result = await this.pool.query<StoredUser>(
-      `SELECT id::text, username, password_hash AS "passwordHash"
+    const result = await this.pool.query<StoredUserRow>(
+      `SELECT id::text AS id,
+              username,
+              password_hash AS "passwordHash",
+              account_id::text AS "accountId"
        FROM public.users WHERE id::text = $1 AND refresh_token_hash = $2`,
       [userId, tokenHash],
     );
-    return result.rows[0];
+    return result.rows[0] ? this.mapStoredUser(result.rows[0]) : undefined;
+  }
+
+  private mapStoredUser(row: StoredUserRow): StoredUser {
+    return {
+      id: row.id,
+      username: row.username,
+      passwordHash: row.passwordHash,
+      accountId: row.accountId === null ? null : Number(row.accountId),
+    };
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "23505";
   }
 }

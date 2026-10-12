@@ -23,8 +23,10 @@ from trading `accounts`, using the same database and initialization flow.
 
 `users` contains an identity ID, unique username, bcrypt `password_hash`, nullable
 `account_id` FK, timestamps, and one nullable SHA-256 `refresh_token_hash`.
-Registration leaves `account_id` unset; it does not create or assign a trading
-account. Deleting a linked account clears the link without deleting the user.
+Registration now creates a matching trading account in the same transaction,
+sets `holder_name` to the username, seeds `cash_balance` with `100000.00`,
+marks the account `ACTIVE`, and links `users.account_id` to the new account.
+Deleting a linked account still clears the link without deleting the user.
 There are no seeded login credentials or database role fields. The existing
 `TRADER` JWT claim remains for compatibility; this change adds no role model.
 
@@ -52,8 +54,9 @@ expiration, token type, and the current hash before returning a new access JWT.
 Refresh does not extend the refresh token's lifetime or issue a replacement.
 Access JWTs and raw refresh tokens are never stored in the database.
 Expired refresh tokens are rejected. Access JWT subjects now use the database
-identity ID and carry a separate `username` claim. Log in again after upgrading;
-old tokens without the username claim are rejected by both services.
+identity ID and carry separate `username` and `accountId` claims. Log in again
+after upgrading; old tokens without the username claim are rejected by both
+services, and backend account routes require the linked `accountId` claim.
 
 ## Verification
 

@@ -5,6 +5,7 @@ import com.leapvelocity.dto.response.AccountDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.dto.response.PositionDto;
 import com.leapvelocity.service.AccountService;
+import com.leapvelocity.security.AccountAccessAuthorizer;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,6 +51,7 @@ public class AccountController {
     public ResponseEntity<AccountDto> getAccount(
             @Parameter(description = "Account ID to retrieve", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         AccountDto account = accountService.getAccount(id);
         return ResponseEntity.ok(account);
     }
@@ -70,6 +72,7 @@ public class AccountController {
     public ResponseEntity<AccountBalanceDto> getBalance(
             @Parameter(description = "Account ID to retrieve balance for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         AccountBalanceDto balance = accountService.getBalance(id);
         return ResponseEntity.ok(balance);
     }
@@ -90,6 +93,7 @@ public class AccountController {
     public ResponseEntity<List<PositionDto>> getPositions(
             @Parameter(description = "Account ID to retrieve positions for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         List<PositionDto> positions = accountService.getPositions(id);
         return ResponseEntity.ok(positions);
     }
@@ -110,6 +114,7 @@ public class AccountController {
     public ResponseEntity<List<OrderDto>> getOrders(
             @Parameter(description = "Account ID to retrieve order history for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         List<OrderDto> orders = accountService.getOrders(id);
         return ResponseEntity.ok(orders);
     }
