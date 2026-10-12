@@ -9,7 +9,7 @@
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts --no-warn-ignored"
   },
   "private": true,
   "packageManager": "npm@11.19.0",
@@ -29,6 +29,9 @@
     "@angular/cli": "^22.2.2",
     "@angular/compiler-cli": "^22.2.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@types/jasmine": "^7.0.0",
+    "@types/node": "^26.6.5",
     "@typescript-eslint/eslint-plugin": "^8.71.1",
     "@typescript-eslint/parser": "^8.71.1",
     "eslint": "^10.12.0",
