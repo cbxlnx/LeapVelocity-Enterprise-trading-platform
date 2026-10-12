@@ -1,4 +1,98 @@
-<div class="login-container">
-  <h1>Login</h1>
-  <p>Please log in to continue.</p>
-</div>
+<main class="login-container" role="main">
+  <div class="login-card">
+    <header class="login-header">
+      <h1>Leap Trading Platform</h1>
+      <p class="subtitle">Sign in to your account</p>
+    </header>
+
+    <!-- Error Alert -->
+    <div
+      *ngIf="errorMessage$ | async as error"
+      class="alert alert-error"
+      role="alert"
+      aria-live="polite"
+    >
+      <span class="alert-icon">⚠</span>
+      <p class="alert-message">{{ error }}</p>
+    </div>
+
+    <!-- Login Form -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input
+          id="username"
+          type="text"
+          class="form-input"
+          [class.input-error]="usernameRequiredError || usernameMinlengthError"
+          formControlName="username"
+          placeholder="Enter your username"
+          autocomplete="username"
+          aria-required="true"
+          [attr.aria-invalid]="username?.invalid ?? false"
+          (keydown)="onKeyDown($event)"
+        />
+        <!-- Validation Messages -->
+        <div class="validation-messages" role="status" aria-live="polite">
+          <span *ngIf="usernameRequiredError" class="error-message">
+            Username is required
+          </span>
+          <span *ngIf="usernameMinlengthError" class="error-message">
+            Username must be at least 3 characters
+          </span>
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input
+          id="password"
+          type="password"
+          class="form-input"
+          [class.input-error]="passwordRequiredError || passwordMinlengthError"
+          formControlName="password"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+          aria-required="true"
+          [attr.aria-invalid]="password?.invalid ?? false"
+          (keydown)="onKeyDown($event)"
+        />
+        <!-- Validation Messages -->
+        <div class="validation-messages" role="status" aria-live="polite">
+          <span *ngIf="passwordRequiredError" class="error-message">
+            Password is required
+          </span>
+          <span *ngIf="passwordMinlengthError" class="error-message">
+            Password must be at least 6 characters
+          </span>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="login-button"
+        [disabled]="isSubmitDisabled"
+        aria-busy="isLoading$ | async"
+      >
+        <span *ngIf="!(isLoading$ | async)" class="button-text">Sign In</span>
+        <span *ngIf="isLoading$ | async" class="button-text">
+          <span class="spinner"></span>
+          Signing in...
+        </span>
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <footer class="login-footer">
+      <p class="signup-prompt">
+        Don't have an account?
+        <a href="#" class="signup-link" aria-label="Sign up for a new account">
+          Sign up
+        </a>
+      </p>
+    </footer>
+  </div>
+</main>
