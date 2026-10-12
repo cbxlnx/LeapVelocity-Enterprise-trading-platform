@@ -14,6 +14,8 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -44,10 +46,11 @@ class ExecutionEngineErrorHandlerTest {
         PermanentFailureException cause = new PermanentFailureException("Invalid JSON format");
         ListenerExecutionFailedException exception = new ListenerExecutionFailedException("Error", cause);
 
-        errorHandler().handleError(message, exception, consumer);
+        Object result = errorHandler().handleError(message, exception, consumer);
 
         // Verify that the message was sent to DLT
         verify(kafkaTemplate, times(1)).send(any(ProducerRecord.class));
+        assertEquals("test", result);
     }
 
     @Test
@@ -109,10 +112,11 @@ class ExecutionEngineErrorHandlerTest {
         }
 
         // Attempt 4 (exceeds max of 3)
-        handler.handleError(message, exception, consumer);
+        Object result = handler.handleError(message, exception, consumer);
 
         // After max retries, should send to DLT
         verify(kafkaTemplate, times(1)).send(any(ProducerRecord.class));
+        assertEquals("test", result);
     }
 
     @Test
@@ -124,8 +128,8 @@ class ExecutionEngineErrorHandlerTest {
         // Should not throw an exception
         Object result = errorHandler().handleError(message, exception);
 
-        // Result should be null (no recovery attempted)
-        assertTrue(result == null);
+        // No consumer record means the fallback overload still swallows the error.
+        assertNull(result);
     }
 
     @Test

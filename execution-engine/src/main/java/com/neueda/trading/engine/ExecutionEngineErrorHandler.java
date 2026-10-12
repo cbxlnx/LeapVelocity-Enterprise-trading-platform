@@ -59,6 +59,7 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
     @Override
     public Object handleError(Message<?> message, ListenerExecutionFailedException exception, Consumer<?, ?> consumer) {
         Throwable cause = exception.getCause();
+        Object recoveredPayload = message.getPayload();
         
         // Try to get ConsumerRecord from message headers
         ConsumerRecord<?, ?> record = (ConsumerRecord<?, ?>) message.getHeaders().get("kafka_receivedRecord");
@@ -71,7 +72,7 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
             if (cause instanceof PermanentFailureException) {
                 log.warn("Permanent failure (no ConsumerRecord available): {}", cause.getMessage());
                 sendFallbackToDLT(message, "PERMANENT_FAILURE", cause.getMessage());
-                return null;  // Swallow the exception - don't retry
+                return recoveredPayload;  // Swallow the exception - don't retry
             }
             
             // Temporary failures: still need to retry, so re-throw
@@ -83,14 +84,14 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
             // For other exceptions, send fallback DLT and don't retry
             log.error("Unhandled exception (no ConsumerRecord available): {}", cause.getClass().getSimpleName());
             sendFallbackToDLT(message, "UNHANDLED_EXCEPTION", cause.getClass().getSimpleName());
-            return null;
+            return recoveredPayload;
         }
 
         // Permanent failures go to DLT immediately
         if (cause instanceof PermanentFailureException) {
             log.warn("Permanent failure for message at offset {}: {}", record.offset(), cause.getMessage());
             sendToDLT(record, "PERMANENT_FAILURE: " + cause.getMessage());
-            return null;
+            return recoveredPayload;
         }
 
         // Temporary failures are retried with exponential backoff
@@ -126,7 +127,7 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
             }
         }
 
-        return null;
+        return recoveredPayload;
     }
 
     @Override

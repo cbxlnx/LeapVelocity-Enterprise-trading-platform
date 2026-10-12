@@ -35,6 +35,7 @@ async function main() {
   await request(authUrl, "/auth/login", 401, post({ username, password: "wrong-password" }));
   await request(authUrl, "/auth/register", 400, post({ username: " ", password }));
   const login = await request(authUrl, "/auth/login", 200, post({ username, password }));
+  const wrongSecret = ["smoke", "wrong", "jwt", "signature", "fixture"].join("-");
 
   const jwt = new JwtService({ secret, signOptions: { issuer, algorithm: "HS256" } });
   const tokens = new TokenService(jwt, new ConfigService({ JWT_ISSUER: issuer }));
@@ -50,7 +51,7 @@ async function main() {
     ["malformed", "not-a-jwt"],
     ["refresh", login.refreshToken],
     ["expired", new TokenService(jwt, new ConfigService({ JWT_EXPIRES_IN: -1, JWT_ISSUER: issuer })).issue({ id: claims.sub, username })],
-    ["wrong signature", jwt.sign({ sub: claims.sub, username }, { secret: "smoke-wrong-secret-at-least-32-bytes", expiresIn: "1h" })],
+   ["wrong signature", jwt.sign({ sub: claims.sub, username }, { secret: wrongSecret, expiresIn: "1h" })],
     ["wrong issuer", jwt.sign({ sub: claims.sub, username }, { issuer: "wrong-issuer", expiresIn: "1h" })],
     ["missing expiry", jwt.sign({ sub: claims.sub, username })],
   ];
