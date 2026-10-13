@@ -1,7 +1,7 @@
 services:
   auth-stub:
     build:
-      context: ./auth-stub
+      context: ./auth-service
       dockerfile: Dockerfile
     container_name: trading-platform-auth-stub
     environment:

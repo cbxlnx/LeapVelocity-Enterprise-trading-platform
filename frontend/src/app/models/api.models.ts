@@ -1,0 +1,55 @@
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'CLOSED' | string;
+export type OrderSide = 'BUY' | 'SELL';
+export type OrderStatus = 'NEW' | 'FILLED' | 'REJECTED' | 'CANCELLED' | string;
+
+export interface Account {
+  id: number;
+  accountId: string;
+  holderName: string;
+  cashBalance: number;
+  status: AccountStatus;
+  version: number;
+}
+
+export interface Balance {
+  accountId: number;
+  cashBalance: number;
+}
+
+export interface Position {
+  accountId: number;
+  symbol: string;
+  quantity: number;
+  averageCost: number;
+  marketValue: number;
+}
+
+export interface Order {
+  id: string;
+  accountId: number;
+  symbol: string;
+  side: OrderSide;
+  quantity: number;
+  price: number;
+  status: OrderStatus;
+  createdOn: string;
+}
+
+export interface PlaceOrderRequest {
+  accountId: number;
+  symbol: string;
+  side: OrderSide;
+  quantity: number;
+  price: number;
+  idempotencyKey: string;
+}
+
+export interface OrderResponse {
+  orderId: string;
+  status: OrderStatus;
+  message: string;
+  symbol: string;
+  side: OrderSide;
+  quantity: number;
+  price: number;
+}
