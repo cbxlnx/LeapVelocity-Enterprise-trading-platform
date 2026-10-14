@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ConsumerAwareListenerErrorHandler;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
@@ -62,8 +63,7 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
         Throwable cause = exception.getCause();
         Object recoveredPayload = message.getPayload();
         
-        // Try to get ConsumerRecord from message headers
-        ConsumerRecord<?, ?> record = (ConsumerRecord<?, ?>) message.getHeaders().get("kafka_receivedRecord");
+        ConsumerRecord<?, ?> record = recordFrom(message);
 
 
         if (record == null) {
@@ -164,6 +164,26 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
         } catch (Exception e) {
             log.error("Failed to send message to DLT topic", e);
         }
+    }
+
+    /**
+     * Gets the failed record. Spring Kafka does not put the ConsumerRecord in listener error headers,
+     * so it is rebuilt from the received topic, partition, offset, key and payload.
+     */
+    private ConsumerRecord<?, ?> recordFrom(Message<?> message) {
+        Map<String, Object> headers = message.getHeaders();
+        Object record = headers.get("kafka_receivedRecord");
+        if (record instanceof ConsumerRecord<?, ?> consumerRecord) {
+            return consumerRecord;
+        }
+        Object topic = headers.get(KafkaHeaders.RECEIVED_TOPIC);
+        Object partition = headers.get(KafkaHeaders.RECEIVED_PARTITION);
+        Object offset = headers.get(KafkaHeaders.OFFSET);
+        if (topic == null || partition == null || offset == null) {
+            return null;
+        }
+        return new ConsumerRecord<>(String.valueOf(topic), ((Number) partition).intValue(),
+                ((Number) offset).longValue(), headers.get(KafkaHeaders.RECEIVED_KEY), message.getPayload());
     }
 
     /**

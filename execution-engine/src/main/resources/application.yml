@@ -41,8 +41,8 @@ engine:
     dead-letter: ${ENGINE_TOPICS_DEAD_LETTER:orders-dlq}
     partitions: 3
   retry:
-    max-retries: ${ENGINE_RETRY_MAX_RETRIES:60}
-    initial-backoff: ${ENGINE_RETRY_INITIAL_BACKOFF:1s}
-    backoff-multiplier: ${ENGINE_RETRY_BACKOFF_MULTIPLIER:2.0}
+    max-retries: ${ENGINE_RETRY_MAX_RETRIES:3}
+    initial-backoff: ${ENGINE_RETRY_INITIAL_BACKOFF:5s}
+    backoff-multiplier: ${ENGINE_RETRY_BACKOFF_MULTIPLIER:1.0}
     max-backoff: ${ENGINE_RETRY_MAX_BACKOFF:5s}
 

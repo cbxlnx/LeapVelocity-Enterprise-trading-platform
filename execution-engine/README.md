@@ -79,9 +79,9 @@ accounts' orders are worked at once.
 |----------|---------|---------|
 | `spring.kafka.bootstrap-servers` | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9094` |
 | `engine.quote-staleness` | `ENGINE_QUOTE_STALENESS` | `15s` |
-| `engine.retry.max-retries` | `ENGINE_RETRY_MAX_RETRIES` | `60` |
-| `engine.retry.initial-backoff` | `ENGINE_RETRY_INITIAL_BACKOFF` | `1s` |
-| `engine.retry.backoff-multiplier` | `ENGINE_RETRY_BACKOFF_MULTIPLIER` | `2.0` |
+| `engine.retry.max-retries` | `ENGINE_RETRY_MAX_RETRIES` | `3` |
+| `engine.retry.initial-backoff` | `ENGINE_RETRY_INITIAL_BACKOFF` | `5s` |
+| `engine.retry.backoff-multiplier` | `ENGINE_RETRY_BACKOFF_MULTIPLIER` | `1.0` |
 | `engine.retry.max-backoff` | `ENGINE_RETRY_MAX_BACKOFF` | `5s` |
 | `server.port` | `SERVER_PORT` | `8082` |
 
