@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -33,6 +34,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 @Configuration
 @OpenAPIDefinition(security = @SecurityRequirement(name = "bearerAuth"))
@@ -42,6 +44,9 @@ import java.time.Duration;
 public class SecurityConfig {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+
+    @Value("${app.cors.allowed-origins:http://localhost:4200,http://localhost:8085,http://127.0.0.1:4200,http://127.0.0.1:8085}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -62,7 +67,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(false);
@@ -76,7 +81,6 @@ public class SecurityConfig {
     public JwtDecoder jwtDecoder(JwtProperties jwtProperties) {
         NimbusJwtDecoder decoder;
         OAuth2TokenValidator<Jwt> validator;
-
         decoder = NimbusJwtDecoder.withSecretKey(secretKey(jwtProperties))
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
