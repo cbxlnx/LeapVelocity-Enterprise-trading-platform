@@ -17,9 +17,9 @@
 
     <name>Execution Engine</name>
     <description>
-        Simulated execution engine for the Enterprise Trading Platform: reads
-        accepted orders from the orders topic, works them against a simulated
-        market, and reports fills on the executions topic.
+        Execution engine for the Enterprise Trading Platform: reads accepted
+        orders from the orders topic, fills them against live quotes from the
+        market-data topic, and reports fills on the executions topic.
     </description>
 
     <properties>

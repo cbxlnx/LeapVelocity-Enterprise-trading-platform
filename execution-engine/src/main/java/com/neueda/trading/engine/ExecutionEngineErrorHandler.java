@@ -14,8 +14,8 @@ import org.springframework.kafka.listener.ListenerExecutionFailedException;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Custom error handler for Kafka listener errors in the order processing pipeline.
@@ -40,8 +40,9 @@ public class ExecutionEngineErrorHandler implements ConsumerAwareListenerErrorHa
     private String deadLetterTopic;
 
     // Simple in-memory tracker: maps (topic-partition-offset) to retry count
+    // Shared by all listener threads, so it must be thread-safe
     // In production, this could be enhanced with Redis or a database
-    private final Map<String, Integer> retryCounters = new HashMap<>();
+    private final Map<String, Integer> retryCounters = new ConcurrentHashMap<>();
 
     public ExecutionEngineErrorHandler(KafkaTemplate<String, String> kafkaTemplate,
                                        RetryProperties retryProperties) {

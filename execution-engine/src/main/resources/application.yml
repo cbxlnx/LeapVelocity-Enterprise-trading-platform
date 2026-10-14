@@ -32,18 +32,17 @@ management:
         include: health,info
 
 engine:
-  min-delay: ${ENGINE_MIN_DELAY:10000ms}
-  max-delay: ${ENGINE_MAX_DELAY:15000ms}
-  max-price-improvement-bps: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:50}
+  quote-staleness: ${ENGINE_QUOTE_STALENESS:15s}
   venue: SIM
   topics:
     orders: orders
     executions: ${ENGINE_TOPICS_EXECUTIONS:trade-events}
+    market-data: market-data
     dead-letter: ${ENGINE_TOPICS_DEAD_LETTER:orders-dlq}
     partitions: 3
   retry:
-    max-retries: ${ENGINE_RETRY_MAX_RETRIES:4}
+    max-retries: ${ENGINE_RETRY_MAX_RETRIES:60}
     initial-backoff: ${ENGINE_RETRY_INITIAL_BACKOFF:1s}
     backoff-multiplier: ${ENGINE_RETRY_BACKOFF_MULTIPLIER:2.0}
-    max-backoff: ${ENGINE_RETRY_MAX_BACKOFF:8s}
+    max-backoff: ${ENGINE_RETRY_MAX_BACKOFF:5s}
 

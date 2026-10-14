@@ -14,7 +14,7 @@ public record OrderEvent(
         Long accountId,
         String symbol,
         Side side,
-        int quantity,
+        BigDecimal quantity,
         BigDecimal price,
         Instant createdOn
 ) {
