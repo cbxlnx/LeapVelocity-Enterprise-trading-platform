@@ -32,6 +32,19 @@ class InstrumentControllerTest {
                 .build();
     }
 
+        @Test
+        @DisplayName("GET /api/v1/instruments - returns tradable instruments from the service")
+        void getInstrumentsReturnsTradableInstruments() throws Exception {
+        when(instrumentService.getTradableInstruments()).thenReturn(
+            List.of(new InstrumentDto(1L, "AAPL", "Apple Inc.", "EQUITY", "USD", true)));
+
+        mockMvc.perform(get("/api/v1/instruments"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].symbol").value("AAPL"));
+
+        verify(instrumentService).getTradableInstruments();
+        }
+
     @Test
     @DisplayName("GET /api/v1/instruments/search - uses empty query and limit 10 when params are missing")
     void searchUsesDefaultsWhenParamsMissing() throws Exception {
