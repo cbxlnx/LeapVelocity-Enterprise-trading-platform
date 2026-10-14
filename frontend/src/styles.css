@@ -1,1 +1,301 @@
-/* You can add global styles to this file, and also import other style files */
+@use 'sass:map';
+@use '@angular/material' as mat;
+
+// Initialize Material's theme system
+@include mat.core();
+
+// Define custom color palettes
+$custom-primary: mat.define-palette((
+  50: #e8f0f5,
+  100: #c5d9e6,
+  200: #9fbfd4,
+  300: #78a5c2,
+  400: #5d92b5,
+  500: #3f5fa8,
+  600: #3a57a0,
+  700: #344d96,
+  800: #2e438d,
+  900: #24347c,
+  A100: #7eb3ff,
+  A200: #4b94ff,
+  A400: #1875ff,
+  A700: #0059ff,
+));
+
+$custom-accent: mat.define-palette((
+  50: #fef5f0,
+  100: #fce5db,
+  200: #f9d3c3,
+  300: #f6c1ab,
+  400: #f4b39a,
+  500: #c05819,
+  600: #b85017,
+  700: #ae4814,
+  800: #a54011,
+  900: #94330a,
+  A100: #ffb3a8,
+  A200: #ff8575,
+  A400: #ff5742,
+  A700: #ff3d28,
+));
+
+$custom-warn: mat.define-palette((
+  50: #fce9e8,
+  100: #f8ccc9,
+  200: #f3ada6,
+  300: #ee8e83,
+  400: #eb776a,
+  500: #b13339,
+  600: #aa2f35,
+  700: #a12a30,
+  800: #99252c,
+  900: #8a1a21,
+  A100: #ffb4af,
+  A200: #ff817c,
+  A400: #ff4e49,
+  A700: #ff3430,
+));
+
+// Create the theme
+$custom-theme: mat.define-light-theme((
+  color: (
+    primary: $custom-primary,
+    accent: $custom-accent,
+    warn: $custom-warn,
+  )
+));
+
+// Apply the theme
+@include mat.all-component-colors($custom-theme);
+
+// ===== CUSTOM GLOBAL STYLES =====
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background-color: #f3f5f6;
+  color: #192830;
+}
+
+// ===== ENTERPRISE COLOR UTILITIES =====
+
+.bg-navy {
+  background-color: #142337;
+}
+
+.bg-slate {
+  background-color: #233748;
+}
+
+.bg-canvas {
+  background-color: #f3f5f6;
+}
+
+.bg-surface {
+  background-color: #ffffff;
+}
+
+.text-navy {
+  color: #142337;
+}
+
+.text-slate {
+  color: #233748;
+}
+
+.text-muted {
+  color: #586c7d;
+}
+
+// Financial Indicators
+.gain {
+  color: #106647 !important;
+  font-weight: 500;
+}
+
+.gain-bg {
+  background-color: #f0f7f4;
+  border-left: 3px solid #106647;
+}
+
+.loss {
+  color: #b13339 !important;
+  font-weight: 500;
+}
+
+.loss-bg {
+  background-color: #fdf5f5;
+  border-left: 3px solid #b13339;
+}
+
+// ===== MATERIAL OVERRIDES FOR ENTERPRISE LOOK =====
+
+mat-card {
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8ecef;
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  }
+}
+
+mat-card-header {
+  padding: 16px 16px 0 16px;
+  
+  mat-card-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+    color: #142337;
+  }
+}
+
+mat-card-content {
+  padding: 16px;
+}
+
+// Tables
+table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  thead tr {
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e8ecef;
+    
+    th {
+      padding: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #586c7d;
+      text-align: left;
+    }
+  }
+  
+  tbody tr {
+    border-bottom: 1px solid #e8ecef;
+    
+    &:hover {
+      background-color: #f9fafb;
+    }
+    
+    td {
+      padding: 12px;
+      font-size: 14px;
+      color: #192830;
+    }
+  }
+}
+
+// Buttons
+button {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 2px;
+  
+  mat-icon {
+    margin-right: 8px;
+  }
+}
+
+// Status Badges
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &.status-active {
+    background-color: #f0f7f4;
+    color: #106647;
+    border: 1px solid #106647;
+  }
+  
+  &.status-suspended {
+    background-color: #fff9f0;
+    color: #c05819;
+    border: 1px solid #c05819;
+  }
+  
+  &.status-closed {
+    background-color: #fdf5f5;
+    color: #b13339;
+    border: 1px solid #b13339;
+  }
+}
+
+// Input Fields
+mat-form-field {
+  width: 100%;
+  
+  .mat-mdc-text-field-wrapper {
+    padding-bottom: 0.5em;
+  }
+  
+  input {
+    font-size: 14px;
+    color: #192830;
+  }
+}
+
+// Focus States
+:focus-visible {
+  outline: 2px solid #3f5fa8;
+  outline-offset: 2px;
+}
+
+// Disabled Elements
+:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// ===== RESPONSIVE & UTILITIES =====
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.gap-1 { gap: 8px; }
+.gap-2 { gap: 16px; }
+.gap-3 { gap: 24px; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 600; }
+.font-mono { font-family: 'Courier New', monospace; }
+
+.text-sm { font-size: 12px; }
+.text-base { font-size: 14px; }
+.text-lg { font-size: 16px; }
+
+.uppercase { text-transform: uppercase; }

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, shareReplay, catchError } from 'rxjs';
+import { Observable, shareReplay, catchError, retry } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Account, Balance, Order, Position } from '../models/api.models';
 import { handleApiError } from './api-error';
@@ -15,6 +15,7 @@ export class AccountService {
   getAccount(accountId: number): Observable<Account> {
     return this.getCached(`account:${accountId}`, () =>
       this.http.get<Account>(`${this.accountsUrl}/${accountId}`).pipe(
+        retry({ count: 2, delay: 1000 }),
         catchError(handleApiError('load the account'))
       )
     );
@@ -23,6 +24,7 @@ export class AccountService {
   getBalance(accountId: number): Observable<Balance> {
     return this.getCached(`balance:${accountId}`, () =>
       this.http.get<Balance>(`${this.accountsUrl}/${accountId}/balance`).pipe(
+        retry({ count: 2, delay: 1000 }),
         catchError(handleApiError('load the account balance'))
       )
     );
@@ -31,6 +33,7 @@ export class AccountService {
   getPositions(accountId: number): Observable<Position[]> {
     return this.getCached(`positions:${accountId}`, () =>
       this.http.get<Position[]>(`${this.accountsUrl}/${accountId}/positions`).pipe(
+        retry({ count: 2, delay: 1000 }),
         catchError(handleApiError('load the account positions'))
       )
     );

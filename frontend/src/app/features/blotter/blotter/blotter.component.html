@@ -1,4 +1,105 @@
-<div class="blotter-container">
-  <h1>Order History</h1>
-  <p>View your order history.</p>
-</div>
+<main class="blotter-container">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">EXECUTION RECORD</p>
+      <h1>Blotter / Order History</h1>
+      <p>A complete record of orders for {{ account?.holderName || 'your account' }} · {{ formatAccountId() }}.</p>
+    </div>
+    <button type="button" class="place-order-button" (click)="placeOrder()">Place Order</button>
+  </header>
+
+  <section class="filter-panel" aria-label="Order history filters">
+    <label>
+      <span>Symbol</span>
+      <select [(ngModel)]="selectedSymbol" (ngModelChange)="setFilter()">
+        <option value="">All symbols</option>
+        <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+      </select>
+    </label>
+    <label>
+      <span>Side</span>
+      <select [(ngModel)]="selectedSide" (ngModelChange)="setFilter()">
+        <option value="">All sides</option>
+        <option value="BUY">Buy</option>
+        <option value="SELL">Sell</option>
+      </select>
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="setFilter()">
+        <option value="">All statuses</option>
+        <option value="NEW">New</option>
+        <option value="FILLED">Filled</option>
+        <option value="REJECTED">Rejected</option>
+        <option value="CANCELLED">Cancelled</option>
+      </select>
+    </label>
+    <label>
+      <span>Date range</span>
+      <select [(ngModel)]="selectedDateRange" (ngModelChange)="setFilter()">
+        <option value="all">All dates</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+    </label>
+    <button type="button" class="refresh-button" (click)="loadOrders()">Refresh</button>
+  </section>
+
+  <div class="summary-row">
+    <span>{{ filteredOrders.length }} orders</span>
+    <span class="summary-badge new">{{ newCount }} NEW</span>
+    <span class="summary-badge filled">{{ filledCount }} FILLED</span>
+    <span class="updated">Live account history</span>
+  </div>
+
+  <section class="history-card">
+    <div class="history-heading">
+      <h2>Order History</h2>
+      <span>Newest first · All times local</span>
+    </div>
+
+    <div *ngIf="isLoading" class="loading-state">Loading order history...</div>
+    <div *ngIf="error && !isLoading" class="error-state">
+      <p>{{ error }}</p>
+      <button type="button" class="refresh-button" (click)="loadOrders()">Retry</button>
+    </div>
+
+    <div *ngIf="!isLoading && !error && visibleOrders.length === 0" class="empty-state">
+      No orders match the selected filters.
+    </div>
+
+    <div *ngIf="!isLoading && !error && visibleOrders.length > 0" class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Date/time</th>
+            <th>Symbol</th>
+            <th>Side</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of visibleOrders">
+            <td><span class="mono">{{ formatDate(order.createdOn) }}</span><small>{{ order.id }} · {{ formatAccountId() }}</small></td>
+            <td><strong>{{ order.symbol }}</strong></td>
+            <td><span class="side-badge" [class]="getSideClass(order.side)">{{ order.side }}</span></td>
+            <td class="mono">{{ order.quantity }}</td>
+            <td class="mono">{{ formatCurrency(order.price) }}</td>
+            <td><span class="status-badge" [class]="getStatusClass(order.status)">{{ order.status }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="table-footer">
+      <span>Showing {{ firstVisibleOrder }}–{{ lastVisibleOrder }} of {{ filteredOrders.length }} orders</span>
+      <div>
+        <button type="button" [disabled]="page === 1" (click)="previousPage()">Previous</button>
+        <span class="page-number">{{ page }}</span>
+        <button type="button" [disabled]="page === totalPages" (click)="nextPage()">Next</button>
+      </div>
+    </footer>
+  </section>
+</main>

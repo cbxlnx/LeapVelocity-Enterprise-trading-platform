@@ -258,6 +258,314 @@ Benefits:
 - Simpler component definitions
 - Smaller bundle size
 - Easier to tree-shake unused code
+
+## Runtime Flow
+
+```text
+src/main.ts
+  -> bootstrapApplication(App, appConfig)
+      -> App shell
+          -> optional HeaderComponent
+          -> RouterOutlet
+              -> lazy feature route
+                  -> page component
+                      -> injected service
+                          -> HttpClient Observable
+                              -> Angular proxy
+                                  -> Spring Boot or Nest service
+```
+
+This follows the lecture sequence: Angular project structure, standalone components, dependency injection, HttpClient Observables, real backend calls, reactive forms, lazy routing, and authenticated JWT flows.
+
+## Complete File Guide
+
+The following sections describe the frontend files that contain application logic, templates, configuration, models, or tests. CSS files are intentionally omitted from the detailed discussion.
+
+### Root Configuration
+
+#### `angular.json`
+
+Angular CLI/build configuration. It defines the `leap-ui` application, `src/main.ts` as the browser entry point, public assets, `src/styles.scss` as the active global stylesheet, production optimization, bundle budgets, and the development `proxy.conf.json`.
+
+The build uses `@angular/build:application`, which compiles the application with Angular's modern esbuild/Vite-based tooling. Production budgets act as a guardrail against bundle growth.
+
+#### `package.json`
+
+Defines npm scripts and dependencies. Important packages include Angular core/router/forms, Angular Material, RxJS, TypeScript, ESLint, and Playwright. The `type: module` setting enables modern JavaScript module behavior.
+
+#### `proxy.conf.json`
+
+Development-only forwarding rules:
+
+| Frontend request | Forwarded to |
+| --- | --- |
+| `/api/*` | Spring Boot at `127.0.0.1:8081` |
+| `/auth/*` | Nest auth service at `127.0.0.1:4000` |
+
+Relative URLs are important when the browser accesses the Linux host through an address such as `10.9.77.223`. Browser-side `localhost` means the browser's own machine, while the Angular proxy runs on the Linux host.
+
+#### `tsconfig.json`, `tsconfig.app.json`, `tsconfig.spec.json`, `tsconfig.playwright.json`
+
+TypeScript compiler configurations for shared application code, Angular application compilation, unit tests, and Playwright tests. Strict typing catches incorrect template bindings, nullable values, and mismatched API models before runtime.
+
+#### `eslint.config.js`, `.prettierrc`, `.editorconfig`
+
+These files define linting, formatting, and editor conventions. They are tooling files rather than runtime Angular code.
+
+#### `playwright.config.ts`
+
+Configures browser tests for Chromium, Firefox, and WebKit. It starts the Angular dev server when necessary, sets the base URL, and enables retry/trace behavior in CI.
+
+### Application Bootstrap
+
+#### `src/main.ts`
+
+The browser entry point. `bootstrapApplication(App, appConfig)` starts the standalone Angular application and supplies its application-wide providers.
+
+#### `src/index.html`
+
+The single real HTML document loaded by the browser. Angular renders the bootstrapped application into its root element.
+
+#### `src/app/app.config.ts`
+
+Registers application-wide dependency-injection providers:
+
+- `provideRouter(routes)` makes the route table available.
+- `provideHttpClient(withInterceptors([authInterceptor]))` enables HttpClient and installs the JWT interceptor once for every service.
+- `provideAnimations()` supports Angular Material.
+- `provideBrowserGlobalErrorListeners()` installs browser error handling.
+
+This is the same application-level provider pattern introduced with `provideRouter` and later reused for HttpClient.
+
+#### `src/app/app.ts`
+
+The root standalone component. It imports `RouterOutlet` and `HeaderComponent`, then derives `isAuthRoute$` from router `NavigationEnd` events with RxJS `filter`, `startWith`, and `map`. The header is hidden on login/register routes and visible elsewhere.
+
+#### `src/app/app.html`
+
+Contains the shell outlet:
+
+```html
+<app-header *ngIf="!(isAuthRoute$ | async)"></app-header>
+<router-outlet></router-outlet>
+```
+
+`router-outlet` is where Angular inserts the currently active page component.
+
+#### `src/app/app.spec.ts`
+
+Root-component unit-test entry point. It is the place to test shell rendering and root-level behavior.
+
+### Routing
+
+#### `src/app/app.routes.ts`
+
+The top-level URL-to-feature map. It lazy-loads feature route collections with `loadChildren` and lazily loads registration with `loadComponent`.
+
+Current routes:
+
+- `/login` -> auth route collection
+- `/register` -> standalone register component
+- `/dashboard` -> dashboard route collection
+- `/order` -> order route collection
+- `/blotter` -> blotter route collection
+- `/` -> redirects to `/dashboard` with `pathMatch: 'full'`
+- unknown paths -> `NotFoundComponent`
+
+`pathMatch: 'full'` is required because an empty path otherwise matches the prefix of every URL.
+
+#### `src/app/features/auth/auth.routes.ts`
+
+Feature route collection for login and register. It keeps auth navigation modular and lazy-loadable from the root route table.
+
+#### `src/app/features/dashboard/dashboard.routes.ts`
+
+Feature route collection for the dashboard page.
+
+#### `src/app/features/order/order.routes.ts`
+
+Feature route collection for the order-ticket page.
+
+#### `src/app/features/blotter/blotter.routes.ts`
+
+Feature route collection for order history.
+
+The route files are intentionally thin. The page components own page behavior; route definitions only map URLs to lazy feature entry points.
+
+### Authentication Feature
+
+#### `src/app/features/auth/login/login.component.ts`
+
+Standalone reactive-form login component. It creates controls with `FormBuilder`, applies required/minimum-length validators, calls `AuthService.login()`, and navigates to `/dashboard` after success. It also reads `reason=session-expired` to explain why a user was returned to login.
+
+This implements the lecture's real login flow: a reactive form calls a real auth endpoint, stores tokens through a service, then navigates away; errors remain in the component's UI state.
+
+#### `src/app/features/auth/login/login.component.html`
+
+Connects the template to the `FormGroup` using `[formGroup]`, `formControlName`, `(ngSubmit)`, async loading values, and validation messages. Template interpolation and event binding are Angular's HTML-plus-template-syntax layer.
+
+#### `src/app/features/auth/login/login.component.spec.ts`
+
+Unit tests for login initialization, validation, submission, and navigation behavior.
+
+#### `src/app/features/auth/register/register.component.ts`
+
+Standalone registration component. Its form intentionally matches the current `users` database contract: username, password, and password confirmation. It validates locally, then calls `AuthService.register()`.
+
+#### `src/app/features/auth/register/register.component.html`
+
+Renders the registration form, validation messages, loading state, security note, and navigation back to login.
+
+### Dashboard Feature
+
+#### `src/app/features/dashboard/dashboard/dashboard.component.ts`
+
+Loads account, balance, and positions from `AccountService` with `forkJoin`, then maps raw API DTOs into the dashboard view model. It calculates total market value, equity, unrealized gain/loss, and gain/loss percentage.
+
+It also demonstrates:
+
+- `takeUntil(destroy$)` for subscription cleanup.
+- `retry()` and `timeout()` for transient/slow API behavior.
+- `finalize()` and a watchdog to prevent permanent loading states.
+- `ChangeDetectorRef` updates for asynchronous completion in the current zoneless runtime.
+- Explicit error and retry states.
+
+#### `src/app/features/dashboard/dashboard/dashboard.component.html`
+
+Renders account overview, balance/equity/P&L summary, action buttons, positions, and the market-overview placeholder. The template consumes the component's already-mapped view model rather than knowing backend DTO details.
+
+### Order Feature
+
+#### `src/app/features/order/order-ticket/order-ticket.component.ts`
+
+Builds the reactive order form and submits real orders through `OrderService`. It supports typeable/searchable instruments, BUY/SELL state, quantity/price validation, live estimated values, idempotency keys, and backend success/error responses.
+
+Client validators catch shape errors such as missing or non-positive values. The backend remains responsible for business rules such as unknown instruments or insufficient SELL holdings.
+
+#### `src/app/features/order/order-ticket/order-ticket.component.html`
+
+Connects the order form to the review panel. It displays authenticated account context, selected instrument details, calculated order value, submitting state, backend response, and server rejection messages.
+
+### Blotter Feature
+
+#### `src/app/features/blotter/blotter/blotter.component.ts`
+
+Loads real orders through `AccountService.getOrders()`, then applies local symbol/side/status/date filters and pagination for the order-history view.
+
+#### `src/app/features/blotter/blotter/blotter.component.html`
+
+Renders the order-history page, filters, summary counts, refresh action, and order table.
+
+### Shared Layout
+
+#### `src/app/shared/layout/header/header.ts`
+
+The shared authenticated header. It injects `Router` and `AuthService`, reads username/account ID from JWT claims, provides client-side navigation links, and clears tokens on logout.
+
+#### `src/app/shared/layout/header/header.html`
+
+Contains the enterprise brand, Dashboard/Order Ticket/Blotter `routerLink`s, dynamic account identity, and logout button. `routerLinkActive` supplies the active-page indicator without manual URL checks.
+
+### Data Models
+
+#### `src/app/models/api.models.ts`
+
+TypeScript contracts matching backend API request/response shapes: accounts, balances, positions, orders, order requests, and order responses. Interfaces provide compile-time safety but do not validate runtime JSON.
+
+#### `src/app/shared/models/account.model.ts`
+
+UI-facing dashboard models. `DashboardData` aggregates API data and derived financial values so presentation components do not need to repeat business calculations.
+
+### Services
+
+#### `src/app/services/account.service.ts`
+
+Real account HttpClient service. It exposes account, balance, position, and order Observables; caches responses with `shareReplay`; retries core account calls; converts errors with `catchError`; and can clear its cache for refresh.
+
+#### `src/app/services/order.service.ts`
+
+Real order HttpClient service. It posts and cancels orders, maps backend response variants into a stable frontend response, and uses shared API error handling.
+
+#### `src/app/services/auth.service.ts`
+
+Real auth HttpClient service for login, registration, refresh, JWT claim access, token storage, and logout. The refresh token exists specifically to replace expired access tokens without forcing a login every hour.
+
+#### `src/app/services/auth.service.interface.ts`
+
+Typed request/response interfaces for auth operations. These are compile-time TypeScript contracts used by `AuthService` and auth components.
+
+#### `src/app/services/api-error.ts`
+
+Shared RxJS error operator. It turns network, client, and server failures into short application messages instead of leaking raw framework errors into the UI.
+
+#### `src/app/services/mock-account.service.ts`
+
+Legacy seeded mock service from the early dashboard implementation. The dashboard now uses real `AccountService`; this file is retained for reference and should not be treated as the production data source.
+
+#### `src/app/services/account.service.spec.ts`
+
+Unit-test file for account HTTP calls and caching/error behavior.
+
+#### `src/app/services/order.service.spec.ts`
+
+Unit-test file for order request bodies, response mapping, and failure conversion.
+
+### Interceptor
+
+#### `src/app/interceptors/auth.interceptor.ts`
+
+Functional `HttpInterceptorFn` that attaches the stored bearer token to protected requests, skips auth endpoints, refreshes an expired access token once after `401`, retries the original request, and redirects to login when the refresh session is also expired.
+
+This is the shared-token/interceptor pattern from the authenticated-flows lecture. Services do not manually construct Authorization headers.
+
+### Environment Files
+
+#### `src/environments/environment.ts`
+
+Development configuration. `apiUrl: '/api'` and `authUrl: ''` intentionally use proxy-relative paths.
+
+#### `src/environments/environment.prod.ts`
+
+Production configuration. It assumes the deployed web server or reverse proxy exposes the backend under `/api`.
+
+### End-to-End Tests
+
+#### `e2e/login.spec.ts`
+
+Playwright browser tests for login rendering, labels, validation, disabled/enabled submit behavior, and keyboard submission. Some selectors/assertions reflect earlier prototype copy and should be updated when UI copy changes.
+
+## Data And Authentication Flow
+
+```text
+LoginComponent
+  -> AuthService.login()
+  -> POST /auth/login
+  -> access + refresh tokens stored
+  -> router.navigate('/dashboard')
+
+DashboardComponent
+  -> AuthService.getAccountId()
+  -> AccountService requests
+  -> authInterceptor adds Bearer token
+  -> /api proxy
+  -> Spring Boot API
+  -> forkJoin maps account/balance/positions
+```
+
+When an access token expires, the interceptor calls `/auth/refresh`, stores the replacement access token, and retries the failed request. If the refresh token has expired, the session is cleared and the login page explains that the session expired.
+
+## Error-Handling Rules
+
+- Reactive-form validation prevents malformed requests before the network call.
+- Backend business-rule errors remain visible to the user through curated server messages.
+- Network errors become readable API-unreachable messages.
+- Dashboard requests have retries, timeouts, and visible Retry states.
+- Failed refreshes redirect to login rather than leaving a stale authenticated page.
+- Existing data should not be discarded merely because a later refresh fails.
+
+## Useful Conceptual Rule
+
+Keep display concerns in components and shared/API concerns in services. If a second component could need the same state, identity, cache, or request logic, it belongs in a root-provided service. Components should consume typed data and signals/Observables rather than duplicate service logic.
 - More intuitive routing
 
 ## Lazy Loading & Performance

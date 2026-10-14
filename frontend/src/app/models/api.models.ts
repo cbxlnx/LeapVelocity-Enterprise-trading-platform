@@ -21,7 +21,7 @@ export interface Position {
   symbol: string;
   quantity: number;
   averageCost: number;
-  marketValue: number;
+  marketValue?: number;
 }
 
 export interface Order {
