@@ -496,6 +496,35 @@ form {
   bottom: 28px;
 }
 
+/* Readability adjustments for dense authentication copy and controls. */
+.login-header .eyebrow {
+  font-size: 10px;
+}
+
+.login-header .subtitle,
+.alert,
+.alert-message,
+.form-label,
+.form-input,
+.signup-prompt {
+  font-size: 12px;
+}
+
+.error-message {
+  font-size: 11px;
+}
+
+.login-button {
+  font-size: 12px;
+}
+
+.security-note p,
+.access-help,
+.copyright,
+.restriction {
+  font-size: 10px;
+}
+
 @media (max-width: 560px) {
   .login-container {
     padding: 76px 20px 80px;

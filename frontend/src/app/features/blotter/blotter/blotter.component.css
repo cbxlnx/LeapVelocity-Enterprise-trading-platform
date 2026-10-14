@@ -57,6 +57,35 @@ tbody tr:hover { background: #f8fafb; }
 .loading-state, .empty-state, .error-state { padding: 28px 16px; color: #71859a; font-size: 10px; text-align: center; }
 .error-state p { margin: 0 0 10px; color: #b13339; }
 
+/* Increase scanability of filters, table content, and status metadata. */
+.eyebrow,
+.page-header p:last-child,
+.place-order-button,
+.refresh-button,
+.table-footer button,
+.filter-panel label,
+.filter-panel select,
+.summary-row,
+.history-heading span,
+th,
+td,
+.table-footer,
+.loading-state,
+.empty-state,
+.error-state {
+  font-size: 12px;
+}
+
+.summary-badge,
+.side-badge,
+.status-badge {
+  font-size: 10px;
+}
+
+td small {
+  font-size: 10px;
+}
+
 @media (max-width: 820px) {
   .filter-panel { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
   .refresh-button { align-self: start; }

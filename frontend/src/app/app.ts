@@ -24,6 +24,6 @@ export class App {
   }
 
   private isAuthPath(url: string): boolean {
-    return url.startsWith('/login') || url.startsWith('/register');
+    return url.startsWith('/login') || url.startsWith('/register') || url.startsWith('/signed-out');
   }
 }

@@ -9,7 +9,7 @@
     <span class="account-label">TRADING ACCOUNT</span>
     <strong>{{ userName }}</strong>
     <span class="mono">{{ displayAccountId }}</span>
-    <span class="status-badge">ACTIVE</span>
+    <span class="status-badge" [class]="'status-' + accountStatus.toLowerCase()">{{ accountStatus }}</span>
     <span class="account-cash">Cash <span class="mono">{{ cashBalance | currency:'USD':'symbol':'1.2-2' }}</span></span>
   </section>
 
@@ -55,14 +55,14 @@
                 (click)="chooseInstrument(instrument.symbol)"
               >
                 <strong>{{ instrument.symbol }}</strong>
-                <span>{{ instrument.name }} · {{ instrument.exchange }}</span>
+                <span>{{ instrument.name }} · {{ instrument.assetClass }}</span>
               </button>
               <p *ngIf="filteredInstruments.length === 0" class="no-instruments">
-                No local match. Continue typing for a future instrument lookup.
+                {{ instrumentError || 'No tradable instruments match this search.' }}
               </p>
             </div>
           </div>
-          <span class="field-help">{{ selectedInstrument.name }} · {{ selectedInstrument.exchange }} · {{ selectedInstrument.currency }}</span>
+          <span class="field-help">{{ selectedInstrument.name }} · {{ selectedInstrument.assetClass }} · {{ selectedInstrument.currency }}</span>
         </div>
 
         <fieldset class="form-group side-fieldset">
@@ -83,15 +83,31 @@
           <div class="form-group">
             <label for="quantity">Quantity</label>
             <div class="input-with-suffix">
-              <input id="quantity" type="number" min="1" formControlName="quantity" />
+              <input
+                id="quantity"
+                type="number"
+                min="1"
+                step="any"
+                formControlName="quantity"
+                [class.input-invalid]="hasOrderBusinessError"
+                [attr.aria-invalid]="hasOrderBusinessError"
+              />
               <span>shares</span>
             </div>
-            <span class="field-help">Whole shares only</span>
+            <span class="field-help"><strong class="quantity-guidance">{{ quantityGuidance }}</strong></span>
           </div>
           <div class="form-group">
             <label for="price">Price</label>
             <div class="input-with-suffix">
-              <input id="price" type="number" min="0.01" step="0.01" formControlName="price" />
+              <input
+                id="price"
+                type="number"
+                min="0.01"
+                step="0.01"
+                formControlName="price"
+                [class.input-invalid]="orderForm.get('side')?.value === 'BUY' && hasOrderBusinessError"
+                [attr.aria-invalid]="orderForm.get('side')?.value === 'BUY' && hasOrderBusinessError"
+              />
               <span>USD</span>
             </div>
             <span class="field-help">Your maximum price per share</span>
@@ -99,9 +115,9 @@
         </div>
 
         <div class="market-reference">
-          <span>Reference market price</span>
-          <strong class="mono">{{ selectedInstrument.marketPrice | currency:'USD':'symbol':'1.2-2' }}</strong>
-          <small>Snapshot: 13 Oct 2026, 14:32:08 UTC. Execution at your limit price or better is not guaranteed.</small>
+          <span>Limit price</span>
+          <strong class="mono">{{ orderForm.get('price')?.value | currency:'USD':'symbol':'1.2-2' }}</strong>
+          <small>Enter the maximum price you are willing to pay per share. Execution at your limit price or better is not guaranteed.</small>
         </div>
 
         <div class="ready-note">
@@ -133,21 +149,140 @@
           <span>Estimated cash after order</span>
           <strong class="mono">{{ estimatedCashAfterOrder | currency:'USD':'symbol':'1.2-2' }}</strong>
         </div>
-        <button type="button" class="place-order-button" [disabled]="isSubmitting" (click)="submitOrder()">
+        <div *ngIf="orderBusinessError" class="business-warning" role="alert">
+          <strong>Review the highlighted fields</strong>
+          <span>{{ orderBusinessError }}</span>
+        </div>
+        <button type="button" class="place-order-button" [disabled]="isSubmitting || orderForm.invalid || hasOrderBusinessError" (click)="submitOrder()">
           {{ isSubmitting ? 'Submitting...' : 'Place Order' }}
         </button>
         <p *ngIf="orderError" class="order-error" role="alert">{{ orderError }}</p>
-        <p *ngIf="orderSubmitted && orderResponse" class="order-success" role="status">
-          {{ orderResponse.message }} Order ID: {{ orderResponse.orderId }}.
-        </p>
         <p class="review-note">ⓘ &nbsp; Submit once. The API will confirm whether the order was accepted.</p>
       </section>
 
       <section class="result-panel">
         <p class="eyebrow">ORDER RESULT</p>
-        <strong>{{ orderSubmitted ? 'Order response received' : isSubmitting ? 'Submitting order' : 'Awaiting submission' }}</strong>
-        <p>{{ orderSubmitted ? 'The backend returned a response for this order.' : 'Your confirmation or any placement issue will appear here.' }}</p>
+        <strong>Recent orders</strong>
+        <p *ngIf="recentOrdersError" class="recent-orders-error">{{ recentOrdersError }}</p>
+        <p *ngIf="!recentOrdersError && recentOrders.length === 0" class="recent-orders-empty">
+          No orders have been placed for this account yet.
+        </p>
+        <div *ngIf="!recentOrdersError && recentOrders.length > 0" class="recent-orders-list">
+          <div *ngFor="let order of recentOrders" class="recent-order-row">
+            <div>
+              <strong>{{ order.symbol }}</strong>
+              <span class="recent-order-meta">
+                {{ order.side }} · {{ order.quantity }} shares · {{ order.price | currency:'USD':'symbol':'1.2-2' }}
+              </span>
+            </div>
+            <div class="recent-order-actions">
+              <span class="recent-order-status" [class]="order.status.toLowerCase()">{{ order.status }}</span>
+              <button
+                *ngIf="order.status === 'NEW'"
+                type="button"
+                class="cancel-order-button"
+                [disabled]="cancellingOrderId !== null"
+                (click)="cancelOrder(order)"
+              >
+                {{ cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <a routerLink="/blotter" class="recent-orders-link">View all order history</a>
       </section>
     </aside>
+  </div>
+
+  <div *ngIf="orderSubmitted && orderResponse" class="order-modal-backdrop">
+    <section
+      class="order-confirmation"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="order-confirmation-title"
+    >
+      <header class="confirmation-header">
+        <h2 id="order-confirmation-title">Order response received</h2>
+        <p>{{ userName }} · {{ displayAccountId }}</p>
+      </header>
+
+      <div class="confirmation-notice" role="status">
+        <span class="confirmation-icon" aria-hidden="true">✓</span>
+        <div>
+          <strong>{{ orderResponse.status }}</strong>
+          <p>{{ orderResponse.message }}</p>
+        </div>
+      </div>
+
+      <div class="confirmation-summary">
+        <div class="confirmation-order-id mono">{{ orderResponse.orderId }}</div>
+        <dl>
+          <div>
+            <dt>Instrument</dt>
+            <dd>{{ orderResponse.symbol }}</dd>
+          </div>
+          <div>
+            <dt>Side and quantity</dt>
+            <dd>{{ orderResponse.side }} · {{ orderResponse.quantity }} shares</dd>
+          </div>
+          <div>
+            <dt>Limit price</dt>
+            <dd>{{ orderResponse.price | currency:'USD':'symbol':'1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>Order value</dt>
+            <dd>{{ orderResponse.quantity * orderResponse.price | currency:'USD':'symbol':'1.2-2' }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="confirmation-actions">
+        <a routerLink="/blotter" class="confirmation-primary">View History</a>
+        <button type="button" class="confirmation-secondary" (click)="startNewOrder()">New Order</button>
+      </div>
+    </section>
+  </div>
+
+  <div *ngIf="orderPendingCancellation" class="order-modal-backdrop">
+    <section
+      class="cancel-confirmation"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cancel-confirmation-title"
+    >
+      <header class="cancel-confirmation-header">
+        <p class="eyebrow">ORDER ACTION</p>
+        <h2 id="cancel-confirmation-title">Cancel this order?</h2>
+        <p>This order is still pending and can be cancelled before execution.</p>
+      </header>
+
+      <div class="cancel-order-summary">
+        <div>
+          <span>Order</span>
+          <strong class="mono">{{ orderPendingCancellation.id }}</strong>
+        </div>
+        <div>
+          <span>Instruction</span>
+          <strong>
+            {{ orderPendingCancellation.side }} {{ orderPendingCancellation.quantity }}
+            {{ orderPendingCancellation.symbol }} shares at
+            {{ orderPendingCancellation.price | currency:'USD':'symbol':'1.2-2' }}
+          </strong>
+        </div>
+      </div>
+
+      <p class="cancel-confirmation-note">
+        Cancelling a pending order does not execute the trade. Your cash and positions will remain unchanged.
+      </p>
+
+      <div class="cancel-confirmation-actions">
+        <button type="button" class="cancel-keep-button" (click)="dismissCancellation()">
+          Keep Order
+        </button>
+        <button type="button" class="cancel-confirm-button" (click)="confirmCancellation()">
+          Cancel Order
+        </button>
+      </div>
+    </section>
   </div>
 </main>
