@@ -1,0 +1,41 @@
+<main class="analytics-container">
+  <header class="page-heading">
+    <p class="eyebrow">Market analytics</p>
+    <h1>AAPL · Historical prices</h1>
+    <p class="subtitle">Apple Inc. daily closing prices in USD.</p>
+  </header>
+
+  <form class="date-filter" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical price date range">
+    <label for="price-from">From <input id="price-from" type="date" formControlName="from" required /></label>
+    <label for="price-to">To <input id="price-to" type="date" formControlName="to" required /></label>
+    <button type="submit" [disabled]="loading() || dateForm.invalid">{{ loading() ? 'Loading…' : 'Load prices' }}</button>
+    @if (dateForm.hasError('dateOrder')) {
+      <p class="validation-message" role="alert">From must be on or before To.</p>
+    }
+  </form>
+
+  <section class="chart-card" aria-label="Historical closing price chart" [attr.aria-busy]="loading()">
+    @if (loading()) {
+      <div class="state" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading AAPL price history…</p></div>
+    } @else if (error(); as message) {
+      <div class="state error-state" role="alert">
+        <h2>Price history could not be loaded</h2><p>{{ message }}</p>
+        <button type="button" (click)="loadPrices()" [disabled]="dateForm.invalid">Retry</button>
+      </div>
+    } @else if (history(); as data) {
+      @if (data.prices.length === 0) {
+        <div class="state" role="status">
+          <h2>No historical prices found</h2>
+          <p>No AAPL prices are stored for {{ formatDate(data.from) }}–{{ formatDate(data.to) }}. Try another date range.</p>
+        </div>
+      } @else {
+        <div class="chart-heading">
+          <div><h2>Daily close</h2><p>{{ formatDate(data.prices[0].date) }}–{{ formatDate(data.prices[data.prices.length - 1].date) }} · {{ data.prices.length }} trading days</p></div>
+          <div class="latest-price"><span>Last available close</span><strong>{{ data.prices[data.prices.length - 1].close | currency:data.currency:'symbol':'1.2-2' }}</strong></div>
+        </div>
+        <app-price-chart [prices]="data.prices" [currency]="data.currency" [symbol]="data.symbol" />
+        <p class="chart-note">Daily closing price · {{ data.currency }} · Source: {{ data.prices[0].source }} · Gaps between trading days are expected.</p>
+      }
+    }
+  </section>
+</main>

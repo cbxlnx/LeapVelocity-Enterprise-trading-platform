@@ -1,0 +1,23 @@
+@if (chart(); as plot) {
+  <div class="chart-scroll">
+    <svg viewBox="0 0 960 340" role="img" [attr.aria-label]="symbol() + ' daily closing prices in ' + currency()">
+      <title>{{ symbol() }} daily closing prices</title>
+      <desc>{{ prices().length }} trading days. {{ formatDate(prices()[0].date) }} to {{ formatDate(prices()[prices().length - 1].date) }}. Values in {{ currency() }}.</desc>
+      @for (tick of plot.yTicks; track tick.y) {
+        <g>
+          <line [attr.x1]="plot.left" [attr.x2]="plot.right" [attr.y1]="tick.y" [attr.y2]="tick.y" class="grid-line" />
+          <text x="66" [attr.y]="tick.y + 4" text-anchor="end">{{ tick.value | number:'1.0-2' }}</text>
+        </g>
+      }
+      <polyline [attr.points]="plot.line" class="price-line" />
+      @for (point of plot.points; track point.date) {
+        <circle [attr.cx]="point.x" [attr.cy]="point.y" r="5" class="price-point" [class.endpoint]="$first || $last">
+          <title>{{ formatDate(point.date) }}: {{ point.close | currency:currency():'symbol':'1.2-2' }}</title>
+        </circle>
+      }
+      @for (tick of plot.xTicks; track tick.date) {
+        <text [attr.x]="tick.x" [attr.y]="plot.bottom + 32" [attr.text-anchor]="$first ? 'start' : $last ? 'end' : 'middle'">{{ formatDate(tick.date) }}</text>
+      }
+    </svg>
+  </div>
+}
