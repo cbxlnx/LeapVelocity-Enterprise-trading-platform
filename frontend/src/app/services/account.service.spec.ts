@@ -32,7 +32,7 @@ describe('AccountService', () => {
 
     const result = firstValueFrom(request);
     const cachedResult = firstValueFrom(cachedRequest);
-    const testRequest = http.expectOne('http://localhost:8081/api/v1/accounts/1');
+    const testRequest = http.expectOne('/api/v1/accounts/1');
     testRequest.flush(response);
 
     await expect(result).resolves.toEqual(response);
@@ -42,7 +42,7 @@ describe('AccountService', () => {
 
   it('turns a not-found response into a meaningful error', async () => {
     const result = firstValueFrom(service.getBalance(99));
-    http.expectOne('http://localhost:8081/api/v1/accounts/99/balance').flush(
+    http.expectOne('/api/v1/accounts/99/balance').flush(
       { message: 'Account not found' },
       { status: 404, statusText: 'Not Found' }
     );

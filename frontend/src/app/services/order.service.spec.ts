@@ -27,7 +27,7 @@ describe('OrderService', () => {
       idempotencyKey: 'order-1',
     };
     const result = firstValueFrom(service.placeOrder(request));
-    const testRequest = http.expectOne('http://localhost:8081/api/v1/orders');
+    const testRequest = http.expectOne('/api/v1/orders');
 
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.body).toEqual(request);
@@ -56,7 +56,7 @@ describe('OrderService', () => {
     const result = firstValueFrom(
       service.cancelOrder('order-1')
     );
-    http.expectOne('http://localhost:8081/api/v1/orders/order-1').flush(
+    http.expectOne('/api/v1/orders/order-1').flush(
       {},
       { status: 500, statusText: 'Server Error' }
     );
