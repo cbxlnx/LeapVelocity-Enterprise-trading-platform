@@ -4,10 +4,16 @@ import { Observable, catchError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { handleApiError } from '../../../services/api-error';
 import { HistoricalPrices } from '../models/historical-prices.model';
+import { PortfolioSummary } from '../models/portfolio-summary.model';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
+
+  getSummary(accountId: number): Observable<PortfolioSummary> {
+    return this.http.get<PortfolioSummary>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/summary`)
+      .pipe(catchError(handleApiError('load portfolio summary')));
+  }
 
   getPrices(symbol: string, from: string, to: string): Observable<HistoricalPrices> {
     const normalized = symbol.trim().toUpperCase();

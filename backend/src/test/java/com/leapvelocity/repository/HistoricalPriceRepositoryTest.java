@@ -53,6 +53,26 @@ class HistoricalPriceRepositoryTest {
     }
 
     @Test
+    void picksLatestCommonCompletedDateInsteadOfMixingSymbolDates() {
+        assertEquals(LocalDate.parse("2025-10-02"), repository.findLatestCommonDate(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-04")));
+        assertNull(repository.findLatestCommonDate(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-02")));
+        assertNull(repository.findLatestCommonDate(List.of("AAPL", "UNKNOWN"), LocalDate.parse("2025-10-04")));
+    }
+
+    @Test
+    void readsClosingPricesOnlyOnChosenDate() {
+        var result = repository.findClosesOnDate(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-02"));
+        assertEquals(2, result.size());
+        assertEquals("252.123456", result.get("AAPL").toPlainString());
+        assertEquals("500.000000", result.get("MSFT").toPlainString());
+    }
+
+    @Test
+    void identifiesSymbolsWithNoCompletedHistory() {
+        assertEquals(java.util.Set.of("AAPL"), repository.findSymbolsWithHistoryBefore(List.of("AAPL", "MSFT", "UNKNOWN"), LocalDate.parse("2025-10-02")));
+    }
+
+    @Test
     void bindsSymbolAsAParameter() {
         assertTrue(repository.findPrices("AAPL' OR 1=1 --", LocalDate.parse("2025-10-01"), LocalDate.parse("2025-10-03")).isEmpty());
     }

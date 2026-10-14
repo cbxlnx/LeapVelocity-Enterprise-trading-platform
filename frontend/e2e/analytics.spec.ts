@@ -15,7 +15,48 @@ async function signInForMockRequests(page: Page) {
     const payload = btoa(JSON.stringify({ username: 'Analytics test', accountId: 1 }));
     localStorage.setItem('leap_access_token', `fixture.${payload}.fixture`);
   });
+  await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: {
+    accountId: 1, currency: 'USD', asOf: null, valuationStatus: 'EMPTY',
+    holdingsValue: 0, cashBalance: 5, totalEquity: 5, costBasis: 0, unrealizedPnL: 0, holdings: [], issues: [],
+  } }));
 }
+
+const portfolioFixture = {
+  accountId: 1, currency: 'USD', asOf: '2025-10-01', valuationStatus: 'READY',
+  holdingsValue: 24, cashBalance: 5, totalEquity: 29, costBasis: 20, unrealizedPnL: 4,
+  holdings: [{ symbol: 'AAPL', currency: 'USD', quantity: 2, averageCost: 10, price: 12,
+    marketValue: 24, costBasis: 20, unrealizedPnL: 4, weight: 1 }], issues: [],
+};
+
+test('shows portfolio KPI, holdings and allocation independently from the price chart', async ({ page }) => {
+  await signInForMockRequests(page);
+  await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: portfolioFixture }));
+  await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
+  await page.goto('/analytics');
+  await expect(page.getByTestId('total-equity')).toHaveText('$29.00');
+  await expect(page.getByTestId('cash-balance')).toHaveText('$5.00');
+  await expect(page.locator('.allocation-label')).toContainText('100.0%');
+  await expect(page.locator('app-portfolio-summary tbody tr')).toHaveCount(1);
+  await expect(page.locator('app-portfolio-summary time')).toHaveAttribute('datetime', '2025-10-01');
+  await expect(page.locator('polyline')).toBeVisible();
+});
+
+test('explains missing prices without displaying zero valuations', async ({ page }) => {
+  await signInForMockRequests(page);
+  await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: {
+    ...portfolioFixture, asOf: null, valuationStatus: 'UNAVAILABLE', holdingsValue: null,
+    totalEquity: null, unrealizedPnL: null,
+    holdings: [{ ...portfolioFixture.holdings[0], price: null, marketValue: null, unrealizedPnL: null, weight: null }],
+    issues: ['Missing completed price history for: AAPL'],
+  } }));
+  await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
+  await page.goto('/analytics');
+  await expect(page.getByRole('alert')).toContainText('Missing completed price history for: AAPL');
+  await expect(page.getByTestId('total-equity')).toHaveText('Unavailable');
+  await expect(page.getByTestId('cash-balance')).toHaveText('$5.00');
+  await expect(page.locator('.allocation-fill')).toHaveCount(0);
+  await expect(page.locator('polyline')).toBeVisible();
+});
 
 test('requires sign-in before opening analytics', async ({ page }) => {
   await page.goto('/analytics');
@@ -84,6 +125,7 @@ test('sends edited dates to the API and blocks a reversed range', async ({ page 
 
 test('keeps the chart inside the page on mobile', async ({ page }) => {
   await signInForMockRequests(page);
+  await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: portfolioFixture }));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
   await page.goto('/analytics');

@@ -15,6 +15,15 @@ describe('AnalyticsApiService', () => {
   });
   afterEach(() => http.verify());
 
+  it('requests portfolio summary for the signed-in account', async () => {
+    const result = firstValueFrom(api.getSummary(7));
+    const request = http.expectOne('/api/v1/accounts/7/analytics/summary');
+    expect(request.request.method).toBe('GET');
+    const summary = { accountId: 7, currency: 'USD', asOf: null, valuationStatus: 'EMPTY', holdings: [], issues: [] };
+    request.flush(summary);
+    await expect(result).resolves.toEqual(summary);
+  });
+
   it('requests stored history with normalized symbol and inclusive date parameters', async () => {
     const result = firstValueFrom(api.getPrices(' aapl ', '2025-10-01', '2026-10-01'));
     const request = http.expectOne('/api/v1/market-data/prices/AAPL?from=2025-10-01&to=2026-10-01');

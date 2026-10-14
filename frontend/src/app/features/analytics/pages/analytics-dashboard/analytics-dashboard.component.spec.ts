@@ -1,9 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HistoricalPrices } from '../../models/historical-prices.model';
 import { AnalyticsApiService } from '../../services/analytics-api.service';
 import { AnalyticsDashboardComponent } from './analytics-dashboard.component';
+import { AuthService } from '../../../../services/auth.service';
 
 const sample: HistoricalPrices = {
   symbol: 'AAPL', currency: 'USD', from: '2025-10-01', to: '2025-10-02',
@@ -16,14 +17,19 @@ const sample: HistoricalPrices = {
 describe('Analytics dashboard', () => {
   let fixture: ComponentFixture<AnalyticsDashboardComponent>;
   let response: Subject<HistoricalPrices>;
-  let api: { getPrices: ReturnType<typeof vi.fn> };
+  let api: { getPrices: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn> };
+  const emptySummary = { accountId: 1, currency: 'USD', asOf: null, valuationStatus: 'EMPTY',
+    holdingsValue: 0, cashBalance: 5, totalEquity: 5, costBasis: 0, unrealizedPnL: 0, holdings: [], issues: [] };
 
   beforeEach(async () => {
     response = new Subject<HistoricalPrices>();
-    api = { getPrices: vi.fn().mockReturnValue(response) };
+    api = { getPrices: vi.fn().mockReturnValue(response), getSummary: vi.fn().mockReturnValue(of(emptySummary)) };
     await TestBed.configureTestingModule({
       imports: [AnalyticsDashboardComponent],
-      providers: [{ provide: AnalyticsApiService, useValue: api }],
+      providers: [
+        { provide: AnalyticsApiService, useValue: api },
+        { provide: AuthService, useValue: { getAccountId: vi.fn().mockReturnValue(1) } },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(AnalyticsDashboardComponent);
     fixture.detectChanges();
@@ -78,5 +84,22 @@ describe('Analytics dashboard', () => {
     expect(fixture.componentInstance.loading()).toBe(true);
     next.next(sample);
     expect(fixture.componentInstance.history()).toEqual(sample);
+  });
+
+  it('keeps instrument history usable when summary loading fails', () => {
+    api.getSummary.mockReturnValue(throwError(() => new Error('Summary unavailable')));
+    fixture.componentInstance.loadSummary();
+    response.next(sample);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-portfolio-summary').textContent).toContain('Summary unavailable');
+    expect(fixture.nativeElement.querySelector('polyline')).toBeTruthy();
+  });
+
+  it('does not guess an account id when the token lacks one', () => {
+    vi.mocked(TestBed.inject(AuthService).getAccountId).mockReturnValue(null);
+    fixture.componentInstance.loadSummary();
+    fixture.detectChanges();
+    expect(api.getSummary).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.textContent).toContain('Please sign in again');
   });
 });

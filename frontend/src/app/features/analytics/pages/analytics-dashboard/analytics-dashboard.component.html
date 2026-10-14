@@ -1,10 +1,14 @@
 <main class="analytics-container">
   <header class="page-heading">
-    <p class="eyebrow">Market analytics</p>
-    <h1>AAPL · Historical prices</h1>
-    <p class="subtitle">Apple Inc. daily closing prices in USD.</p>
+    <p class="eyebrow">Portfolio analytics</p>
+    <h1>Portfolio overview</h1>
+    <p class="subtitle">Current account valuation, allocation and instrument history.</p>
   </header>
 
+  <app-portfolio-summary [summary]="summary()" [loading]="summaryLoading()" [error]="summaryError()" (refresh)="loadSummary()" />
+
+  <h2>AAPL · Historical prices</h2>
+  <p class="subtitle">Apple Inc. daily closing prices in USD. The date filter applies only to this chart.</p>
   <form class="date-filter" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical price date range">
     <label for="price-from">From <input id="price-from" type="date" formControlName="from" required /></label>
     <label for="price-to">To <input id="price-to" type="date" formControlName="to" required /></label>
