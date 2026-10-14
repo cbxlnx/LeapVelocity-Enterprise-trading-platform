@@ -1,3 +1,389 @@
 .dashboard-container {
-  padding: 20px;
+  padding: 24px;
+  background-color: #f3f5f6;
+  min-height: 100vh;
+}
+
+/* Loading & Error States */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 16px;
+  color: #586c7d;
+}
+
+.error-state {
+  margin-bottom: 24px;
+}
+
+.error-card {
+  background-color: #fdf5f5;
+  border-left: 4px solid #b13339;
+}
+
+.error-message {
+  color: #b13339;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+/* Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.header-content {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px 0;
+  color: #7b8da0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.header-content h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #142337;
+}
+
+.subtitle {
+  margin: 8px 0 0 0;
+  color: #586c7d;
+  font-size: 14px;
+}
+
+.refresh-btn {
+  border: 1px solid #d4dbe3;
+  background: #ffffff;
+  color: #243444;
+  border-radius: 4px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background: #f8fafc;
+  border-color: #c5d0dc;
+}
+
+/* Balance Card */
+.balance-card {
+  background: #1c2b3f;
+  color: white;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.balance-card mat-card-content {
+  padding: 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.95fr;
+  gap: 0;
+}
+
+.card-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 130px;
+  padding: 22px 24px;
+}
+
+.card-section + .card-section {
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 8px 0;
+}
+
+.balance-value,
+.equity-value {
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1;
+  margin: 6px 0 10px 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gain-loss-value {
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.05;
+  margin: 8px 0 10px 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.timestamp,
+.cost-basis {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.account-id {
+  font-weight: 600;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gain {
+  color: #58c09a !important;
+}
+
+.loss {
+  color: #e27171 !important;
+}
+
+.gain-loss-percent {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gain-loss-cost-basis {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  border-radius: 4px;
+  height: 34px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+}
+
+.action-btn-primary {
+  background: #c05819;
+  color: #ffffff;
+  border-color: #c05819;
+}
+
+.action-btn-primary:hover {
+  background: #aa4c15;
+  border-color: #aa4c15;
+}
+
+.action-btn-secondary {
+  background: #ffffff;
+  color: #243444;
+  border-color: #d5dde6;
+}
+
+.action-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #c8d2de;
+}
+
+/* Positions Section */
+.positions-section {
+  margin-bottom: 32px;
+}
+
+.positions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.positions-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #142337;
+}
+
+.holdings-count {
+  font-size: 12px;
+  color: #586c7d;
+  font-weight: 500;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.positions-table {
+  width: 100%;
+}
+
+.positions-table thead tr {
+  background-color: #f9fafb;
+}
+
+.positions-table th {
+  padding: 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #586c7d;
+}
+
+.positions-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: #192830;
+}
+
+.positions-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.percent {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 12px;
+  border-top: 2px solid #e8ecef;
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+/* Workspace Extension */
+.workspace-extension {
+  margin-top: 32px;
+}
+
+.extension-description {
+  color: #586c7d;
+  font-size: 13px;
+  margin: 0 0 16px 0;
+}
+
+.extension-items {
+  display: flex;
+  gap: 24px;
+}
+
+.extension-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #192830;
+}
+
+.status-planned {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-section + .card-section {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .balance-value,
+  .equity-value {
+    font-size: 34px;
+  }
+
+  .gain-loss-value {
+    font-size: 30px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .extension-items {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 680px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .refresh-btn {
+    align-self: flex-end;
+  }
 }

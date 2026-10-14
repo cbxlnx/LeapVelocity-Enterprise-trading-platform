@@ -6,8 +6,7 @@
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, sans-serif;
+  font-family: var(--font-ui);
 }
 
 /* Login Card */
@@ -267,6 +266,258 @@ form {
   .form-input,
   .login-button {
     border-width: 2px;
+  }
+}
+
+/* Prototype login surface */
+.login-container {
+  position: relative;
+  min-height: 100vh;
+  padding: 24px 36px 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #142337;
+  color: #192830;
+  font-family: var(--font-ui);
+}
+
+.login-brand {
+  position: absolute;
+  top: 24px;
+  left: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.brand-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 3px;
+  background: #c84f16;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.brand-subtitle {
+  margin-top: 3px;
+  color: #aab9c8;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+}
+
+.login-card {
+  width: min(100%, 330px);
+  max-width: none;
+  padding: 28px;
+  border: 1px solid #d9e0e7;
+  border-radius: 5px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(20, 35, 55, 0.45);
+}
+
+.login-header {
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.login-header .eyebrow {
+  margin: 0 0 10px;
+  color: #526a82;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+}
+
+.login-header h1 {
+  margin: 0;
+  color: #1d3045;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.login-header .subtitle {
+  max-width: 250px;
+  margin: 8px 0 0;
+  color: #60748a;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.alert {
+  margin-bottom: 16px;
+  padding: 9px 10px;
+  border-radius: 3px;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.alert-icon {
+  font-size: 13px;
+}
+
+.alert-message {
+  font-size: 10px;
+}
+
+form {
+  gap: 15px;
+}
+
+.form-label {
+  margin-bottom: 6px;
+  color: #1d3045;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.form-input {
+  width: 100%;
+  height: 37px;
+  padding: 0 10px;
+  border: 1px solid #bdcbd8;
+  border-radius: 3px;
+  color: #26394d;
+  font-size: 10px;
+  background: #ffffff;
+}
+
+.form-input::placeholder {
+  color: #52677d;
+  opacity: 1;
+}
+
+.form-input:focus {
+  border-color: #3f5fa8;
+  box-shadow: 0 0 0 2px rgba(63, 95, 168, 0.14);
+  background: #ffffff;
+}
+
+.validation-messages {
+  min-height: 0;
+}
+
+.error-message {
+  font-size: 9px;
+}
+
+.login-button {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 0;
+  padding: 0 12px;
+  border-radius: 3px;
+  background: #c84f16;
+  font-size: 10px;
+  font-weight: 600;
+  transition: background-color 160ms ease;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #ad4312;
+  box-shadow: none;
+}
+
+.login-button:active:not(:disabled) {
+  transform: none;
+}
+
+.security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #dfe5eb;
+  color: #60748a;
+}
+
+.security-icon {
+  flex: 0 0 auto;
+  color: #526a82;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.security-note p {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.access-help,
+.copyright,
+.restriction {
+  position: absolute;
+  margin: 0;
+  color: #9aabba;
+  font-size: 8px;
+}
+
+.access-help {
+  bottom: 137px;
+}
+
+.access-help a {
+  color: #c9d5df;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.access-help a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.copyright {
+  bottom: 28px;
+  left: 36px;
+}
+
+.restriction {
+  right: 36px;
+  bottom: 28px;
+}
+
+@media (max-width: 560px) {
+  .login-container {
+    padding: 76px 20px 80px;
+    justify-content: center;
+  }
+
+  .login-brand {
+    top: 22px;
+    left: 20px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .access-help {
+    bottom: 42px;
+  }
+
+  .copyright,
+  .restriction {
+    display: none;
   }
 }
 

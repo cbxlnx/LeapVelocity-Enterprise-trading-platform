@@ -1,8 +1,17 @@
 <main class="login-container" role="main">
+  <div class="login-brand" aria-label="Enterprise Trading Platform">
+    <div class="brand-mark">ET</div>
+    <div>
+      <div class="brand-name">Enterprise Trading Platform</div>
+      <div class="brand-subtitle">INSTITUTIONAL EXECUTION</div>
+    </div>
+  </div>
+
   <div class="login-card">
     <header class="login-header">
-      <h1>Leap Trading Platform</h1>
-      <p class="subtitle">Sign in to your account</p>
+      <p class="eyebrow">AUTHORIZED ACCESS ONLY</p>
+      <h1>Sign in to your<br />workspace</h1>
+      <p class="subtitle">Secure access to your account, positions and order execution.</p>
     </header>
 
     <!-- Error Alert -->
@@ -77,7 +86,7 @@
         [disabled]="isSubmitDisabled"
         aria-busy="isLoading$ | async"
       >
-        <span *ngIf="!(isLoading$ | async)" class="button-text">Sign In</span>
+        <span *ngIf="!(isLoading$ | async)" class="button-text">Login</span>
         <span *ngIf="isLoading$ | async" class="button-text">
           <span class="spinner"></span>
           Signing in...
@@ -85,14 +94,15 @@
       </button>
     </form>
 
-    <!-- Footer -->
-    <footer class="login-footer">
-      <p class="signup-prompt">
-        Don't have an account?
-        <a href="#" class="signup-link" aria-label="Sign up for a new account">
-          Sign up
-        </a>
-      </p>
-    </footer>
+    <div class="security-note">
+      <span class="security-icon" aria-hidden="true">[ ]</span>
+      <p>Protected institutional access. Your session and account activity are securely recorded.</p>
+    </div>
   </div>
+
+  <p class="access-help">
+    Need an account? <a routerLink="/register">Sign up here</a>
+  </p>
+  <p class="copyright">&copy; 2026 Enterprise Trading Platform</p>
+  <p class="restriction">Restricted to authorized account holders</p>
 </main>

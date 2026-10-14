@@ -6,6 +6,10 @@ import { setupSwagger } from "./config/swagger.config";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: true,
+    credentials: false,
+  });
   app.enableShutdownHooks();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
   setupSwagger(app);

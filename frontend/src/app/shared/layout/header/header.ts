@@ -1,0 +1,30 @@
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../../services/auth.service';
+
+@Component({
+selector: 'app-header',
+standalone: true,
+imports: [CommonModule, RouterLink, RouterLinkActive],
+templateUrl: './header.html',
+styleUrls: ['./header.css'],
+})
+export class HeaderComponent {
+  userName: string;
+  accountId: string;
+
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {
+    this.userName = this.authService.getUsername() ?? 'User';
+    const accountId = this.authService.getAccountId();
+    this.accountId = accountId ? `ACC-${String(accountId).padStart(3, '0')}` : 'Account unavailable';
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
+}

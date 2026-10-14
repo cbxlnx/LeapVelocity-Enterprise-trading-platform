@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LoginComponent } from './login.component';
@@ -20,12 +20,20 @@ describe('LoginComponent', () => {
     const routerMock = {
       navigate: vi.fn(),
     };
+    const activatedRouteMock = {
+      snapshot: {
+        queryParamMap: {
+          get: vi.fn().mockReturnValue(null),
+        },
+      },
+    };
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent, ReactiveFormsModule],
       providers: [
         { provide: AuthService, useValue: authServiceMock },
         { provide: Router, useValue: routerMock },
+        { provide: ActivatedRoute, useValue: activatedRouteMock },
       ],
     }).compileComponents();
 

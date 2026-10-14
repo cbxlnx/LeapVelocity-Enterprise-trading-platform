@@ -1,0 +1,56 @@
+<main class="register-container" role="main">
+  <div class="register-brand" aria-label="Enterprise Trading Platform">
+    <div class="brand-mark">ET</div>
+    <div>
+      <div class="brand-name">Enterprise Trading Platform</div>
+      <div class="brand-subtitle">INSTITUTIONAL EXECUTION</div>
+    </div>
+  </div>
+
+  <div class="register-card">
+    <header class="register-header">
+      <p class="eyebrow">REQUEST ACCOUNT ACCESS</p>
+      <h1>Create your<br />workspace</h1>
+      <p class="subtitle">Create credentials for secure access to your account and trading workspace.</p>
+    </header>
+
+    <div *ngIf="errorMessage$ | async as error" class="alert alert-error" role="alert">
+      <p class="alert-message">{{ error }}</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input id="username" type="text" class="form-input" formControlName="username" placeholder="Choose a username" autocomplete="username" (keydown)="onKeyDown($event)" />
+        <span *ngIf="controlHasError('username', 'required') || controlHasError('username', 'minlength')" class="error-message">Use at least 3 characters</span>
+      </div>
+
+      <div class="field-row">
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input id="password" type="password" class="form-input" formControlName="password" placeholder="Create password" autocomplete="new-password" (keydown)="onKeyDown($event)" />
+          <span *ngIf="controlHasError('password', 'required') || controlHasError('password', 'minlength')" class="error-message">Use at least 8 characters</span>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirm password</label>
+          <input id="confirmPassword" type="password" class="form-input" [class.input-error]="passwordsMismatch" formControlName="confirmPassword" placeholder="Repeat password" autocomplete="new-password" (keydown)="onKeyDown($event)" />
+          <span *ngIf="passwordsMismatch" class="error-message">Passwords must match</span>
+        </div>
+      </div>
+
+      <button type="submit" class="register-button" [disabled]="isSubmitDisabled" [attr.aria-busy]="isLoading$ | async">
+        <span *ngIf="!(isLoading$ | async)">Sign up</span>
+        <span *ngIf="isLoading$ | async" class="button-text"><span class="spinner"></span>Submitting...</span>
+      </button>
+    </form>
+
+    <div class="security-note">
+      <span class="security-icon" aria-hidden="true">[ ]</span>
+      <p>Access requests are reviewed by your administrator before activation.</p>
+    </div>
+  </div>
+
+  <p class="account-link">Already have access? <a routerLink="/login">Sign in</a></p>
+  <p class="copyright">&copy; 2026 Enterprise Trading Platform</p>
+  <p class="restriction">Restricted to authorized account holders</p>
+</main>
