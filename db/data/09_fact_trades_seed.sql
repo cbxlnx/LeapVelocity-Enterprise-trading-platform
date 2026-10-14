@@ -9,7 +9,7 @@ VALUES
     (
         '10000000-0000-0000-0000-000000000001',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 1),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GLBEQ1'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'AAPL'),
         20260816,
         'BUY',
         100.0000,
@@ -19,7 +19,7 @@ VALUES
     (
         '10000000-0000-0000-0000-000000000004',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 2),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'USEQUITY'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GOOGL'),
         20260801,
         'BUY',
         75.0000,
@@ -29,7 +29,7 @@ VALUES
     (
         '10000000-0000-0000-0000-000000000007',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 3),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'CORPB1'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'MSFT'),
         20260811,
         'BUY',
         200.0000,
@@ -39,7 +39,7 @@ VALUES
     (
         '10000000-0000-0000-0000-00000000000a',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 4),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GILT10'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'JPM'),
         20260905,
         'BUY',
         40.0000,
@@ -49,7 +49,7 @@ VALUES
     (
         '10000000-0000-0000-0000-00000000000b',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 5),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'EMMARKET'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'AMZN'),
         20260722,
         'BUY',
         90.0000,
@@ -59,7 +59,7 @@ VALUES
     (
         '10000000-0000-0000-0000-00000000000f',
         (SELECT account_key FROM analytics.dim_account WHERE account_id = 6),
-        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'GLBEQ1'),
+        (SELECT instrument_key FROM analytics.dim_instrument WHERE symbol = 'AAPL'),
         20260920,
         'BUY',
         200.0000,

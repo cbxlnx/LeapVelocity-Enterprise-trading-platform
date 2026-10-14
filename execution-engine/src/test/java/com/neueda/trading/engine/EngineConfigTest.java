@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,7 +21,7 @@ class EngineConfigTest {
     void objectMapperSerializesAndDeserializesJavaTimeEvents() throws Exception {
         ObjectMapper mapper = config.objectMapper();
         ExecutionEvent event = new ExecutionEvent(UUID.randomUUID(), UUID.randomUUID(), 4L, "VERDA", Side.BUY,
-                5, new BigDecimal("4.20"), new BigDecimal("4.25"), "SIM", Instant.EPOCH);
+                new BigDecimal("5"), new BigDecimal("4.20"), new BigDecimal("4.25"), "SIM", Instant.EPOCH);
 
         String json = mapper.writeValueAsString(event);
         ExecutionEvent restored = mapper.readValue(json, ExecutionEvent.class);
@@ -32,30 +31,25 @@ class EngineConfigTest {
     }
 
     @Test
-    void simulatedMarketBeanUsesConfiguredVenue() {
-        EngineProperties properties = new EngineProperties(Duration.ZERO, Duration.ZERO, 0, "SIMX");
+    void quoteMarketBeanUsesConfiguredVenue() throws Exception {
+        EngineProperties properties = new EngineProperties(Duration.ofSeconds(15), "SIMX");
 
-        SimulatedMarket market = config.simulatedMarket(properties);
-        ExecutionEvent execution = market.execute(new OrderEvent(UUID.randomUUID(), 9L, "VERDA", Side.SELL,
-                3, new BigDecimal("12.50"), Instant.EPOCH));
+        QuoteMarket market = config.quoteMarket(properties);
+        market.update(new MarketDataEvent("VERDA", new BigDecimal("12.55"), new BigDecimal("12.50"),
+                new BigDecimal("12.55"), "USD", Instant.EPOCH, "test"));
+        ExecutionEvent execution = market.execute(new OrderEvent(UUID.randomUUID(), 9L, "VERDA", Side.BUY,
+                new BigDecimal("3"), new BigDecimal("12.60"), Instant.EPOCH));
 
         assertEquals("SIMX", execution.venue());
         assertNotNull(execution.executedOn());
-        assertEquals(new BigDecimal("12.50"), execution.price());
-    }
-
-    @Test
-    void pauserBeanAcceptsZeroDelay() throws Exception {
-        Pauser pauser = config.pauser();
-
-        assertNotNull(pauser);
-        assertDoesNotThrow(() -> pauser.pause(Duration.ZERO));
+        assertEquals(new BigDecimal("12.55"), execution.price());
     }
 
     @Test
     void topicBeansUseProvidedNamesAndPartitions() {
         assertTopic(config.ordersTopic("orders", 4), "orders", 4);
         assertTopic(config.executionsTopic("executions", 4), "executions", 4);
+        assertTopic(config.marketDataTopic("market-data", 4), "market-data", 4);
         assertTopic(config.deadLetterTopic("orders-dlt", 4), "orders-dlt", 4);
     }
 

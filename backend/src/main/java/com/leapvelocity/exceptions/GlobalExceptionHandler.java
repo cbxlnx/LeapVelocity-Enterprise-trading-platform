@@ -77,6 +77,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles QuoteNotFoundException.
+     * Maps to HTTP 404 Not Found with error code MKT-404.
+     */
+    @ExceptionHandler(QuoteNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponse> handleQuoteNotFoundException(
+            QuoteNotFoundException ex,
+            HttpServletRequest request) {
+        logger.warn("Quote not found: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.QUOTE_NOT_FOUND,
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.QUOTE_NOT_FOUND.getHttpStatus()).body(response);
+    }
+
+    /**
      * Handles InsufficientFundsException.
      * Maps to HTTP 400 Bad Request with error code ORD-400.
      */

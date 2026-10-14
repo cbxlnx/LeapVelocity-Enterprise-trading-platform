@@ -1,6 +1,8 @@
 package com.leapvelocity.config;
 
 import com.leapvelocity.messaging.ExecutionEvent;
+import com.leapvelocity.messaging.KafkaTopics;
+import com.leapvelocity.messaging.MarketDataEvent;
 import com.leapvelocity.messaging.OrderEvent;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -15,13 +17,18 @@ import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -84,6 +91,49 @@ class KafkaConfigTest {
 
         assertSame(consumerFactory, factory.getConsumerFactory());
         assertEquals(ContainerProperties.AckMode.MANUAL_IMMEDIATE, factory.getContainerProperties().getAckMode());
+    }
+
+    @Test
+    void marketDataConsumerFactoryReadsLatestAndDeserializesQuotes() {
+        ConsumerFactory<String, MarketDataEvent> factory = consumerConfig.marketDataEventConsumerFactory("kafka:9092");
+
+        Map<String, Object> properties = ((DefaultKafkaConsumerFactory<String, MarketDataEvent>) factory).getConfigurationProperties();
+        assertEquals("kafka:9092", properties.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
+        assertEquals(StringDeserializer.class, properties.get(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG));
+        assertEquals(ErrorHandlingDeserializer.class, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+        assertEquals(JsonDeserializer.class, properties.get(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS));
+        assertEquals("latest", properties.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG));
+        assertEquals(MarketDataEvent.class.getName(), properties.get(JsonDeserializer.VALUE_DEFAULT_TYPE));
+        assertEquals(false, properties.get(JsonDeserializer.USE_TYPE_INFO_HEADERS));
+        assertTrue(String.valueOf(properties.get(JsonDeserializer.TRUSTED_PACKAGES)).contains("com.leapvelocity.messaging"));
+    }
+
+    @Test
+    void marketDataDeserializerParsesPublisherPayload() {
+        ConsumerFactory<String, MarketDataEvent> factory = consumerConfig.marketDataEventConsumerFactory("kafka:9092");
+        Map<String, Object> properties = ((DefaultKafkaConsumerFactory<String, MarketDataEvent>) factory).getConfigurationProperties();
+
+        ErrorHandlingDeserializer<MarketDataEvent> deserializer = new ErrorHandlingDeserializer<>();
+        deserializer.configure(properties, false);
+        String payload = "{\"symbol\":\"AAPL\",\"lastPrice\":187.25,\"bid\":187.20,\"ask\":187.30,"
+                + "\"currency\":\"USD\",\"asOf\":\"2026-05-01T12:00:00Z\",\"source\":\"yfinance\"}";
+
+        MarketDataEvent quote = deserializer.deserialize(KafkaTopics.MARKET_DATA, payload.getBytes(StandardCharsets.UTF_8));
+
+        assertEquals("AAPL", quote.symbol());
+        assertEquals(0, new BigDecimal("187.25").compareTo(quote.lastPrice()));
+        assertEquals(Instant.parse("2026-05-01T12:00:00Z"), quote.asOf());
+        assertEquals("yfinance", quote.source());
+    }
+
+    @Test
+    void marketDataListenerContainerFactoryDoesNotUseManualAcknowledgment() {
+        ConsumerFactory<String, MarketDataEvent> consumerFactory = consumerConfig.marketDataEventConsumerFactory("kafka:9092");
+
+        var factory = consumerConfig.marketDataListenerContainerFactory(consumerFactory);
+
+        assertSame(consumerFactory, factory.getConsumerFactory());
+        assertNotEquals(ContainerProperties.AckMode.MANUAL_IMMEDIATE, factory.getContainerProperties().getAckMode());
     }
 
     @Test

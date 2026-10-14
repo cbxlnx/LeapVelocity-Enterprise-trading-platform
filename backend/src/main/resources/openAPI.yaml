@@ -211,6 +211,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /market-data/quotes/{symbol}:
+    get:
+      summary: Retrieve the latest market quote for a symbol
+      tags:
+        - market-data
+      operationId: getLatestQuote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Latest quote retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '404':
+          description: No quote has been received yet for the symbol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /instruments/search:
+    get:
+      summary: Search instruments by symbol or name prefix
+      tags:
+        - instruments
+      operationId: searchInstruments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ''
+          description: Symbol or name prefix to match; blank returns an empty list
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 50
+          description: Maximum number of results; values outside 1-50 are clamped
+      responses:
+        '200':
+          description: Matching instruments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     PlaceOrderRequestDto:
@@ -336,6 +417,66 @@ components:
           type: number
           format: double
           description: Average acquisition cost per share
+
+    QuoteDto:
+      type: object
+      required: [symbol, lastPrice, asOf, source]
+      properties:
+        symbol:
+          type: string
+          description: Instrument ticker symbol
+          example: AAPL
+        lastPrice:
+          type: number
+          format: double
+          description: Last traded price
+        bid:
+          type: number
+          format: double
+          description: Best bid price
+        ask:
+          type: number
+          format: double
+          description: Best ask price
+        currency:
+          type: string
+          description: Quote currency
+          example: USD
+        asOf:
+          type: string
+          format: date-time
+          description: Quote timestamp reported by the publisher
+        source:
+          type: string
+          description: Data source name
+          example: yfinance
+
+    InstrumentDto:
+      type: object
+      required: [id, symbol, name, assetClass, currency, tradable]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal instrument identifier
+        symbol:
+          type: string
+          description: Instrument ticker symbol
+          example: AAPL
+        name:
+          type: string
+          description: Instrument display name
+        assetClass:
+          type: string
+          description: Asset class
+          example: EQUITY
+        currency:
+          type: string
+          description: Trading currency
+          example: USD
+        tradable:
+          type: boolean
+          description: Whether orders can be placed for the instrument
 
     ErrorResponse:
       type: object

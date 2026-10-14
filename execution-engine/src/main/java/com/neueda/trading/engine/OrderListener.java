@@ -17,8 +17,8 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * Step 2 of the event flow: reads each order from the {@code orders} topic,
- * works it on the {@link SimulatedMarket}, and writes the fill to the
- * {@code executions} topic keyed by account.
+ * fills it against the latest quote from the {@link QuoteMarket}, and writes
+ * the fill to the {@code executions} topic keyed by account.
  *
  * <p>The fill is sent and acknowledged by Kafka before this method returns,
  * so the order's offset is only committed once its fill is safely on the
@@ -28,24 +28,23 @@ import java.util.concurrent.TimeoutException;
  * <p>Failure Handling:
  * - **Permanent Failures** (e.g., invalid JSON): Thrown as {@link PermanentFailureException}
  *   and immediately sent to the Dead Letter Topic by the error handler.
- * - **Temporary Failures** (e.g., Kafka send timeout): Thrown as {@link TemporaryFailureException}
- *   and retried with exponential backoff until the retry budget is exhausted, then sent to DLT.
+ * - **Temporary Failures** (e.g., no fresh marketable quote yet, or Kafka send timeout): Thrown as
+ *   {@link TemporaryFailureException} and retried with exponential backoff until the retry budget
+ *   is exhausted, then sent to DLT.
  */
 @Component
 public class OrderListener {
 
     private static final Logger log = LoggerFactory.getLogger(OrderListener.class);
 
-    private final SimulatedMarket market;
-    private final Pauser pauser;
+    private final QuoteMarket market;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final String executionsTopic;
 
-    public OrderListener(SimulatedMarket market, Pauser pauser, KafkaTemplate<String, String> kafkaTemplate,
+    public OrderListener(QuoteMarket market, KafkaTemplate<String, String> kafkaTemplate,
                          ObjectMapper objectMapper, @Value("${engine.topics.executions}") String executionsTopic) {
         this.market = market;
-        this.pauser = pauser;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.executionsTopic = executionsTopic;
@@ -66,13 +65,6 @@ public class OrderListener {
 
         log.info("Working order {}: {} {} {} limit {}", order.orderId(), order.side(), order.quantity(),
                 order.symbol(), order.price());
-
-        try {
-            pauser.pause(market.nextDelay());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        }
 
         ExecutionEvent fill = market.execute(order);
 

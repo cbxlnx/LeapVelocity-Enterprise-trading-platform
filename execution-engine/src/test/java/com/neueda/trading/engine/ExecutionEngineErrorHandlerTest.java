@@ -8,6 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ListenerExecutionFailedException;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -16,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -148,5 +150,32 @@ class ExecutionEngineErrorHandlerTest {
 
         // Verify DLT message was sent
         verify(kafkaTemplate, times(1)).send(any(ProducerRecord.class));
+    }
+
+    @Test
+    void testHandleError_TemporaryFailure_WithListenerHeadersExhaustsRetriesThenDLT() {
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture(null));
+
+        // Real listener errors carry topic, partition, offset and key headers, but no ConsumerRecord
+        Message<?> message = MessageBuilder.withPayload("{\"orderId\":\"1\"}")
+                .setHeader(KafkaHeaders.RECEIVED_TOPIC, "orders")
+                .setHeader(KafkaHeaders.RECEIVED_PARTITION, 0)
+                .setHeader(KafkaHeaders.OFFSET, 5L)
+                .setHeader(KafkaHeaders.RECEIVED_KEY, "7")
+                .build();
+        ListenerExecutionFailedException exception = new ListenerExecutionFailedException(
+                "Error", new TemporaryFailureException("No marketable BUY price"));
+
+        ExecutionEngineErrorHandler handler = errorHandler();
+
+        // Max of 3 retries: the first three attempts are rethrown for redelivery
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            assertThrows(ListenerExecutionFailedException.class, () -> handler.handleError(message, exception, consumer));
+        }
+
+        Object result = handler.handleError(message, exception, consumer);
+
+        verify(kafkaTemplate, times(1)).send(any(ProducerRecord.class));
+        assertEquals("{\"orderId\":\"1\"}", result);
     }
 }

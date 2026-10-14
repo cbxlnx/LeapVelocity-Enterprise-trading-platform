@@ -1,16 +1,21 @@
 -- Seed data for instruments table
--- Available tradable financial instruments
+-- Curated US-listed tickers. market-data-publisher polls these symbols.
+-- Keep this list in sync with the default in market-data-publisher/publisher.py.
 
 TRUNCATE TABLE instruments RESTART IDENTITY CASCADE;
 
 INSERT INTO instruments 
     (symbol, name, asset_class, currency, tradable)
 VALUES
-    ('GLBEQ1', 'Global Equity Index Fund', 'EQUITY', 'GBP', TRUE),
-    ('CORPB1', 'Sterling Corporate Bond Fund', 'BOND', 'GBP', TRUE),
-    ('CASHGBP', 'Cash GBP', 'CASH', 'GBP', FALSE),
-    ('GILT10', 'UK 10-Year Gilt', 'BOND', 'GBP', TRUE),
-    ('USEQUITY', 'US Equity Fund', 'EQUITY', 'GBP', TRUE),
-    ('EMMARKET', 'Emerging Markets Fund', 'EQUITY', 'GBP', TRUE),
-    ('EUROFIX', 'Euro Fixed Income Fund', 'BOND', 'GBP', TRUE),
-    ('MULTIFUND', 'Multi-Asset Fund', 'FUND', 'GBP', TRUE);
+    ('AAPL', 'Apple Inc.', 'EQUITY', 'USD', TRUE),
+    ('MSFT', 'Microsoft Corporation', 'EQUITY', 'USD', TRUE),
+    ('GOOGL', 'Alphabet Inc. Class A', 'EQUITY', 'USD', TRUE),
+    ('AMZN', 'Amazon.com, Inc.', 'EQUITY', 'USD', TRUE),
+    ('NVDA', 'NVIDIA Corporation', 'EQUITY', 'USD', TRUE),
+    ('TSLA', 'Tesla, Inc.', 'EQUITY', 'USD', TRUE),
+    ('JPM', 'JPMorgan Chase & Co.', 'EQUITY', 'USD', TRUE),
+    ('JNJ', 'Johnson & Johnson', 'EQUITY', 'USD', TRUE),
+    ('XOM', 'Exxon Mobil Corporation', 'EQUITY', 'USD', TRUE),
+    ('WMT', 'Walmart Inc.', 'EQUITY', 'USD', TRUE),
+    ('SPY', 'SPDR S&P 500 ETF Trust', 'FUND', 'USD', TRUE),
+    ('QQQ', 'Invesco QQQ Trust', 'FUND', 'USD', TRUE);

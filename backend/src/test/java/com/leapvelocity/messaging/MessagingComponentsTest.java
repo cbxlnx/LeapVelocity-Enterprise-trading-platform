@@ -2,6 +2,7 @@ package com.leapvelocity.messaging;
 
 import com.leapvelocity.entities.Order;
 import com.leapvelocity.entities.enums.OrderSide;
+import com.leapvelocity.service.MarketDataService;
 import com.leapvelocity.service.OrderExecutionService;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -103,6 +104,17 @@ class MessagingComponentsTest {
 
         verify(service).settleExecution(event);
         verify(acknowledgment).acknowledge();
+    }
+
+    @Test
+    void marketDataListenerForwardsQuoteToCache() {
+        MarketDataService marketDataService = mock(MarketDataService.class);
+        MarketDataEvent quote = new MarketDataEvent("AAPL", new BigDecimal("187.25"), new BigDecimal("187.20"),
+                new BigDecimal("187.30"), "USD", Instant.EPOCH, "yfinance");
+
+        new MarketDataListener(marketDataService).onQuote(quote);
+
+        verify(marketDataService).update(quote);
     }
 
     @Test
