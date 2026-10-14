@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 /** Read-only access to the table maintained by the Python importer. */
 @Repository
 public class HistoricalPriceRepository {
+    public record AdjustedPrice(String symbol, LocalDate date, BigDecimal adjustedClose) { }
+
     private final JdbcTemplate jdbcTemplate;
 
     public HistoricalPriceRepository(JdbcTemplate jdbcTemplate) {
@@ -55,6 +57,25 @@ public class HistoricalPriceRepository {
                     Date day = row.getDate("as_of");
                     return day == null ? null : day.toLocalDate();
                 }, parameters.toArray());
+    }
+
+    /** A null from selects all stored history through the inclusive end date. */
+    public List<AdjustedPrice> findAdjustedPrices(List<String> symbols, LocalDate from, LocalDate to) {
+        if (symbols.isEmpty()) return List.of();
+        String placeholders = String.join(",", Collections.nCopies(symbols.size(), "?"));
+        List<Object> parameters = new ArrayList<>(symbols);
+        String lowerBound = "";
+        if (from != null) {
+            lowerBound = " AND price_date >= ?";
+            parameters.add(Date.valueOf(from));
+        }
+        parameters.add(Date.valueOf(to));
+        return jdbcTemplate.query("SELECT symbol, price_date, adjusted_close FROM analytics.daily_prices "
+                        + "WHERE symbol IN (" + placeholders + ")" + lowerBound
+                        + " AND price_date <= ? ORDER BY price_date ASC, symbol ASC",
+                (row, index) -> new AdjustedPrice(row.getString("symbol"),
+                        row.getDate("price_date").toLocalDate(), row.getBigDecimal("adjusted_close")),
+                parameters.toArray());
     }
 
     public Map<String, BigDecimal> findClosesOnDate(List<String> symbols, LocalDate date) {

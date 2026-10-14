@@ -2,10 +2,12 @@
   <header class="page-heading">
     <p class="eyebrow">Portfolio analytics</p>
     <h1>Portfolio overview</h1>
-    <p class="subtitle">Current account valuation, allocation and instrument history.</p>
+    <p class="subtitle">Current account valuation, allocation, historical simulation and instrument history.</p>
   </header>
 
-  <app-portfolio-summary [summary]="summary()" [loading]="summaryLoading()" [error]="summaryError()" (refresh)="loadSummary()" />
+  <app-portfolio-summary [summary]="summary()" [loading]="summaryLoading()" [error]="summaryError()" (refresh)="refreshPortfolio()" />
+
+  <app-performance-panel [performance]="performance()" [period]="performancePeriod()" [loading]="performanceLoading()" [error]="performanceError()" (periodChange)="changePerformancePeriod($event)" (refresh)="loadPerformance()" />
 
   <h2>AAPL · Historical prices</h2>
   <p class="subtitle">Apple Inc. daily closing prices in USD. The date filter applies only to this chart.</p>

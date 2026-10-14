@@ -53,6 +53,15 @@ class HistoricalPriceRepositoryTest {
     }
 
     @Test
+    void readsAdjustedPricesForAllSymbolsWithInclusiveBoundsAndOrdering() {
+        var rows = repository.findAdjustedPrices(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-02"), LocalDate.parse("2025-10-02"));
+        assertEquals(List.of("AAPL", "MSFT"), rows.stream().map(row -> row.symbol()).toList());
+        assertEquals("249.654321", rows.get(0).adjustedClose().toPlainString());
+        assertEquals(3, repository.findAdjustedPrices(List.of("AAPL", "MSFT"), null, LocalDate.parse("2025-10-02")).size());
+        assertTrue(repository.findAdjustedPrices(List.of("AAPL' OR 1=1 --"), null, LocalDate.parse("2025-10-03")).isEmpty());
+    }
+
+    @Test
     void picksLatestCommonCompletedDateInsteadOfMixingSymbolDates() {
         assertEquals(LocalDate.parse("2025-10-02"), repository.findLatestCommonDate(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-04")));
         assertNull(repository.findLatestCommonDate(List.of("AAPL", "MSFT"), LocalDate.parse("2025-10-02")));

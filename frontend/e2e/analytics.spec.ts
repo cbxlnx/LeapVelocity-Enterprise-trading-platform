@@ -19,7 +19,64 @@ async function signInForMockRequests(page: Page) {
     accountId: 1, currency: 'USD', asOf: null, valuationStatus: 'EMPTY',
     holdingsValue: 0, cashBalance: 5, totalEquity: 5, costBasis: 0, unrealizedPnL: 0, holdings: [], issues: [],
   } }));
+  await page.route('**/api/v1/accounts/1/analytics/performance?**', (route) => route.fulfill({ json: {
+    accountId: 1, period: '1Y', benchmark: 'SPY', simulationStatus: 'EMPTY', weightingDate: null,
+    requestedFrom: null, requestedTo: null, from: null, to: null, portfolioReturnPercent: null,
+    benchmarkReturnPercent: null, initialWeights: [], points: [], issues: [],
+  } }));
 }
+
+const performanceFixture = {
+  accountId: 1, period: '1Y', benchmark: 'SPY', simulationStatus: 'READY', weightingDate: '2026-10-13',
+  requestedFrom: '2025-10-13', requestedTo: '2026-10-13', from: '2026-10-09', to: '2026-10-13',
+  portfolioReturnPercent: 2, benchmarkReturnPercent: 5,
+  initialWeights: [{ symbol: 'AAPL', weight: 0.6 }, { symbol: 'MSFT', weight: 0.4 }],
+  points: [
+    { date: '2026-10-09', portfolioIndex: 100, benchmarkIndex: 100 },
+    { date: '2026-10-13', portfolioIndex: 102, benchmarkIndex: 105 },
+  ], issues: [],
+};
+
+test('compares two indexed series and reloads all supported simulation periods', async ({ page }) => {
+  await signInForMockRequests(page);
+  const selected: string[] = [];
+  await page.route('**/api/v1/accounts/1/analytics/performance?**', (route) => {
+    const period = new URL(route.request().url()).searchParams.get('period')!;
+    selected.push(period);
+    return route.fulfill({ json: { ...performanceFixture, period } });
+  });
+  await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
+  await page.goto('/analytics');
+  await expect(page.getByTestId('simulated-return')).toHaveText('+2.00%');
+  await expect(page.getByTestId('benchmark-return')).toHaveText('+5.00%');
+  await expect(page.locator('app-performance-chart polyline')).toHaveCount(2);
+  await expect(page.getByRole('img', { name: 'Hypothetical portfolio and SPY indices, starting at 100' })).toBeVisible();
+  for (const period of ['1M', '3M', '6M', 'ALL', '1Y']) {
+    await page.getByLabel('Simulation period').selectOption(period);
+    await expect(page.getByTestId('simulated-return')).toBeVisible();
+    expect(selected.at(-1)).toBe(period);
+  }
+  await expect(page.locator('app-performance-panel')).toContainText("does not represent your account's actual historical returns");
+});
+
+test('reports missing benchmark data and retries failed simulation requests', async ({ page }) => {
+  await signInForMockRequests(page);
+  let calls = 0;
+  await page.route('**/api/v1/accounts/1/analytics/performance?**', (route) => {
+    calls += 1;
+    if (calls === 1) return route.fulfill({ status: 500, json: { message: 'Simulation server unavailable' } });
+    return route.fulfill({ json: { ...performanceFixture, simulationStatus: 'UNAVAILABLE', points: [],
+      portfolioReturnPercent: null, benchmarkReturnPercent: null, from: null, to: null,
+      issues: ['Missing adjusted-price history for: SPY'] } });
+  });
+  await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
+  await page.goto('/analytics');
+  await expect(page.locator('app-performance-panel [role="alert"]')).toContainText('Simulation server unavailable');
+  await page.getByRole('button', { name: 'Retry simulation', exact: true }).click();
+  await expect(page.locator('app-performance-panel [role="alert"]')).toContainText('Missing adjusted-price history for: SPY');
+  await expect(page.locator('app-performance-chart')).toHaveCount(0);
+  await expect(page.locator('app-price-chart polyline')).toBeVisible();
+});
 
 const portfolioFixture = {
   accountId: 1, currency: 'USD', asOf: '2025-10-01', valuationStatus: 'READY',
@@ -126,10 +183,11 @@ test('sends edited dates to the API and blocks a reversed range', async ({ page 
 test('keeps the chart inside the page on mobile', async ({ page }) => {
   await signInForMockRequests(page);
   await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: portfolioFixture }));
+  await page.route('**/api/v1/accounts/1/analytics/performance?**', (route) => route.fulfill({ json: performanceFixture }));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route('**/api/v1/market-data/prices/AAPL?**', (route) => route.fulfill({ json: fixture }));
   await page.goto('/analytics');
-  await expect(page.locator('polyline')).toBeVisible();
+  await expect(page.locator('app-price-chart polyline')).toBeVisible();
   const widths = await page.locator('main').evaluate((element) => ({ width: element.getBoundingClientRect().width, viewport: window.innerWidth }));
   expect(widths.width).toBeLessThanOrEqual(widths.viewport);
 });

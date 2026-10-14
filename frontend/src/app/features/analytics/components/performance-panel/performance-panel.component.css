@@ -1,0 +1,30 @@
+:host { display: block; margin-bottom: 28px; }
+.simulation { padding: 24px; background: white; border: 1px solid #e1e6ec; border-radius: 10px; }
+.simulation-heading { display: flex; justify-content: space-between; align-items: start; gap: 24px; }
+h2 { margin: 0 0 8px; color: #142337; font-size: 20px; }
+.simulation-heading p { max-width: 700px; margin: 0; color: #586c7d; font-size: 13px; line-height: 1.6; }
+.simulation-controls { display: flex; gap: 12px; align-items: end; flex-shrink: 0; }
+label { display: grid; gap: 6px; color: #243444; font-size: 12px; }
+select, button { padding: 9px 12px; border: 1px solid #c8d2de; border-radius: 4px; background: white; color: #243444; font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; }
+select { min-width: 90px; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { background: #f3f5f6; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+.effective-range { margin-top: 24px; color: #586c7d; font-size: 13px; line-height: 1.6; }
+.simulation-returns { display: flex; gap: 64px; padding: 12px 0 20px; }
+.simulation-returns div { display: grid; gap: 8px; }
+.simulation-returns span { color: #586c7d; font-size: 12px; }
+.simulation-returns strong { color: #106647; font: 600 26px var(--font-mono, monospace); }
+.simulation-returns strong.negative { color: #b13339; }
+.legend { display: flex; flex-wrap: wrap; gap: 20px; color: #586c7d; font-size: 12px; }
+.legend span { display: flex; align-items: center; gap: 8px; }
+.legend i { width: 24px; height: 0; border-top: 3px solid; }
+.portfolio-key { border-color: #3f5fa8 !important; }
+.benchmark-key { border-color: #c05819 !important; border-top-style: dashed !important; }
+.method-note, .initial-weights { color: #586c7d; font-size: 12px; line-height: 1.7; }
+.initial-weights span { display: inline-block; margin-right: 12px; color: #243444; }
+.simulation-state { min-height: 100px; padding: 28px 0; color: #586c7d; line-height: 1.7; }
+.simulation-error { color: #b13339; }
+.simulation-error ul { padding-left: 20px; }
+@media (max-width: 900px) { .simulation-heading { flex-direction: column; } }
+@media (max-width: 480px) { .simulation { padding: 16px; } .simulation-returns { gap: 28px; } .simulation-returns strong { font-size: 22px; } }

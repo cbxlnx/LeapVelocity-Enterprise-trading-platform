@@ -15,6 +15,15 @@ describe('AnalyticsApiService', () => {
   });
   afterEach(() => http.verify());
 
+  it('requests simulation with its selected period without using the price date filter', async () => {
+    const result = firstValueFrom(api.getPerformance(7, '3M'));
+    const request = http.expectOne('/api/v1/accounts/7/analytics/performance?period=3M');
+    expect(request.request.method).toBe('GET');
+    const payload = { accountId: 7, period: '3M', simulationStatus: 'EMPTY', points: [] };
+    request.flush(payload);
+    await expect(result).resolves.toEqual(payload);
+  });
+
   it('requests portfolio summary for the signed-in account', async () => {
     const result = firstValueFrom(api.getSummary(7));
     const request = http.expectOne('/api/v1/accounts/7/analytics/summary');

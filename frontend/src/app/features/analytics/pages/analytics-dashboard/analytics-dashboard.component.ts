@@ -10,11 +10,13 @@ import { AnalyticsApiService } from '../../services/analytics-api.service';
 import { AuthService } from '../../../../services/auth.service';
 import { PortfolioSummary } from '../../models/portfolio-summary.model';
 import { PortfolioSummaryComponent } from '../../components/portfolio-summary/portfolio-summary.component';
+import { PerformancePanelComponent } from '../../components/performance-panel/performance-panel.component';
+import { PerformancePeriod, PortfolioPerformance } from '../../models/portfolio-performance.model';
 
 @Component({
   selector: 'app-analytics-dashboard',
   standalone: true,
-  imports: [CurrencyPipe, ReactiveFormsModule, PriceChartComponent, PortfolioSummaryComponent],
+  imports: [CurrencyPipe, ReactiveFormsModule, PriceChartComponent, PortfolioSummaryComponent, PerformancePanelComponent],
   templateUrl: './analytics-dashboard.component.html',
   styleUrl: './analytics-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,6 +27,7 @@ export class AnalyticsDashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private request?: Subscription;
   private summaryRequest?: Subscription;
+  private performanceRequest?: Subscription;
   private readonly initialRange = defaultHistoryRange();
   readonly formatDate = formatTradingDate;
   readonly loading = signal(false);
@@ -33,6 +36,10 @@ export class AnalyticsDashboardComponent implements OnInit {
   readonly summary = signal<PortfolioSummary | null>(null);
   readonly summaryLoading = signal(false);
   readonly summaryError = signal<string | null>(null);
+  readonly performance = signal<PortfolioPerformance | null>(null);
+  readonly performancePeriod = signal<PerformancePeriod>('1Y');
+  readonly performanceLoading = signal(false);
+  readonly performanceError = signal<string | null>(null);
   readonly dateForm = new FormGroup({
     from: new FormControl(this.initialRange.from, { nonNullable: true, validators: [Validators.required] }),
     to: new FormControl(this.initialRange.to, { nonNullable: true, validators: [Validators.required] }),
@@ -42,8 +49,44 @@ export class AnalyticsDashboardComponent implements OnInit {
   } });
 
   ngOnInit(): void {
-    this.loadSummary();
+    this.refreshPortfolio();
     this.loadPrices();
+  }
+
+  refreshPortfolio(): void {
+    this.loadSummary();
+    this.loadPerformance();
+  }
+
+  changePerformancePeriod(period: PerformancePeriod): void {
+    this.performancePeriod.set(period);
+    this.loadPerformance();
+  }
+
+  loadPerformance(): void {
+    this.performanceRequest?.unsubscribe();
+    this.performance.set(null);
+    this.performanceError.set(null);
+    const accountId = this.auth.getAccountId();
+    if (!accountId) {
+      this.performanceLoading.set(false);
+      this.performanceError.set('Your trading account is unavailable. Please sign in again.');
+      return;
+    }
+    this.performanceLoading.set(true);
+    this.performanceRequest = this.api.getPerformance(accountId, this.performancePeriod()).pipe(
+      timeout(15000), takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (performance) => {
+        this.performance.set(performance);
+        this.performanceLoading.set(false);
+      },
+      error: (error: Error) => {
+        this.performanceError.set(error.name === 'TimeoutError'
+          ? 'The simulation API took too long to respond. Please retry.' : error.message);
+        this.performanceLoading.set(false);
+      },
+    });
   }
 
   loadSummary(): void {

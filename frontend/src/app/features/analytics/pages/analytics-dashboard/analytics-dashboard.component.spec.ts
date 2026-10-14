@@ -5,6 +5,7 @@ import { HistoricalPrices } from '../../models/historical-prices.model';
 import { AnalyticsApiService } from '../../services/analytics-api.service';
 import { AnalyticsDashboardComponent } from './analytics-dashboard.component';
 import { AuthService } from '../../../../services/auth.service';
+import { PortfolioPerformance } from '../../models/portfolio-performance.model';
 
 const sample: HistoricalPrices = {
   symbol: 'AAPL', currency: 'USD', from: '2025-10-01', to: '2025-10-02',
@@ -17,13 +18,17 @@ const sample: HistoricalPrices = {
 describe('Analytics dashboard', () => {
   let fixture: ComponentFixture<AnalyticsDashboardComponent>;
   let response: Subject<HistoricalPrices>;
-  let api: { getPrices: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn> };
+  let api: { getPrices: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; getPerformance: ReturnType<typeof vi.fn> };
+  const emptyPerformance: PortfolioPerformance = { accountId: 1, period: '1Y', benchmark: 'SPY', simulationStatus: 'EMPTY',
+    weightingDate: null, requestedFrom: null, requestedTo: null, from: null, to: null,
+    portfolioReturnPercent: null, benchmarkReturnPercent: null, initialWeights: [], points: [], issues: [] };
   const emptySummary = { accountId: 1, currency: 'USD', asOf: null, valuationStatus: 'EMPTY',
     holdingsValue: 0, cashBalance: 5, totalEquity: 5, costBasis: 0, unrealizedPnL: 0, holdings: [], issues: [] };
 
   beforeEach(async () => {
     response = new Subject<HistoricalPrices>();
-    api = { getPrices: vi.fn().mockReturnValue(response), getSummary: vi.fn().mockReturnValue(of(emptySummary)) };
+    api = { getPrices: vi.fn().mockReturnValue(response), getSummary: vi.fn().mockReturnValue(of(emptySummary)),
+      getPerformance: vi.fn().mockReturnValue(of(emptyPerformance)) };
     await TestBed.configureTestingModule({
       imports: [AnalyticsDashboardComponent],
       providers: [
@@ -101,5 +106,27 @@ describe('Analytics dashboard', () => {
     fixture.detectChanges();
     expect(api.getSummary).toHaveBeenCalledTimes(1);
     expect(fixture.nativeElement.textContent).toContain('Please sign in again');
+  });
+
+  it('cancels an old simulation request when a new period is selected', () => {
+    const old = new Subject<PortfolioPerformance>(), current = new Subject<PortfolioPerformance>();
+    api.getPerformance.mockReturnValueOnce(old).mockReturnValueOnce(current);
+    fixture.componentInstance.changePerformancePeriod('1M');
+    fixture.componentInstance.changePerformancePeriod('ALL');
+    old.next(emptyPerformance);
+    expect(fixture.componentInstance.performanceLoading()).toBe(true);
+    current.next({ ...emptyPerformance, period: 'ALL' });
+    expect(fixture.componentInstance.performance()?.period).toBe('ALL');
+    expect(api.getPerformance).toHaveBeenLastCalledWith(1, 'ALL');
+  });
+
+  it('keeps summary and instrument prices available when simulation fails', () => {
+    api.getPerformance.mockReturnValue(throwError(() => new Error('Simulation unavailable')));
+    fixture.componentInstance.loadPerformance();
+    response.next(sample);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-performance-panel').textContent).toContain('Simulation unavailable');
+    expect(fixture.nativeElement.querySelector('[data-testid="cash-balance"]').textContent).toBe('$5.00');
+    expect(fixture.nativeElement.querySelector('app-price-chart polyline')).toBeTruthy();
   });
 });
