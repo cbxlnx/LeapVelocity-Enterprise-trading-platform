@@ -89,7 +89,7 @@ Production builds include:
 
 **Bundle Size Guidelines:**
 - Initial bundle: < 500KB (warning), < 1MB (error)
-- Component styles: < 4KB (warning), < 8KB (error)
+- Component styles: < 12KB (warning), < 16KB (error)
 
 ## Project Structure
 

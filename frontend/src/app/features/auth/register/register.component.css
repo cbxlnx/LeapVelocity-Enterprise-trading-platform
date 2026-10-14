@@ -252,6 +252,33 @@ form {
   right: 36px;
 }
 
+/* Readability adjustments for dense registration copy and controls. */
+.eyebrow {
+  font-size: 10px;
+}
+
+.subtitle,
+.form-label,
+.form-input,
+.alert-message,
+.account-link {
+  font-size: 12px;
+}
+
+.error-message {
+  font-size: 11px;
+}
+
+.register-button {
+  font-size: 12px;
+}
+
+.security-note p,
+.copyright,
+.restriction {
+  font-size: 10px;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

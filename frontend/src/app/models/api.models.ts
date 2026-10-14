@@ -24,6 +24,15 @@ export interface Position {
   marketValue?: number;
 }
 
+export interface Instrument {
+  id: number;
+  symbol: string;
+  name: string;
+  assetClass: string;
+  currency: string;
+  tradable: boolean;
+}
+
 export interface Order {
   id: string;
   accountId: number;

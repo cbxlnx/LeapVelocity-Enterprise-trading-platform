@@ -85,6 +85,18 @@
   padding: 3px 7px;
 }
 
+.status-badge.status-suspended,
+.status-badge.status-closed,
+.status-badge.status-unavailable {
+  background: #f8e5e6;
+  color: #b13339;
+}
+
+.status-badge.status-loading {
+  background: #e8f0f7;
+  color: #346383;
+}
+
 .order-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(280px, 0.92fr);
@@ -226,10 +238,25 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(63, 128, 194, 0.13);
 }
 
+input.input-invalid {
+  border-color: #b13339;
+  background: #fffafa;
+}
+
+input.input-invalid:focus {
+  border-color: #b13339;
+  box-shadow: 0 0 0 2px rgba(177, 51, 57, 0.14);
+}
+
 .field-help {
   margin-top: 5px;
   color: #7c8e9f;
   font-size: 9px;
+}
+
+.quantity-guidance {
+  color: #3d6f96;
+  font-weight: 700;
 }
 
 .side-fieldset {
@@ -424,6 +451,24 @@ input:focus {
   padding: 14px 0;
 }
 
+.business-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px;
+  border-left: 3px solid #b13339;
+  border-radius: 3px;
+  background: #fdf0f1;
+  color: #b13339;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.business-warning strong {
+  font-size: 12px;
+}
+
 .place-order-button {
   width: 100%;
   height: 34px;
@@ -446,8 +491,7 @@ input:focus {
   cursor: wait;
 }
 
-.order-error,
-.order-success {
+.order-error {
   margin: 10px 0 0;
   font-size: 9px;
   line-height: 1.45;
@@ -455,10 +499,6 @@ input:focus {
 
 .order-error {
   color: #b13339;
-}
-
-.order-success {
-  color: #16734e;
 }
 
 .review-note {
@@ -485,6 +525,405 @@ input:focus {
   line-height: 1.4;
 }
 
+.recent-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 12px;
+  border-top: 1px solid #dce4eb;
+}
+
+.recent-order-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #dce4eb;
+}
+
+.recent-order-row > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-order-row strong {
+  color: #263b50;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.recent-order-meta {
+  overflow: hidden;
+  color: #71859a;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-order-status {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border-radius: 2px;
+  background: #e8f0f7;
+  color: #346383;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.recent-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.cancel-order-button {
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid #d8aeb1;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #b13339;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cancel-order-button:hover:not(:disabled) {
+  background: #fdf5f5;
+}
+
+.cancel-order-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.recent-order-status.filled {
+  background: #e4f2eb;
+  color: #16734e;
+}
+
+.recent-order-status.rejected,
+.recent-order-status.cancelled {
+  background: #f8e5e6;
+  color: #b13339;
+}
+
+.recent-orders-error,
+.recent-orders-empty {
+  margin-top: 10px;
+}
+
+.recent-orders-error {
+  color: #b13339 !important;
+}
+
+.recent-orders-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: #3d6f96;
+  font-size: 9px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.recent-orders-link:hover {
+  text-decoration: underline;
+}
+
+.order-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgba(25, 40, 48, 0.42);
+  place-items: center;
+}
+
+.order-confirmation {
+  width: min(100%, 570px);
+  box-sizing: border-box;
+  border: 1px solid #d6dfe7;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(20, 35, 55, 0.24);
+}
+
+.confirmation-header {
+  padding: 32px 32px 24px;
+}
+
+.confirmation-header h2 {
+  margin: 0;
+  color: #1d3045;
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.confirmation-header p {
+  margin: 10px 0 0;
+  color: #60758a;
+  font-size: 15px;
+}
+
+.confirmation-notice {
+  display: flex;
+  gap: 16px;
+  margin: 0 32px 26px;
+  padding: 22px 20px;
+  border-left: 4px solid #16734e;
+  border-radius: 4px;
+  background: #e7f3ec;
+  color: #116b4a;
+}
+
+.confirmation-icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.confirmation-notice strong {
+  display: block;
+  font-size: 16px;
+}
+
+.confirmation-notice p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.confirmation-summary {
+  padding: 0 32px;
+}
+
+.confirmation-order-id {
+  padding-bottom: 16px;
+  color: #1d3045;
+  font-size: 16px;
+}
+
+.confirmation-summary dl {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #dce4eb;
+}
+
+.confirmation-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.confirmation-summary dt {
+  color: #60758a;
+  font-size: 15px;
+}
+
+.confirmation-summary dd {
+  margin: 0;
+  color: #1d3045;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  text-align: right;
+}
+
+.confirmation-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 32px;
+}
+
+.confirmation-primary,
+.confirmation-secondary {
+  display: grid;
+  width: 100%;
+  min-height: 60px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  place-items: center;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.confirmation-primary {
+  background: #c84f16;
+  color: #ffffff;
+}
+
+.confirmation-secondary {
+  border: 1px solid #cbd8e2;
+  background: #ffffff;
+  color: #263b50;
+  cursor: pointer;
+}
+
+.confirmation-primary:hover {
+  background: #ad4312;
+}
+
+.confirmation-secondary:hover {
+  background: #f3f6f8;
+}
+
+.cancel-confirmation {
+  width: min(100%, 480px);
+  box-sizing: border-box;
+  border: 1px solid #d6dfe7;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(20, 35, 55, 0.24);
+}
+
+.cancel-confirmation-header {
+  padding: 28px 30px 20px;
+}
+
+.cancel-confirmation-header .eyebrow {
+  margin-bottom: 10px;
+}
+
+.cancel-confirmation-header h2 {
+  margin: 0;
+  color: #1d3045;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.cancel-confirmation-header > p:last-child {
+  margin: 9px 0 0;
+  color: #60758a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cancel-order-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 30px;
+  padding: 16px 0;
+  border-top: 1px solid #dce4eb;
+  border-bottom: 1px solid #dce4eb;
+}
+
+.cancel-order-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.cancel-order-summary span {
+  color: #60758a;
+  font-size: 12px;
+}
+
+.cancel-order-summary strong {
+  max-width: 68%;
+  color: #263b50;
+  font-size: 12px;
+  text-align: right;
+}
+
+.cancel-confirmation-note {
+  margin: 18px 30px 22px;
+  color: #71859a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cancel-confirmation-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 30px 28px;
+}
+
+.cancel-keep-button,
+.cancel-confirm-button {
+  min-height: 46px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cancel-keep-button {
+  border: 1px solid #cbd8e2;
+  background: #ffffff;
+  color: #263b50;
+}
+
+.cancel-confirm-button {
+  border: 1px solid #b13339;
+  background: #b13339;
+  color: #ffffff;
+}
+
+.cancel-keep-button:hover {
+  background: #f3f6f8;
+}
+
+.cancel-confirm-button:hover {
+  background: #922c31;
+}
+
+/* Keep order entry readable while preserving the compact trading layout. */
+.eyebrow,
+.account-label,
+label,
+legend,
+.panel-heading p,
+select,
+input,
+.side-toggle label,
+.market-reference,
+.ready-note,
+.review-details dt,
+.review-details dd,
+.cash-after span,
+.cash-after strong,
+.estimated-value span,
+.order-error,
+.review-note,
+.result-panel strong,
+.result-panel p:last-child,
+.recent-orders-link {
+  font-size: 12px;
+}
+
+.field-help,
+.market-reference small,
+.estimated-value small,
+.recent-order-meta,
+.recent-order-status {
+  font-size: 10px;
+}
+
+.place-order-button {
+  font-size: 12px;
+}
+
 @media (max-width: 850px) {
   .order-layout {
     grid-template-columns: 1fr;
@@ -509,5 +948,37 @@ input:focus {
 
   .field-row {
     grid-template-columns: 1fr;
+  }
+
+  .order-modal-backdrop {
+    padding: 16px;
+  }
+
+  .confirmation-header,
+  .confirmation-summary,
+  .confirmation-actions {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .confirmation-notice {
+    margin-right: 20px;
+    margin-left: 20px;
+  }
+
+  .cancel-confirmation-header,
+  .cancel-confirmation-actions {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .cancel-order-summary {
+    margin-right: 20px;
+    margin-left: 20px;
+  }
+
+  .cancel-confirmation-note {
+    margin-right: 20px;
+    margin-left: 20px;
   }
 }

@@ -19,6 +19,7 @@ import com.leapvelocity.repository.AccountRepository;
 import com.leapvelocity.repository.ExecutionRepository;
 import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
+import com.leapvelocity.security.AccountAccessAuthorizer;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -178,6 +179,7 @@ public class OrderExecutionService {
 
 		order = orderRepository.findById(orderId)
 				.orElseThrow(() -> new OrderNotFoundException(orderId.toString()));
+		AccountAccessAuthorizer.requireOwnAccountOrAdmin(order.getAccountId());
 
 		// Cannot cancel if already filled, rejected, or already cancelled
 		if (order.getStatus() != OrderStatus.NEW) {
@@ -185,22 +187,8 @@ public class OrderExecutionService {
 					"Cannot cancel order with status: " + order.getStatus());
 		}
 
-		// Get the account
-		Account account = accountRepository.findById(order.getAccountId())
-				.orElseThrow(() -> new AccountNotFoundException(order.getAccountId()));
-
-		// If BUY order, refund the cash to the account
-		if (order.getSide() == OrderSide.BUY) {
-			BigDecimal notional = order.getQuantity().multiply(order.getPrice());
-			account.credit(notional);
-			persistAccount(account);
-		}
-		// If SELL order, refund the position to the account
-		else if (order.getSide() == OrderSide.SELL) {
-			positionUpdateService.reverseSell(order);
-		}
-
-		// Mark order as cancelled
+		// NEW orders have not settled yet, so cancellation only changes order state.
+		// Cash and positions are updated later by settleExecution(), if an execution arrives.
 		order.setStatus(OrderStatus.CANCELLED);
 		return saveOrder(order);
 	}
