@@ -9,8 +9,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Keeps the {@link QuoteMarket} supplied with live quotes from the
- * {@code market-data} topic. Starts at the latest offset, because only a
- * current quote is useful to an order.
+ * {@code market-data} topic. A new group starts at the latest offset, because
+ * only a current quote is useful to an order. After a restart the group resumes
+ * from its committed offset, and replayed quotes are stamped with receipt time.
  *
  * <p>This listener never throws. It uses the shared container error handler,
  * which re-delivers a failed record without limit, so one unreadable quote
