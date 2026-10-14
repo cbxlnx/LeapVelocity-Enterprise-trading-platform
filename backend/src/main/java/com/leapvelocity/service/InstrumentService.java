@@ -20,6 +20,14 @@ public class InstrumentService {
     }
 
     @Transactional(readOnly = true)
+    public List<InstrumentDto> getTradableInstruments() {
+        return instrumentRepository.findAll().stream()
+                .filter(instrument -> instrument.isTradable())
+                .map(InstrumentDto::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<InstrumentDto> search(String query, int limit) {
         String prefix = query == null ? "" : query.trim();
         if (prefix.isEmpty()) {

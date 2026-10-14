@@ -29,6 +29,15 @@ public class InstrumentController {
         this.instrumentService = instrumentService;
     }
 
+    @Operation(summary = "List instruments", description = "Retrieve all tradable instruments registered in the database")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tradable instruments retrieved successfully")
+    })
+    @GetMapping
+    public ResponseEntity<List<InstrumentDto>> getInstruments() {
+        return ResponseEntity.ok(instrumentService.getTradableInstruments());
+    }
+
     /**
      * Search instruments by symbol or name prefix.
      *
