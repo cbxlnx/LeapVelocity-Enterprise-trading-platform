@@ -173,6 +173,17 @@ public class OrderExecutionService {
 	}
 
 	@Transactional
+	public void rejectDeadLetteredOrder(UUID orderId) {
+		Order order = orderRepository.findById(orderId).orElse(null);
+		if (order == null || order.getStatus() != OrderStatus.NEW) {
+			return;
+		}
+
+		order.setStatus(OrderStatus.REJECTED);
+		saveOrder(order);
+	}
+
+	@Transactional
 	public Order cancelOrder(UUID orderId) {
 		Order order;
 
