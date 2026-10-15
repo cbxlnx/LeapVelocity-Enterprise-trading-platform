@@ -9,6 +9,7 @@
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "e2e": "playwright test",
     "lint": "eslint src/**/*.ts --no-warn-ignored"
   },
   "private": true,
