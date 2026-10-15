@@ -17,6 +17,7 @@ export interface Position {
   currentMarketValue?: number;
   gainLoss?: number;
   gainLossPercent?: number;
+  quoteAvailable: boolean;
 }
 
 export interface AccountBalance {
@@ -30,6 +31,8 @@ export interface DashboardData {
   positions: Position[];
   totalMarketValue: number;
   totalEquity: number;
+  portfolioCostBasis: number;
   unrealizedGainLoss: number;
   unrealizedGainLossPercent: number;
+  unavailableQuoteCount: number;
 }

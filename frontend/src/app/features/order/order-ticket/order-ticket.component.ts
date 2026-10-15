@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
@@ -11,8 +11,10 @@ import { ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../../../services/auth.service';
 import { AccountService } from '../../../services/account.service';
 import { OrderService } from '../../../services/order.service';
-import { AccountStatus, Instrument, Order, OrderResponse, Position } from '../../../models/api.models';
+import { AccountStatus, Instrument, Order, OrderResponse, Position, QuoteSnapshot } from '../../../models/api.models';
 import { InstrumentService } from '../../../services/instrument.service';
+import { MarketDataService, normalizeSymbol } from '../../../services/market-data.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-order-ticket',
@@ -21,7 +23,7 @@ import { InstrumentService } from '../../../services/instrument.service';
   templateUrl: './order-ticket.component.html',
   styleUrl: './order-ticket.component.css',
 })
-export class OrderTicketComponent implements OnInit {
+export class OrderTicketComponent implements OnInit, OnDestroy {
   orderForm!: FormGroup;
   orderSubmitted = false;
   isSubmitting = false;
@@ -39,6 +41,10 @@ export class OrderTicketComponent implements OnInit {
   recentOrdersError: string | null = null;
   cancellingOrderId: string | null = null;
   orderPendingCancellation: Order | null = null;
+  referenceQuote: QuoteSnapshot | null = null;
+  quoteLoading = false;
+  quoteError: string | null = null;
+  private quoteSubscription: Subscription | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -46,6 +52,7 @@ export class OrderTicketComponent implements OnInit {
     private accountService: AccountService,
     private orderService: OrderService,
     private instrumentService: InstrumentService,
+    private marketDataService: MarketDataService,
     private changeDetector: ChangeDetectorRef
   ) {}
 
@@ -96,6 +103,10 @@ export class OrderTicketComponent implements OnInit {
         },
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.quoteSubscription?.unsubscribe();
   }
 
   get selectedInstrument() {
@@ -185,8 +196,9 @@ export class OrderTicketComponent implements OnInit {
   }
 
   normalizeSymbol(): void {
-    const symbol = String(this.orderForm.get('symbol')?.value ?? '').trim().toUpperCase();
+    const symbol = normalizeSymbol(String(this.orderForm.get('symbol')?.value ?? ''));
     this.orderForm.patchValue({ symbol }, { emitEvent: false });
+    this.loadReferenceQuote();
     window.setTimeout(() => {
       this.showInstrumentOptions = false;
     }, 150);
@@ -198,6 +210,7 @@ export class OrderTicketComponent implements OnInit {
       { emitEvent: false }
     );
     this.showInstrumentOptions = false;
+    this.loadReferenceQuote();
   }
 
   submitOrder(): void {
@@ -246,6 +259,7 @@ export class OrderTicketComponent implements OnInit {
     this.orderSubmitted = false;
     this.orderResponse = null;
     this.orderError = null;
+    this.clearReferenceQuote();
     this.orderForm.reset({
       symbol: '',
       side: 'BUY',
@@ -340,6 +354,47 @@ export class OrderTicketComponent implements OnInit {
         this.changeDetector.detectChanges();
       },
     });
+  }
+
+  private loadReferenceQuote(): void {
+    const symbol = normalizeSymbol(String(this.orderForm.get('symbol')?.value ?? ''));
+    this.clearReferenceQuote();
+    if (!symbol) {
+      return;
+    }
+
+    this.quoteLoading = true;
+    this.quoteSubscription = this.marketDataService.getQuote(symbol).subscribe({
+      next: (quote) => {
+        if (this.currentFormSymbol() !== symbol) {
+          return;
+        }
+        this.referenceQuote = quote;
+        this.orderForm.patchValue({ price: quote.lastPrice }, { emitEvent: false });
+        this.quoteLoading = false;
+        this.changeDetector.detectChanges();
+      },
+      error: (error) => {
+        if (this.currentFormSymbol() !== symbol) {
+          return;
+        }
+        this.quoteError = error?.message || 'Unable to load the market quote.';
+        this.quoteLoading = false;
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
+  private clearReferenceQuote(): void {
+    this.quoteSubscription?.unsubscribe();
+    this.quoteSubscription = null;
+    this.referenceQuote = null;
+    this.quoteError = null;
+    this.quoteLoading = false;
+  }
+
+  private currentFormSymbol(): string {
+    return normalizeSymbol(String(this.orderForm.get('symbol')?.value ?? ''));
   }
 
   private createIdempotencyKey(): string {

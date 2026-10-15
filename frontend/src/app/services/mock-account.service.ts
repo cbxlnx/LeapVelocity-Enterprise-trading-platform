@@ -26,6 +26,7 @@ export class MockAccountService {
       currentMarketValue: 36400.00,
       gainLoss: 2400.00,
       gainLossPercent: 7.05,
+      quoteAvailable: true,
     },
     {
       id: 2,
@@ -36,6 +37,7 @@ export class MockAccountService {
       currentMarketValue: 41900.00,
       gainLoss: -1000.00,
       gainLossPercent: -2.33,
+      quoteAvailable: true,
     },
     {
       id: 3,
@@ -46,6 +48,7 @@ export class MockAccountService {
       currentMarketValue: 31500.00,
       gainLoss: 1500.00,
       gainLossPercent: 4.97,
+      quoteAvailable: true,
     },
     {
       id: 4,
@@ -56,6 +59,7 @@ export class MockAccountService {
       currentMarketValue: 16400.00,
       gainLoss: -600.00,
       gainLossPercent: -3.53,
+      quoteAvailable: true,
     },
     {
       id: 5,
@@ -66,6 +70,7 @@ export class MockAccountService {
       currentMarketValue: 29000.00,
       gainLoss: 1500.00,
       gainLossPercent: 5.45,
+      quoteAvailable: true,
     },
   ];
 
@@ -93,8 +98,10 @@ export class MockAccountService {
       positions: [...this.mockPositions],
       totalMarketValue,
       totalEquity,
+      portfolioCostBasis: totalMarketValue - unrealizedGainLoss,
       unrealizedGainLoss,
       unrealizedGainLossPercent,
+      unavailableQuoteCount: 0,
     });
   }
 }

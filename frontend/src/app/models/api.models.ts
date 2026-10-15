@@ -62,3 +62,19 @@ export interface OrderResponse {
   quantity: number;
   price: number;
 }
+
+export interface QuoteSnapshot {
+  symbol: string;
+  lastPrice: number;
+  bid: number | null;
+  ask: number | null;
+  currency: string;
+  asOf: string;
+  source: string;
+}
+
+export interface BatchQuotesResponse {
+  quotes: QuoteSnapshot[];
+  missingSymbols: string[];
+  serverTimestamp: string;
+}
