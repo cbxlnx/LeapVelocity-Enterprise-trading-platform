@@ -302,8 +302,6 @@ Development-only forwarding rules:
 | `/api/*` | Spring Boot at `127.0.0.1:8081` |
 | `/auth/*` | Nest auth service at `127.0.0.1:4000` |
 
-Relative URLs are important when the browser accesses the Linux host through an address such as `10.9.77.223`. Browser-side `localhost` means the browser's own machine, while the Angular proxy runs on the Linux host.
-
 #### `tsconfig.json`, `tsconfig.app.json`, `tsconfig.spec.json`, `tsconfig.playwright.json`
 
 TypeScript compiler configurations for shared application code, Angular application compilation, unit tests, and Playwright tests. Strict typing catches incorrect template bindings, nullable values, and mismatched API models before runtime.
