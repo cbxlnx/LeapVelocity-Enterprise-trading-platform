@@ -17,7 +17,7 @@ export class PerformancePanelComponent {
   readonly error = input<string | null>(null);
   readonly periodChange = output<PerformancePeriod>();
   readonly refresh = output<void>();
-  readonly periods: PerformancePeriod[] = ['1M', '3M', '6M', '1Y', 'ALL'];
+  readonly periods: PerformancePeriod[] = ['1M', '3M', '6M', '1Y', '2Y'];
   readonly formatDate = formatTradingDate;
 
   changePeriod(event: Event): void {

@@ -60,9 +60,11 @@ describe('Historical simulation panel', () => {
     fixture.componentInstance.periodChange.subscribe(changed);
     fixture.componentInstance.refresh.subscribe(refreshed);
     const select = fixture.nativeElement.querySelector('select');
-    select.value = 'ALL';
-    select.dispatchEvent(new Event('change'));
-    expect(changed).toHaveBeenCalledWith('ALL');
+    for (const period of ['1Y', '2Y']) {
+      select.value = period;
+      select.dispatchEvent(new Event('change'));
+      expect(changed).toHaveBeenLastCalledWith(period);
+    }
     fixture.componentRef.setInput('error', 'Simulation request failed');
     fixture.detectChanges();
     fixture.nativeElement.querySelector('.simulation-error button').click();

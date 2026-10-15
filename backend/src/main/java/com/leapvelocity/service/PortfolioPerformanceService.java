@@ -28,7 +28,7 @@ public class PortfolioPerformanceService {
     private static final String BENCHMARK = "SPY";
     private static final BigDecimal HUNDRED = new BigDecimal("100");
     private static final MathContext PRECISION = MathContext.DECIMAL128;
-    private static final Set<String> PERIODS = Set.of("1M", "3M", "6M", "1Y", "ALL");
+    private static final Set<String> PERIODS = Set.of("1M", "3M", "6M", "1Y", "2Y");
     private final PortfolioAnalyticsService analytics;
     private final HistoricalPriceRepository prices;
     private final InstrumentRepository instruments;
@@ -43,7 +43,7 @@ public class PortfolioPerformanceService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public PortfolioPerformanceDto getPerformance(Long accountId, String period) {
         String selected = period == null ? "1Y" : period.trim().toUpperCase(Locale.ROOT);
-        if (!PERIODS.contains(selected)) throw new IllegalArgumentException("period must be 1M, 3M, 6M, 1Y or ALL");
+        if (!PERIODS.contains(selected)) throw new IllegalArgumentException("period must be 1M, 3M, 6M, 1Y or 2Y");
         var summary = analytics.getSummary(accountId);
         LocalDate end = summary.asOf();
         LocalDate start = end == null ? null : switch (selected) {
@@ -51,7 +51,8 @@ public class PortfolioPerformanceService {
             case "3M" -> end.minusMonths(3);
             case "6M" -> end.minusMonths(6);
             case "1Y" -> end.minusYears(1);
-            default -> null;
+            case "2Y" -> end.minusYears(2);
+            default -> throw new IllegalStateException("Unsupported validated period: " + selected);
         };
         if (summary.valuationStatus() != ValuationStatus.READY) {
             return unavailable(accountId, selected,

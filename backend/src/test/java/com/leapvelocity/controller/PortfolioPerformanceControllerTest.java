@@ -43,8 +43,13 @@ class PortfolioPerformanceControllerTest {
     void clearSecurity() { SecurityContextHolder.clearContext(); }
 
     private PortfolioPerformanceDto result(long accountId) {
+        return result(accountId, "1Y");
+    }
+
+    private PortfolioPerformanceDto result(long accountId, String period) {
         LocalDate date = LocalDate.parse("2026-10-13");
-        return new PortfolioPerformanceDto(accountId, "1Y", "SPY", SimulationStatus.READY, date, date.minusYears(1), date,
+        LocalDate from = date.minusYears("2Y".equals(period) ? 2 : 1);
+        return new PortfolioPerformanceDto(accountId, period, "SPY", SimulationStatus.READY, date, from, date,
                 date.minusDays(1), date, new BigDecimal("2"), new BigDecimal("5"), List.of(),
                 List.of(new PortfolioPerformanceDto.Point(date, new BigDecimal("102"), new BigDecimal("105"))), List.of());
     }
@@ -60,25 +65,34 @@ class PortfolioPerformanceControllerTest {
     }
 
     @Test
+    void acceptsTwoYearPeriodForOwnAccount() throws Exception {
+        when(performance.getPerformance(1L, "2Y")).thenReturn(result(1L, "2Y"));
+        mvc.perform(get("/api/v1/accounts/1/analytics/performance").param("period", "2Y"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.period").value("2Y"))
+                .andExpect(jsonPath("$.requestedFrom").value("2024-10-13"));
+        verify(performance).getPerformance(1L, "2Y");
+    }
+
+    @Test
     void deniesAnotherAccountBeforeCalculating() throws Exception {
-        mvc.perform(get("/api/v1/accounts/2/analytics/performance").param("period", "ALL"))
+        mvc.perform(get("/api/v1/accounts/2/analytics/performance").param("period", "2Y"))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(performance);
     }
 
     @Test
-    void adminCanRequestAnotherAccountAndAllHistory() throws Exception {
+    void adminCanRequestAnotherAccountsTwoYearHistory() throws Exception {
         authenticate("ROLE_ADMIN");
-        when(performance.getPerformance(2L, "ALL")).thenReturn(result(2L));
-        mvc.perform(get("/api/v1/accounts/2/analytics/performance").param("period", "ALL"))
+        when(performance.getPerformance(2L, "2Y")).thenReturn(result(2L, "2Y"));
+        mvc.perform(get("/api/v1/accounts/2/analytics/performance").param("period", "2Y"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.accountId").value(2));
-        verify(performance).getPerformance(2L, "ALL");
+        verify(performance).getPerformance(2L, "2Y");
     }
 
     @Test
     void unsupportedPeriodUsesExistingValidationResponse() throws Exception {
-        when(performance.getPerformance(1L, "2Y")).thenThrow(new IllegalArgumentException("Unsupported period"));
-        mvc.perform(get("/api/v1/accounts/1/analytics/performance").param("period", "2Y"))
+        when(performance.getPerformance(1L, "ALL")).thenThrow(new IllegalArgumentException("Unsupported period"));
+        mvc.perform(get("/api/v1/accounts/1/analytics/performance").param("period", "ALL"))
                 .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("VAL-422"));
     }
 }

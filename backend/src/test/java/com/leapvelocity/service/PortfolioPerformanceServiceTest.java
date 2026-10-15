@@ -93,7 +93,7 @@ class PortfolioPerformanceServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"1M", "3M", "6M", "1Y", "ALL"})
+    @ValueSource(strings = {"1M", "3M", "6M", "1Y", "2Y"})
     void appliesPeriodBoundsRelativeToCurrentValuationDate(String period) {
         var result = service.getPerformance(1L, period);
         LocalDate expected = switch (period) {
@@ -101,11 +101,31 @@ class PortfolioPerformanceServiceTest {
             case "3M" -> end.minusMonths(3);
             case "6M" -> end.minusMonths(6);
             case "1Y" -> end.minusYears(1);
-            default -> null;
+            case "2Y" -> end.minusYears(2);
+            default -> throw new IllegalArgumentException(period);
         };
         assertEquals(expected, result.requestedFrom());
         assertEquals(end, result.weightingDate());
         verify(prices).findAdjustedPrices(List.of("AAPL", "MSFT", "SPY"), expected, end);
+    }
+
+    @Test
+    void twoYearsUsesBoundedHistoryEvenWhenOlderPricesAreStored() {
+        LocalDate twoYearStart = LocalDate.parse("2024-10-13");
+        LocalDate firstCommonDate = LocalDate.parse("2024-10-15");
+        List<AdjustedPrice> recent = List.of(
+                bar("AAPL", firstCommonDate, "100"), bar("MSFT", firstCommonDate, "200"), bar("SPY", firstCommonDate, "500"),
+                bar("AAPL", end, "110"), bar("MSFT", end, "180"), bar("SPY", end, "525"));
+        when(prices.findAdjustedPrices(anyList(), eq(twoYearStart), eq(end))).thenReturn(recent);
+
+        var twoYears = service.getPerformance(1L, " 2y ");
+        assertEquals("2Y", twoYears.period());
+        assertEquals(twoYearStart, twoYears.requestedFrom());
+        assertEquals(firstCommonDate, twoYears.from());
+        assertEquals(2, twoYears.points().size());
+        number("100", twoYears.points().get(0).portfolioIndex());
+        number("100", twoYears.points().get(0).benchmarkIndex());
+        verify(prices).findAdjustedPrices(List.of("AAPL", "MSFT", "SPY"), twoYearStart, end);
     }
 
     @Test
@@ -163,7 +183,8 @@ class PortfolioPerformanceServiceTest {
 
     @Test
     void invalidPeriodFailsBeforeReadingAccount() {
-        assertThrows(IllegalArgumentException.class, () -> service.getPerformance(1L, "2Y"));
+        assertThrows(IllegalArgumentException.class, () -> service.getPerformance(1L, "ALL"));
+        assertThrows(IllegalArgumentException.class, () -> service.getPerformance(1L, "5Y"));
         verifyNoInteractions(analytics, prices, instruments);
     }
 

@@ -4,7 +4,10 @@ h1 { margin: 0; font-size: 28px; color: #142337; }
 .subtitle { margin: 8px 0 24px; color: #586c7d; }
 .date-filter { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #243444; }
-input { padding: 9px 12px; border: 1px solid #c8d2de; border-radius: 4px; background: white; color: #142337; font: inherit; }
+input, select { padding: 9px 12px; border: 1px solid #c8d2de; border-radius: 4px; background: white; color: #142337; font: inherit; }
+.date-filter label { min-width: 0; max-width: 100%; }
+select { width: 100%; max-width: 360px; }
+.instrument-error { margin-bottom: 24px; color: #b13339; }
 button { padding: 10px 18px; border: 1px solid #c05819; border-radius: 4px; background: #c05819; color: white; font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; cursor: pointer; }
 button:hover:not(:disabled) { background: #aa4c15; }
 button:disabled { opacity: .6; cursor: not-allowed; }

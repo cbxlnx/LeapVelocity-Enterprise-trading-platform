@@ -19,11 +19,23 @@ The current repository includes the infrastructure and core services needed to r
 Authentication setup, service boundaries, request examples, and verification details are documented here:  
 [Authentication sprint report](docs/authentication-sprint.md)
 
+The analytics dashboard scope, calculation assumptions, and implementation steps
+are documented in [Analytics MVP](docs/analytics-mvp.md).
+
+Run `docker compose up -d --build` to start the backend services, production
+Angular/Nginx frontend and historical-price import job. Open
+`http://localhost:8085`; sign in or register normally. The importer loads prices
+into the persistent database and exits. See
+[container startup](docs/analytics-mvp.md#container-startup-and-historical-prices)
+for progress checks, repeat imports and frontend routing configuration.
+
 ## Architecture Overview
 
 The local Docker-based environment currently defines these runtime services:
 
 - `auth-stub`: authentication service running on port `4000`
+- `frontend`: production Angular served by Nginx on host port `8085`
+- `analytics-import`: finite historical-price loading job after database health
 - `trade-api`: Spring Boot trading API running on port `8081`
 - `execution-engine`: asynchronous execution processor consuming Kafka events
 - `trade-db`: PostgreSQL database running on port `5432`
@@ -51,6 +63,7 @@ DB_PASSWORD=change_me
 POSTGRES_PORT=5432
 APP_PORT=8081
 AUTH_STUB_PORT=4000
+FRONTEND_PORT=8085
 KAFKA_PORT=9092
 KAFKA_UI_PORT=8090
 JWT_SECRET=your-secure-secret
@@ -69,22 +82,22 @@ REFRESH_TOKEN_EXPIRES_IN=7d
 From the project root, build and start the full local platform with:
 
 ```
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 To verify that the services are running:
 ```
-docker-compose ps
+docker compose ps -a
 ```
 
 To stop the environment
 ```
-docker-compose down
+docker compose down
 ```
 
 To stop the environment and remove the database volume:
 ```
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Database Reset Note
@@ -99,12 +112,18 @@ For production deployment, the same service boundaries can be deployed into a ma
 
 ### Local Service Access
 
+- http://localhost:8085 — application UI
 - http://localhost:8081
 - http://localhost:4000
 - localhost:9092
 - http://localhost:8090
 
 Kafka UI is connected to the local Kafka broker defined in Docker Compose and can be used to inspect brokers, topics, and consumer groups.
+
+The `analytics-import` container should finish with `Exited (0)`. Follow import
+progress with `docker compose logs -f analytics-import`; the frontend can start
+before the download completes. Users and trades are created through the normal
+application flow.
 
 ## Branching Strategy
 

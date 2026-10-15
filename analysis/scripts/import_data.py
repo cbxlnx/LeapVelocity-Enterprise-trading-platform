@@ -1,7 +1,7 @@
 """Import daily yfinance prices for database instruments into PostgreSQL.
 
 Run with --symbols AAPL --years 1 for the first import, or without arguments
-for ten years of all eligible instruments. No downloads happen on module import.
+for two years of all eligible instruments. No downloads happen on module import.
 """
 
 import argparse
@@ -58,7 +58,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbols", nargs="+", help="Subset of database symbols, e.g. AAPL MSFT")
     period = parser.add_mutually_exclusive_group()
-    period.add_argument("--years", type=int, choices=range(1, 11), default=10)
+    period.add_argument("--years", type=int, choices=range(1, 11), default=2)
     period.add_argument("--start", type=parse_date, help="Inclusive start date")
     parser.add_argument("--end", type=parse_date, help="Exclusive end date; default: today in New York")
     args = parser.parse_args(argv)

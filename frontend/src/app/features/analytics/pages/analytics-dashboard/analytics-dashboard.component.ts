@@ -1,5 +1,5 @@
 import { CurrencyPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, timeout } from 'rxjs';
@@ -8,6 +8,8 @@ import { HistoricalPrices } from '../../models/historical-prices.model';
 import { defaultHistoryRange, formatTradingDate } from '../../models/trading-date';
 import { AnalyticsApiService } from '../../services/analytics-api.service';
 import { AuthService } from '../../../../services/auth.service';
+import { InstrumentService } from '../../../../services/instrument.service';
+import { Instrument } from '../../../../models/api.models';
 import { PortfolioSummary } from '../../models/portfolio-summary.model';
 import { PortfolioSummaryComponent } from '../../components/portfolio-summary/portfolio-summary.component';
 import { PerformancePanelComponent } from '../../components/performance-panel/performance-panel.component';
@@ -24,10 +26,12 @@ import { PerformancePeriod, PortfolioPerformance } from '../../models/portfolio-
 export class AnalyticsDashboardComponent implements OnInit {
   private readonly api = inject(AnalyticsApiService);
   private readonly auth = inject(AuthService);
+  private readonly instrumentService = inject(InstrumentService);
   private readonly destroyRef = inject(DestroyRef);
   private request?: Subscription;
   private summaryRequest?: Subscription;
   private performanceRequest?: Subscription;
+  private instrumentsRequest?: Subscription;
   private readonly initialRange = defaultHistoryRange();
   readonly formatDate = formatTradingDate;
   readonly loading = signal(false);
@@ -40,17 +44,56 @@ export class AnalyticsDashboardComponent implements OnInit {
   readonly performancePeriod = signal<PerformancePeriod>('1Y');
   readonly performanceLoading = signal(false);
   readonly performanceError = signal<string | null>(null);
+  readonly instruments = signal<Instrument[]>([]);
+  readonly instrumentsLoading = signal(false);
+  readonly instrumentsError = signal<string | null>(null);
   readonly dateForm = new FormGroup({
+    symbol: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     from: new FormControl(this.initialRange.from, { nonNullable: true, validators: [Validators.required] }),
     to: new FormControl(this.initialRange.to, { nonNullable: true, validators: [Validators.required] }),
   }, { validators: (form) => {
     const { from, to } = form.value;
     return from && to && from > to ? { dateOrder: true } : null;
   } });
+  private readonly selectedSymbol = signal('');
+  readonly selectedInstrument = computed(() => this.instruments().find(instrument => instrument.symbol === this.selectedSymbol()));
 
   ngOnInit(): void {
     this.refreshPortfolio();
-    this.loadPrices();
+    this.dateForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ symbol }) => {
+      if (symbol === this.selectedSymbol()) return;
+      this.selectedSymbol.set(symbol ?? '');
+      this.request?.unsubscribe();
+      this.history.set(null);
+      this.error.set(null);
+      this.loading.set(false);
+      this.loadPrices();
+    });
+    this.loadInstruments();
+  }
+
+  loadInstruments(): void {
+    this.instrumentsRequest?.unsubscribe();
+    this.instrumentsLoading.set(true);
+    this.instrumentsError.set(null);
+    this.instrumentsRequest = this.instrumentService.getInstruments().pipe(
+      timeout(15000), takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (instruments) => {
+        const eligible = instruments.filter(instrument => instrument.tradable && instrument.currency === 'USD'
+          && instrument.assetClass !== 'CASH').sort((a, b) => a.symbol.localeCompare(b.symbol));
+        this.instruments.set(eligible);
+        this.instrumentsLoading.set(false);
+        const current = this.dateForm.controls.symbol.value;
+        this.dateForm.controls.symbol.setValue(eligible.find(instrument => instrument.symbol === current)?.symbol
+          ?? eligible[0]?.symbol ?? '');
+      },
+      error: (error: Error) => {
+        this.instrumentsLoading.set(false);
+        this.instrumentsError.set(error.name === 'TimeoutError'
+          ? 'The instrument list took too long to load. Please retry.' : error.message || 'Unable to load instruments. Please retry.');
+      },
+    });
   }
 
   refreshPortfolio(): void {
@@ -116,7 +159,7 @@ export class AnalyticsDashboardComponent implements OnInit {
   }
 
   loadPrices(): void {
-    if (this.dateForm.invalid) {
+    if (this.dateForm.invalid || !this.selectedInstrument() || this.instrumentsLoading()) {
       this.dateForm.markAllAsTouched();
       return;
     }
@@ -124,8 +167,8 @@ export class AnalyticsDashboardComponent implements OnInit {
     this.history.set(null);
     this.error.set(null);
     this.loading.set(true);
-    const { from, to } = this.dateForm.getRawValue();
-    this.request = this.api.getPrices('AAPL', from, to).pipe(
+    const { symbol, from, to } = this.dateForm.getRawValue();
+    this.request = this.api.getPrices(symbol, from, to).pipe(
       timeout(15000),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({

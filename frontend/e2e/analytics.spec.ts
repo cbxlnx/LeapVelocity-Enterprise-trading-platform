@@ -8,6 +8,14 @@ const fixture = {
   ],
 };
 
+const instrumentFixtures = [
+  ['AAPL', 'Apple Inc.'], ['MSFT', 'Microsoft Corporation'], ['GOOGL', 'Alphabet Inc. Class A'],
+  ['AMZN', 'Amazon.com, Inc.'], ['NVDA', 'NVIDIA Corporation'], ['TSLA', 'Tesla, Inc.'],
+  ['JPM', 'JPMorgan Chase & Co.'], ['JNJ', 'Johnson & Johnson'], ['XOM', 'Exxon Mobil Corporation'],
+  ['WMT', 'Walmart Inc.'], ['SPY', 'SPDR S&P 500 ETF Trust'], ['QQQ', 'Invesco QQQ Trust'],
+].map(([symbol, name], id) => ({ id, symbol, name, currency: 'USD', tradable: true,
+  assetClass: ['SPY', 'QQQ'].includes(symbol) ? 'FUND' : 'EQUITY' }));
+
 async function signInForMockRequests(page: Page) {
   // Browser-only fixture. These tests intercept history requests and do not
   // claim to authenticate against a real backend.
@@ -15,6 +23,7 @@ async function signInForMockRequests(page: Page) {
     const payload = btoa(JSON.stringify({ username: 'Analytics test', accountId: 1 }));
     localStorage.setItem('leap_access_token', `fixture.${payload}.fixture`);
   });
+  await page.route('**/api/v1/instruments', route => route.fulfill({ json: instrumentFixtures }));
   await page.route('**/api/v1/accounts/1/analytics/summary', (route) => route.fulfill({ json: {
     accountId: 1, currency: 'USD', asOf: null, valuationStatus: 'EMPTY',
     holdingsValue: 0, cashBalance: 5, totalEquity: 5, costBasis: 0, unrealizedPnL: 0, holdings: [], issues: [],
@@ -51,7 +60,7 @@ test('compares two indexed series and reloads all supported simulation periods',
   await expect(page.getByTestId('benchmark-return')).toHaveText('+5.00%');
   await expect(page.locator('app-performance-chart polyline')).toHaveCount(2);
   await expect(page.getByRole('img', { name: 'Hypothetical portfolio and SPY indices, starting at 100' })).toBeVisible();
-  for (const period of ['1M', '3M', '6M', 'ALL', '1Y']) {
+  for (const period of ['1M', '3M', '6M', '2Y', '1Y']) {
     await page.getByLabel('Simulation period').selectOption(period);
     await expect(page.getByTestId('simulated-return')).toBeVisible();
     expect(selected.at(-1)).toBe(period);
@@ -178,6 +187,38 @@ test('sends edited dates to the API and blocks a reversed range', async ({ page 
   await page.getByLabel('From', { exact: true }).fill('2025-10-03');
   await expect(page.getByRole('alert')).toHaveText('From must be on or before To.');
   await expect(page.getByRole('button', { name: 'Load prices' })).toBeDisabled();
+});
+
+test('selects database instruments and requests only their history with the chosen dates', async ({ page }) => {
+  await signInForMockRequests(page);
+  const requested: string[] = [];
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/v1/market-data/prices/*?**', async route => {
+    const url = new URL(route.request().url());
+    const symbol = url.pathname.split('/').at(-1)!;
+    requested.push(`${symbol}/${url.searchParams.get('from')}/${url.searchParams.get('to')}`);
+    if (symbol === 'MSFT') await pending;
+    await route.fulfill({ json: { ...fixture, symbol, prices: symbol === 'QQQ' ? [] : fixture.prices } });
+  });
+  await page.goto('/analytics');
+  await expect(page.getByRole('img', { name: 'AAPL daily closing prices in USD' })).toBeVisible();
+  await expect(page.locator('#price-symbol option')).toHaveCount(12);
+  expect(requested).toHaveLength(1);
+  await page.getByLabel('From', { exact: true }).fill('2025-10-01');
+  await page.getByLabel('To', { exact: true }).fill('2025-10-02');
+  await page.locator('#price-symbol').selectOption('MSFT');
+  await expect(page.getByRole('heading', { name: 'MSFT · Historical prices' })).toBeVisible();
+  await expect(page.getByText('Loading MSFT price history…')).toBeVisible();
+  await expect(page.locator('app-price-chart')).toHaveCount(0);
+  release();
+  await expect(page.getByRole('img', { name: 'MSFT daily closing prices in USD' })).toBeVisible();
+  await expect(page.getByText('Microsoft Corporation daily closing prices in USD.', { exact: false })).toBeVisible();
+  expect(requested.at(-1)).toBe('MSFT/2025-10-01/2025-10-02');
+  await page.locator('#price-symbol').selectOption('QQQ');
+  await expect(page.getByText('No QQQ prices are stored', { exact: false })).toBeVisible();
+  await expect(page.locator('app-price-chart')).toHaveCount(0);
+  expect(requested).toHaveLength(3);
 });
 
 test('keeps the chart inside the page on mobile', async ({ page }) => {

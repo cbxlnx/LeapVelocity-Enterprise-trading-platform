@@ -14,7 +14,7 @@ import { formatTradingDate } from '../../models/trading-date';
 export class PriceChartComponent {
   readonly prices = input.required<HistoricalPricePoint[]>();
   readonly currency = input('USD');
-  readonly symbol = input('AAPL');
+  readonly symbol = input.required<string>();
   readonly formatDate = formatTradingDate;
 
   readonly chart = computed(() => {

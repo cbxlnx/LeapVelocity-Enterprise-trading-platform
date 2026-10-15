@@ -9,9 +9,23 @@
 
   <app-performance-panel [performance]="performance()" [period]="performancePeriod()" [loading]="performanceLoading()" [error]="performanceError()" (periodChange)="changePerformancePeriod($event)" (refresh)="loadPerformance()" />
 
-  <h2>AAPL · Historical prices</h2>
-  <p class="subtitle">Apple Inc. daily closing prices in USD. The date filter applies only to this chart.</p>
+  <h2>{{ selectedInstrument() ? selectedInstrument()?.symbol + ' · ' : '' }}Historical prices</h2>
+  @if (selectedInstrument(); as instrument) {
+    <p class="subtitle">{{ instrument.name }} daily closing prices in {{ instrument.currency }}. The instrument and date filters apply only to this chart.</p>
+  }
+  @if (instrumentsLoading()) {
+    <p role="status">Loading instruments…</p>
+  } @else if (instrumentsError(); as message) {
+    <div class="instrument-error" role="alert"><p>{{ message }}</p><button type="button" (click)="loadInstruments()">Retry instruments</button></div>
+  } @else if (instruments().length === 0) {
+    <p role="status">No eligible USD instruments are available for historical prices.</p>
+  } @else {
   <form class="date-filter" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical price date range">
+    <label for="price-symbol">Instrument<select id="price-symbol" formControlName="symbol">
+      @for (instrument of instruments(); track instrument.symbol) {
+        <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option>
+      }
+    </select></label>
     <label for="price-from">From <input id="price-from" type="date" formControlName="from" required /></label>
     <label for="price-to">To <input id="price-to" type="date" formControlName="to" required /></label>
     <button type="submit" [disabled]="loading() || dateForm.invalid">{{ loading() ? 'Loading…' : 'Load prices' }}</button>
@@ -19,20 +33,22 @@
       <p class="validation-message" role="alert">From must be on or before To.</p>
     }
   </form>
+  }
 
+  @if (selectedInstrument(); as instrument) {
   <section class="chart-card" aria-label="Historical closing price chart" [attr.aria-busy]="loading()">
     @if (loading()) {
-      <div class="state" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading AAPL price history…</p></div>
+      <div class="state" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading {{ instrument.symbol }} price history…</p></div>
     } @else if (error(); as message) {
       <div class="state error-state" role="alert">
-        <h2>Price history could not be loaded</h2><p>{{ message }}</p>
+        <h2>{{ instrument.symbol }} price history could not be loaded</h2><p>{{ message }}</p>
         <button type="button" (click)="loadPrices()" [disabled]="dateForm.invalid">Retry</button>
       </div>
     } @else if (history(); as data) {
       @if (data.prices.length === 0) {
         <div class="state" role="status">
           <h2>No historical prices found</h2>
-          <p>No AAPL prices are stored for {{ formatDate(data.from) }}–{{ formatDate(data.to) }}. Try another date range.</p>
+          <p>No {{ data.symbol }} prices are stored for {{ formatDate(data.from) }}–{{ formatDate(data.to) }}. Try another instrument or date range.</p>
         </div>
       } @else {
         <div class="chart-heading">
@@ -44,4 +60,5 @@
       }
     }
   </section>
+  }
 </main>

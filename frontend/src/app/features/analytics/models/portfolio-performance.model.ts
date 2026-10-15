@@ -1,4 +1,4 @@
-export type PerformancePeriod = '1M' | '3M' | '6M' | '1Y' | 'ALL';
+export type PerformancePeriod = '1M' | '3M' | '6M' | '1Y' | '2Y';
 
 export interface PerformancePoint {
   date: string;

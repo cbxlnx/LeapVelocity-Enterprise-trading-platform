@@ -15,11 +15,11 @@ describe('AnalyticsApiService', () => {
   });
   afterEach(() => http.verify());
 
-  it('requests simulation with its selected period without using the price date filter', async () => {
-    const result = firstValueFrom(api.getPerformance(7, '3M'));
-    const request = http.expectOne('/api/v1/accounts/7/analytics/performance?period=3M');
+  it.each(['3M', '1Y', '2Y'] as const)('requests simulation for %s without using the price date filter', async (period) => {
+    const result = firstValueFrom(api.getPerformance(7, period));
+    const request = http.expectOne(`/api/v1/accounts/7/analytics/performance?period=${period}`);
     expect(request.request.method).toBe('GET');
-    const payload = { accountId: 7, period: '3M', simulationStatus: 'EMPTY', points: [] };
+    const payload = { accountId: 7, period, simulationStatus: 'EMPTY', points: [] };
     request.flush(payload);
     await expect(result).resolves.toEqual(payload);
   });

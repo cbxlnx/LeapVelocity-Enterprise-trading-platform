@@ -5,6 +5,7 @@ import { HistoricalPrices } from '../../models/historical-prices.model';
 import { AnalyticsApiService } from '../../services/analytics-api.service';
 import { AnalyticsDashboardComponent } from './analytics-dashboard.component';
 import { AuthService } from '../../../../services/auth.service';
+import { InstrumentService } from '../../../../services/instrument.service';
 import { PortfolioPerformance } from '../../models/portfolio-performance.model';
 
 const sample: HistoricalPrices = {
@@ -19,6 +20,11 @@ describe('Analytics dashboard', () => {
   let fixture: ComponentFixture<AnalyticsDashboardComponent>;
   let response: Subject<HistoricalPrices>;
   let api: { getPrices: ReturnType<typeof vi.fn>; getSummary: ReturnType<typeof vi.fn>; getPerformance: ReturnType<typeof vi.fn> };
+  let instruments: { getInstruments: ReturnType<typeof vi.fn> };
+  const catalog = [
+    { id: 2, symbol: 'MSFT', name: 'Microsoft Corporation', assetClass: 'EQUITY', currency: 'USD', tradable: true },
+    { id: 1, symbol: 'AAPL', name: 'Apple Inc.', assetClass: 'EQUITY', currency: 'USD', tradable: true },
+  ];
   const emptyPerformance: PortfolioPerformance = { accountId: 1, period: '1Y', benchmark: 'SPY', simulationStatus: 'EMPTY',
     weightingDate: null, requestedFrom: null, requestedTo: null, from: null, to: null,
     portfolioReturnPercent: null, benchmarkReturnPercent: null, initialWeights: [], points: [], issues: [] };
@@ -27,6 +33,7 @@ describe('Analytics dashboard', () => {
 
   beforeEach(async () => {
     response = new Subject<HistoricalPrices>();
+    instruments = { getInstruments: vi.fn().mockReturnValue(of(catalog)) };
     api = { getPrices: vi.fn().mockReturnValue(response), getSummary: vi.fn().mockReturnValue(of(emptySummary)),
       getPerformance: vi.fn().mockReturnValue(of(emptyPerformance)) };
     await TestBed.configureTestingModule({
@@ -34,6 +41,7 @@ describe('Analytics dashboard', () => {
       providers: [
         { provide: AnalyticsApiService, useValue: api },
         { provide: AuthService, useValue: { getAccountId: vi.fn().mockReturnValue(1) } },
+        { provide: InstrumentService, useValue: instruments },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AnalyticsDashboardComponent);
@@ -73,7 +81,7 @@ describe('Analytics dashboard', () => {
   });
 
   it('blocks reversed date ranges before sending another request', () => {
-    fixture.componentInstance.dateForm.setValue({ from: '2026-10-01', to: '2025-10-01' });
+    fixture.componentInstance.dateForm.patchValue({ from: '2026-10-01', to: '2025-10-01' });
     fixture.componentInstance.loadPrices();
     fixture.detectChanges();
     expect(api.getPrices).toHaveBeenCalledTimes(1);
@@ -83,7 +91,7 @@ describe('Analytics dashboard', () => {
   it('cancels the previous request so old responses cannot replace the new range', () => {
     const next = new Subject<HistoricalPrices>();
     api.getPrices.mockReturnValue(next);
-    fixture.componentInstance.dateForm.setValue({ from: sample.from, to: sample.to });
+    fixture.componentInstance.dateForm.patchValue({ from: sample.from, to: sample.to });
     fixture.componentInstance.loadPrices();
     response.next({ ...sample, prices: [] });
     expect(fixture.componentInstance.loading()).toBe(true);
@@ -100,6 +108,57 @@ describe('Analytics dashboard', () => {
     expect(fixture.nativeElement.querySelector('polyline')).toBeTruthy();
   });
 
+  it('loads only the selected instrument and ignores a response for the previous symbol', () => {
+    const next = new Subject<HistoricalPrices>();
+    api.getPrices.mockReturnValue(next);
+    fixture.componentInstance.dateForm.patchValue({ from: sample.from, to: sample.to });
+    const select = fixture.nativeElement.querySelector('#price-symbol');
+    select.value = 'MSFT';
+    select.dispatchEvent(new Event('change'));
+    response.next(sample);
+    fixture.detectChanges();
+    expect(api.getPrices).toHaveBeenCalledTimes(2);
+    expect(api.getPrices).toHaveBeenLastCalledWith('MSFT', sample.from, sample.to);
+    expect(fixture.componentInstance.history()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Loading MSFT price history');
+    expect(fixture.nativeElement.textContent).toContain('MSFT · Historical prices');
+    expect(fixture.nativeElement.textContent).toContain('Microsoft Corporation daily closing prices in USD');
+    next.next({ ...sample, symbol: 'MSFT', prices: [] });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No MSFT prices are stored');
+    expect(api.getSummary).toHaveBeenCalledTimes(1);
+    expect(api.getPerformance).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the returned catalog even when AAPL is absent', () => {
+    instruments.getInstruments.mockReturnValue(of([catalog[0]]));
+    fixture.componentInstance.loadInstruments();
+    fixture.detectChanges();
+    expect(api.getPrices).toHaveBeenLastCalledWith('MSFT', expect.any(String), expect.any(String));
+    expect(fixture.nativeElement.querySelector('#price-symbol option').textContent).toContain('Microsoft');
+  });
+
+  it('can retry an instrument lookup failure without disturbing portfolio requests', () => {
+    instruments.getInstruments.mockReturnValue(throwError(() => new Error('Instrument list unavailable')));
+    fixture.componentInstance.loadInstruments();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.instrument-error').textContent).toContain('Instrument list unavailable');
+    instruments.getInstruments.mockReturnValue(of(catalog));
+    fixture.nativeElement.querySelector('.instrument-error button').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#price-symbol').options.length).toBe(2);
+    expect(api.getSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an empty catalog without requesting an unsupported symbol', () => {
+    instruments.getInstruments.mockReturnValue(of([]));
+    fixture.componentInstance.loadInstruments();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No eligible USD instruments');
+    expect(fixture.nativeElement.querySelector('app-price-chart')).toBeNull();
+    expect(api.getPrices).toHaveBeenCalledTimes(1);
+  });
+
   it('does not guess an account id when the token lacks one', () => {
     vi.mocked(TestBed.inject(AuthService).getAccountId).mockReturnValue(null);
     fixture.componentInstance.loadSummary();
@@ -112,12 +171,12 @@ describe('Analytics dashboard', () => {
     const old = new Subject<PortfolioPerformance>(), current = new Subject<PortfolioPerformance>();
     api.getPerformance.mockReturnValueOnce(old).mockReturnValueOnce(current);
     fixture.componentInstance.changePerformancePeriod('1M');
-    fixture.componentInstance.changePerformancePeriod('ALL');
+    fixture.componentInstance.changePerformancePeriod('2Y');
     old.next(emptyPerformance);
     expect(fixture.componentInstance.performanceLoading()).toBe(true);
-    current.next({ ...emptyPerformance, period: 'ALL' });
-    expect(fixture.componentInstance.performance()?.period).toBe('ALL');
-    expect(api.getPerformance).toHaveBeenLastCalledWith(1, 'ALL');
+    current.next({ ...emptyPerformance, period: '2Y' });
+    expect(fixture.componentInstance.performance()?.period).toBe('2Y');
+    expect(api.getPerformance).toHaveBeenLastCalledWith(1, '2Y');
   });
 
   it('keeps summary and instrument prices available when simulation fails', () => {

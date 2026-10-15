@@ -6,6 +6,7 @@ import { defaultHistoryRange, formatTradingDate } from '../../models/trading-dat
 describe('Price chart and trading dates', () => {
   it('renders a flat series and a single observation without invalid coordinates', () => {
     const fixture = TestBed.createComponent(PriceChartComponent);
+    fixture.componentRef.setInput('symbol', 'MSFT');
     const point = { date: '2025-10-01', close: 250, adjustedClose: 248, volume: 0, source: 'yfinance' };
     for (const prices of [[point], [point, { ...point, date: '2025-10-02' }]]) {
       fixture.componentRef.setInput('prices', prices);
