@@ -249,6 +249,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /market-data/quotes:
+    get:
+      summary: Retrieve latest market quotes for several symbols
+      description: >-
+        Symbols are trimmed, upper-cased and de-duplicated. Unknown symbols are listed in
+        missingSymbols and still return HTTP 200. Use lastPrice for valuation and asOf to judge freshness.
+      tags:
+        - market-data
+      operationId: getLatestQuotes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated ticker symbols, at most 50 entries; each 1-20 characters
+          example: AAPL,MSFT
+      responses:
+        '200':
+          description: Quotes retrieved; unknown symbols are listed in missingSymbols
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchQuotesDto'
+        '400':
+          description: symbols is missing, has a blank or over-length entry, or exceeds 50 entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /instruments/search:
     get:
       summary: Search instruments by symbol or name prefix
@@ -450,6 +491,26 @@ components:
           type: string
           description: Data source name
           example: yfinance
+
+    BatchQuotesDto:
+      type: object
+      required: [quotes, missingSymbols, serverTimestamp]
+      properties:
+        quotes:
+          type: array
+          description: Quotes for the requested symbols that have been received, in request order
+          items:
+            $ref: '#/components/schemas/QuoteDto'
+        missingSymbols:
+          type: array
+          description: Normalized requested symbols with no quote received yet
+          items:
+            type: string
+            example: MSFT
+        serverTimestamp:
+          type: string
+          format: date-time
+          description: Time the batch response was built
 
     InstrumentDto:
       type: object
