@@ -14,6 +14,7 @@ public enum ErrorCode {
     // Instrument errors
     INSTRUMENT_NOT_FOUND("INS-404", HttpStatus.NOT_FOUND, "Instrument not found"),
     QUOTE_NOT_FOUND("MKT-404", HttpStatus.NOT_FOUND, "Quote not found"),
+    INVALID_QUOTE_REQUEST("MKT-400", HttpStatus.BAD_REQUEST, "Invalid quote request"),
     
     // Order errors
     INSUFFICIENT_FUNDS("ORD-400", HttpStatus.BAD_REQUEST, "Insufficient funds"),

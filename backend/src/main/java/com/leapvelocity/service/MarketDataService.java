@@ -3,9 +3,14 @@ package com.leapvelocity.service;
 import com.leapvelocity.messaging.MarketDataEvent;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,6 +34,29 @@ public class MarketDataService {
             return Optional.empty();
         }
         return Optional.ofNullable(latestQuotes.get(normalize(symbol)));
+    }
+
+    public QuoteLookup latestQuotes(Collection<String> symbols) {
+        Set<String> requested = new LinkedHashSet<>();
+        for (String symbol : symbols) {
+            if (symbol != null) {
+                requested.add(normalize(symbol));
+            }
+        }
+        List<MarketDataEvent> found = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        for (String symbol : requested) {
+            MarketDataEvent quote = latestQuotes.get(symbol);
+            if (quote == null) {
+                missing.add(symbol);
+            } else {
+                found.add(quote);
+            }
+        }
+        return new QuoteLookup(found, missing);
+    }
+
+    public record QuoteLookup(List<MarketDataEvent> quotes, List<String> missingSymbols) {
     }
 
     private String normalize(String symbol) {

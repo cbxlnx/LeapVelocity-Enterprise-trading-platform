@@ -94,6 +94,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.QUOTE_NOT_FOUND.getHttpStatus()).body(response);
     }
 
+    @ExceptionHandler(InvalidQuoteRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponse> handleInvalidQuoteRequestException(
+            InvalidQuoteRequestException ex,
+            HttpServletRequest request) {
+        logger.warn("Invalid quote request: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.INVALID_QUOTE_REQUEST,
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.INVALID_QUOTE_REQUEST.getHttpStatus()).body(response);
+    }
+
     /**
      * Handles InsufficientFundsException.
      * Maps to HTTP 400 Bad Request with error code ORD-400.
