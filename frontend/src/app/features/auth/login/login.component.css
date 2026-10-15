@@ -278,7 +278,8 @@ form {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #142337;
   color: #192830;
   font-family: var(--font-ui);
@@ -462,26 +463,29 @@ form {
   line-height: 1.45;
 }
 
-.access-help,
+.account-link,
 .copyright,
 .restriction {
-  position: absolute;
-  margin: 0;
   color: #9aabba;
   font-size: 8px;
 }
 
-.access-help {
-  bottom: 137px;
+.account-link {
+  margin: 18px 0 0;
 }
 
-.access-help a {
+.copyright,
+.restriction {
+  position: absolute;
+}
+
+.account-link a {
   color: #c9d5df;
   font-weight: 600;
   text-decoration: none;
 }
 
-.access-help a:hover {
+.account-link a:hover {
   color: #ffffff;
   text-decoration: underline;
 }
@@ -519,7 +523,7 @@ form {
 }
 
 .security-note p,
-.access-help,
+.account-link,
 .copyright,
 .restriction {
   font-size: 10px;
@@ -538,10 +542,6 @@ form {
 
   .login-card {
     padding: 24px;
-  }
-
-  .access-help {
-    bottom: 42px;
   }
 
   .copyright,
