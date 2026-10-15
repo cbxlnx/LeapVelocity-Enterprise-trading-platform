@@ -115,9 +115,23 @@
         </div>
 
         <div class="market-reference">
-          <span>Limit price</span>
-          <strong class="mono">{{ orderForm.get('price')?.value | currency:'USD':'symbol':'1.2-2' }}</strong>
-          <small>Enter the maximum price you are willing to pay per share. Execution at your limit price or better is not guaranteed.</small>
+          <span>Reference market price</span>
+          @if (quoteError) {
+            <strong>Unavailable</strong>
+          } @else if (referenceQuote) {
+            <strong class="mono">{{ referenceQuote.lastPrice | currency:'USD':'symbol':'1.2-2' }}</strong>
+          } @else {
+            <strong class="mono">{{ orderForm.get('price')?.value | currency:'USD':'symbol':'1.2-2' }}</strong>
+          }
+          @if (quoteLoading) {
+            <small>Loading the latest quote...</small>
+          } @else if (quoteError) {
+            <small role="alert">{{ quoteError }}</small>
+          } @else if (referenceQuote) {
+            <small>Price prefilled from the quote as of {{ referenceQuote.asOf | date:'short' }}. Execution at your limit price or better is not guaranteed.</small>
+          } @else {
+            <small>Enter the maximum price you are willing to pay per share. Execution at your limit price or better is not guaranteed.</small>
+          }
         </div>
 
         <div class="ready-note">

@@ -189,6 +189,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+.quote-unavailable {
+  color: #71859a;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.quote-note {
+  margin: 0;
+  padding: 10px 12px;
+  color: #71859a;
+  font-size: 12px;
+}
+
 /* Action Buttons */
 .action-buttons {
   display: flex;

@@ -4,12 +4,13 @@ import { RouterModule, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { forkJoin, Subject, Subscription, timeout, finalize } from 'rxjs';
+import { forkJoin, map, Subject, Subscription, switchMap, timeout, finalize } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AccountService } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
-import { Account as ApiAccount, Position as ApiPosition } from '../../../models/api.models';
-import { DashboardData } from '../../../shared/models/account.model';
+import { Account as ApiAccount, Position as ApiPosition, QuoteSnapshot } from '../../../models/api.models';
+import { DashboardData, Position } from '../../../shared/models/account.model';
+import { MarketDataService, normalizeSymbol } from '../../../services/market-data.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -37,6 +38,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private accountService: AccountService,
     private authService: AuthService,
+    private marketDataService: MarketDataService,
     private router: Router,
     private changeDetector: ChangeDetectorRef
   ) {}
@@ -83,6 +85,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       positions: this.accountService.getPositions(accountId),
     })
       .pipe(
+        switchMap(({ account, balance, positions }) =>
+          this.marketDataService.getBatchQuotes(positions.map((position) => position.symbol)).pipe(
+            map((batch) => ({ account, balance, positions, quotes: batch.quotes }))
+          )
+        ),
         timeout(10000),
         takeUntil(this.destroy$),
         finalize(() => {
@@ -90,9 +97,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ account, balance, positions }) => {
+        next: ({ account, balance, positions, quotes }) => {
           try {
-            this.dashboardData = this.buildDashboardData(account, balance, positions);
+            this.dashboardData = this.buildDashboardData(account, balance, positions, quotes);
             this.error = null;
           } catch (error) {
             this.dashboardData = null;
@@ -132,12 +139,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private buildDashboardData(
     account: ApiAccount,
     balance: { accountId: number; cashBalance: number },
-    positions: ApiPosition[]
+    positions: ApiPosition[],
+    quotes: QuoteSnapshot[]
   ): DashboardData {
-    const mappedPositions = positions.map((position, index) => {
+    const mappedPositions: Position[] = positions.map((position, index) => {
       const costBasis = position.quantity * position.averageCost;
-      const marketValue = position.marketValue ?? costBasis;
-      const gainLoss = marketValue - costBasis;
+      const quote = quotes.find(
+        (item) => normalizeSymbol(item.symbol) === normalizeSymbol(position.symbol)
+      );
+      const quoteAvailable = quote !== undefined;
+      const marketValue = quote ? position.quantity * quote.lastPrice : 0;
+      const gainLoss = quote ? marketValue - costBasis : 0;
 
       return {
         id: index,
@@ -147,7 +159,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         averageCost: position.averageCost,
         currentMarketValue: marketValue,
         gainLoss,
-        gainLossPercent: costBasis === 0 ? 0 : (gainLoss / costBasis) * 100,
+        gainLossPercent: quoteAvailable && costBasis !== 0 ? (gainLoss / costBasis) * 100 : 0,
+        quoteAvailable,
       };
     });
     const totalMarketValue = mappedPositions.reduce(
@@ -158,6 +171,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       (total, position) => total + (position.gainLoss ?? 0),
       0
     );
+    const portfolioCostBasis = mappedPositions
+      .filter((position) => position.quoteAvailable)
+      .reduce((total, position) => total + position.quantity * position.averageCost, 0);
+    const unavailableQuoteCount = mappedPositions.filter(
+      (position) => !position.quoteAvailable
+    ).length;
 
     return {
       account: {
@@ -168,11 +187,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       positions: mappedPositions,
       totalMarketValue,
       totalEquity: balance.cashBalance + totalMarketValue,
+      portfolioCostBasis,
       unrealizedGainLoss,
       unrealizedGainLossPercent:
-        totalMarketValue - unrealizedGainLoss === 0
-          ? 0
-          : (unrealizedGainLoss / (totalMarketValue - unrealizedGainLoss)) * 100,
+        portfolioCostBasis === 0 ? 0 : (unrealizedGainLoss / portfolioCostBasis) * 100,
+      unavailableQuoteCount,
     };
   }
 
@@ -208,10 +227,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   formatPercent(value: number): string {
     return (value >= 0 ? '+' : '') + value.toFixed(2) + '%';
-  }
-
-  getPortfolioCostBasis(data: DashboardData): number {
-    return data.totalMarketValue - data.unrealizedGainLoss;
   }
 
   formatUpdatedAt(value: Date | string): string {

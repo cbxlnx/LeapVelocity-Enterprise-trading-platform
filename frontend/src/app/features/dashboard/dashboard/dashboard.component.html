@@ -58,7 +58,7 @@
               {{ formatPercent(dashboardData.unrealizedGainLossPercent) }} gain
             </p>
             <p class="gain-loss-cost-basis">
-              Cost basis {{ formatCurrency(getPortfolioCostBasis(dashboardData)) }}
+              Cost basis {{ formatCurrency(dashboardData.portfolioCostBasis) }}
             </p>
           </div>
         </div>
@@ -106,15 +106,25 @@
               <!-- Current Market Value Column -->
               <ng-container matColumnDef="currentMarketValue">
                 <th mat-header-cell *matHeaderCellDef>Current market value</th>
-                <td mat-cell *matCellDef="let position">{{ formatCurrency(position.currentMarketValue || 0) }}</td>
+                <td mat-cell *matCellDef="let position">
+                  @if (position.quoteAvailable) {
+                    {{ formatCurrency(position.currentMarketValue || 0) }}
+                  } @else {
+                    <span class="quote-unavailable">Quote unavailable</span>
+                  }
+                </td>
               </ng-container>
 
               <!-- Gain/Loss Column -->
               <ng-container matColumnDef="gainLoss">
                 <th mat-header-cell *matHeaderCellDef>Gain/Loss</th>
-                <td mat-cell *matCellDef="let position" [ngClass]="getGainLossClass(position.gainLoss)">
-                  <strong>{{ formatCurrency(position.gainLoss || 0) }}</strong>
-                  <span class="percent">({{ formatPercent(position.gainLossPercent || 0) }})</span>
+                <td mat-cell *matCellDef="let position" [ngClass]="position.quoteAvailable ? getGainLossClass(position.gainLoss) : ''">
+                  @if (position.quoteAvailable) {
+                    <strong>{{ formatCurrency(position.gainLoss || 0) }}</strong>
+                    <span class="percent">({{ formatPercent(position.gainLossPercent || 0) }})</span>
+                  } @else {
+                    <span class="quote-unavailable">Quote unavailable</span>
+                  }
                 </td>
               </ng-container>
 
@@ -128,6 +138,11 @@
             <strong>Total market value</strong>
             <strong>{{ formatCurrency(dashboardData.totalMarketValue) }}</strong>
           </div>
+          @if (dashboardData.unavailableQuoteCount > 0) {
+            <p class="quote-note" role="status">
+              {{ dashboardData.unavailableQuoteCount }} position(s) without a market quote are excluded from total market value, equity, and gain/loss.
+            </p>
+          }
         </mat-card-content>
       </mat-card>
     </div>
