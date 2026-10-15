@@ -263,6 +263,8 @@
 
 .positions-table {
   width: 100%;
+  --mat-table-header-headline-font: var(--font-ui);
+  --mat-table-row-item-label-text-font: var(--font-ui);
 }
 
 .positions-table thead tr {

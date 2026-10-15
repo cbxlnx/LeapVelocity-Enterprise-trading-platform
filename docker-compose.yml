@@ -1,4 +1,39 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      TRADE_API_UPSTREAM: ${TRADE_API_UPSTREAM:-trade-api:8081}
+      AUTH_UPSTREAM: ${AUTH_UPSTREAM:-auth-stub:4000}
+    ports:
+      - "${FRONTEND_PORT:-8085}:8080"
+    depends_on:
+      trade-api:
+        condition: service_started
+      auth-stub:
+        condition: service_started
+    networks:
+      - trade-net
+
+  # Runs a finite batch and exits; this is not a web service or a scheduler.
+  analytics-import:
+    build:
+      context: ./analysis
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: trade-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-leapvelocity_trading_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+    restart: "no"
+    depends_on:
+      trade-db:
+        condition: service_healthy
+    networks:
+      - trade-net
+
   auth-stub:
     build:
       context: ./auth-service

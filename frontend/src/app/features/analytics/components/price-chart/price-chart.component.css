@@ -1,0 +1,8 @@
+:host { display: block; }
+.chart-scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 520px; }
+text { fill: #586c7d; font: 12px var(--font-ui, sans-serif); }
+.grid-line { stroke: #e8ecef; stroke-width: 1; }
+.price-line { fill: none; stroke: #3f5fa8; stroke-width: 2.5; stroke-linejoin: round; }
+.price-point { fill: #3f5fa8; opacity: 0; }
+.price-point.endpoint, .price-point:hover { opacity: 1; }

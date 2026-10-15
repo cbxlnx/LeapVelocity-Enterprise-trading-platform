@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.angular/
+coverage/
+test-results/
+playwright-report/
+e2e/
+**/*.spec.ts
+.env
+.env.*
+.git/
+npm-debug.log*

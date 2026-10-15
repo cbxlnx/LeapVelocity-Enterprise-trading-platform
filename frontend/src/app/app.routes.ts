@@ -25,6 +25,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'analytics',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/analytics/pages/analytics-dashboard/analytics-dashboard.component').then(
+        (m) => m.AnalyticsDashboardComponent
+      ),
+  },
+  {
     path: 'order',
     canActivate: [authGuard],
     loadChildren: () =>

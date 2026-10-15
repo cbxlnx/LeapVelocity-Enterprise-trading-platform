@@ -1,0 +1,29 @@
+.analytics-container { max-width: 1280px; margin: 0 auto; padding: 28px 24px; }
+.eyebrow { margin: 0 0 8px; color: #586c7d; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; }
+h1 { margin: 0; font-size: 28px; color: #142337; }
+.subtitle { margin: 8px 0 24px; color: #586c7d; }
+.date-filter { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #243444; }
+input, select { padding: 9px 12px; border: 1px solid #c8d2de; border-radius: 4px; background: white; color: #142337; font: inherit; }
+.date-filter label { min-width: 0; max-width: 100%; }
+select { width: 100%; max-width: 360px; }
+.instrument-error { margin-bottom: 24px; color: #b13339; }
+button { padding: 10px 18px; border: 1px solid #c05819; border-radius: 4px; background: #c05819; color: white; font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; cursor: pointer; }
+button:hover:not(:disabled) { background: #aa4c15; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+.validation-message { width: 100%; margin: 0; color: #b13339; }
+.chart-card { padding: 24px; background: white; border: 1px solid #e1e6ec; border-radius: 10px; }
+.chart-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 16px; }
+h2 { margin: 0 0 8px; font-size: 18px; color: #142337; }
+.chart-heading p, .chart-note { margin: 0; color: #586c7d; font-size: 13px; }
+.latest-price { display: grid; gap: 6px; text-align: right; }
+.latest-price span { color: #586c7d; font-size: 12px; }
+.latest-price strong { color: #142337; font-size: 26px; font-family: var(--font-mono, monospace); }
+.chart-note { margin-top: 12px; line-height: 1.6; }
+.state { min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #586c7d; gap: 8px; }
+.state p { max-width: 600px; line-height: 1.6; }
+.error-state p { color: #b13339; }
+.spinner { width: 32px; height: 32px; border: 3px solid #e1e6ec; border-top-color: #3f5fa8; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (max-width: 640px) { .analytics-container { padding: 20px 12px; } .chart-card { padding: 16px; } .chart-heading { flex-direction: column; } .latest-price { text-align: left; } h1 { font-size: 23px; } }

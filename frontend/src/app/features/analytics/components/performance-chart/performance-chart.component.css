@@ -1,0 +1,13 @@
+:host { display: block; }
+.chart-scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 520px; }
+text { fill: #586c7d; font: 12px var(--font-ui, sans-serif); }
+.grid-line { stroke: #e8ecef; stroke-width: 1; }
+.baseline { stroke: #adb9c8; stroke-width: 1; stroke-dasharray: 3 5; }
+.portfolio-line, .benchmark-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.portfolio-line { stroke: #3f5fa8; }
+.benchmark-line { stroke: #c05819; stroke-dasharray: 7 4; }
+.point { opacity: 0; }
+.point.endpoint, .point:hover { opacity: 1; }
+.portfolio-point { fill: #3f5fa8; }
+.benchmark-point { fill: white; stroke: #c05819; stroke-width: 2; }

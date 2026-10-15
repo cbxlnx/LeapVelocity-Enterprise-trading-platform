@@ -1,0 +1,22 @@
+@if (chart(); as plot) {
+  <div class="chart-scroll">
+    <svg viewBox="0 0 960 340" role="img" aria-label="Hypothetical portfolio and SPY indices, starting at 100">
+      <title>Historical simulation: Portfolio and SPY</title>
+      <desc>{{ points().length }} common trading dates, {{ formatDate(points()[0].date) }} to {{ formatDate(points()[points().length - 1].date) }}. Both series use one index scale and start at 100.</desc>
+      @for (tick of plot.yTicks; track tick.y) {
+        <g><line [attr.x1]="plot.left" [attr.x2]="plot.right" [attr.y1]="tick.y" [attr.y2]="tick.y" class="grid-line" />
+          <text x="66" [attr.y]="tick.y + 4" text-anchor="end">{{ tick.value | number:'1.0-2' }}</text></g>
+      }
+      <line [attr.x1]="plot.left" [attr.x2]="plot.right" [attr.y1]="plot.baseline" [attr.y2]="plot.baseline" class="baseline" />
+      <polyline [attr.points]="plot.portfolioLine" class="portfolio-line" />
+      <polyline [attr.points]="plot.benchmarkLine" class="benchmark-line" />
+      @for (point of plot.points; track point.date) {
+        <circle [attr.cx]="point.x" [attr.cy]="point.portfolioY" r="4" class="point portfolio-point" [class.endpoint]="$first || $last"><title>{{ formatDate(point.date) }} · Portfolio: {{ point.portfolioIndex | number:'1.2-2' }}</title></circle>
+        <circle [attr.cx]="point.x" [attr.cy]="point.benchmarkY" r="4" class="point benchmark-point" [class.endpoint]="$first || $last"><title>{{ formatDate(point.date) }} · SPY: {{ point.benchmarkIndex | number:'1.2-2' }}</title></circle>
+      }
+      @for (tick of plot.xTicks; track tick.date) {
+        <text [attr.x]="tick.x" [attr.y]="plot.bottom + 32" [attr.text-anchor]="$first ? 'start' : $last ? 'end' : 'middle'">{{ formatDate(tick.date) }}</text>
+      }
+    </svg>
+  </div>
+}

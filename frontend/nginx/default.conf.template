@@ -1,0 +1,45 @@
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    server_tokens off;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location ^~ /api/ {
+        proxy_pass http://${TRADE_API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ^~ /auth/ {
+        proxy_pass http://${AUTH_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store";
+    }
+
+    # A stale/missing bundle must return 404 instead of Angular's HTML page.
+    location ~* \.(?:js|css|map|png|jpg|jpeg|gif|svg|ico|woff|woff2)$ {
+        try_files $uri =404;
+    }
+
+    # Direct navigation or refresh of Angular routes such as /analytics.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
