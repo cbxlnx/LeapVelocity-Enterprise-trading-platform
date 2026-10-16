@@ -55,9 +55,20 @@
 }
 
 .alert-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
   flex-shrink: 0;
-  font-size: 18px;
-  line-height: 1.2;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.alert-icon::before {
+  content: '!';
 }
 
 .alert-message {
@@ -450,11 +461,21 @@ form {
 }
 
 .security-icon {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
   flex: 0 0 auto;
   color: #526a82;
-  font-family: var(--font-mono);
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
   font-size: 10px;
-  line-height: 1.4;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.security-icon::before {
+  content: 'i';
 }
 
 .security-note p {

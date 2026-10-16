@@ -12,6 +12,7 @@ export interface Position {
   id: number;
   accountId: number;
   symbol: string;
+  instrumentName?: string;
   quantity: number;
   averageCost: number;
   currentMarketValue?: number;

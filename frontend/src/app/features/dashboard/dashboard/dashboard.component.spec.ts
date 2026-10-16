@@ -6,6 +6,7 @@ import { BatchQuotesResponse, QuoteSnapshot } from '../../../models/api.models';
 import { AccountService } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
 import { MarketDataService } from '../../../services/market-data.service';
+import { InstrumentService } from '../../../services/instrument.service';
 import { DashboardComponent } from './dashboard.component';
 
 const account = {
@@ -60,6 +61,7 @@ describe('DashboardComponent valuation', () => {
         { provide: AccountService, useValue: accountService },
         { provide: AuthService, useValue: { getAccountId: () => 1 } },
         { provide: MarketDataService, useValue: marketData },
+        { provide: InstrumentService, useValue: { getInstruments: () => of([]) } },
       ],
     });
 

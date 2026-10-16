@@ -15,9 +15,12 @@ import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -34,8 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Characterization tests for order cancellation flow.
  * 
  * Tests verify:
- * - BUY order cancellations: Cash is refunded to account, position unchanged
- * - SELL order cancellations: Cash unchanged, position is restored
+ * - BUY and SELL order cancellations: account and position state is unchanged
  * - Edge cases: Non-existent orders, already-cancelled orders, non-NEW orders
  * - State transitions: Order status correctly moves to CANCELLED
  * - Account state consistency: Cash balance is correct after cancellation
@@ -58,6 +60,9 @@ class OrderCancellationServiceTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken("test-admin", null, "ROLE_ADMIN"));
+
         mocks = new RepositoryMocks();
         accountRepository = mocks.accountRepository();
         orderRepository = mocks.orderRepository();
@@ -75,8 +80,13 @@ class OrderCancellationServiceTest {
         );
     }
 
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     // ==================== BUY ORDER CANCELLATION TESTS ====================
-    // Verify BUY order cancellations refund cash and leave position unchanged
+    // Verify BUY order cancellations leave position state unchanged
 
     @Nested
     @DisplayName("BUY Order Cancellations")
@@ -114,7 +124,7 @@ class OrderCancellationServiceTest {
     }
 
     // ==================== SELL ORDER CANCELLATION TESTS ====================
-    // Verify SELL order cancellations restore positions and leave cash unchanged
+    // Verify SELL order cancellations leave position state unchanged
 
     @Nested
     @DisplayName("SELL Order Cancellations")
@@ -137,12 +147,12 @@ class OrderCancellationServiceTest {
 
             BigDecimal positionQtyBefore = position.getQuantity(); // 100
 
-            // Act: Cancel the SELL order (should restore 50 shares)
+            // Act: Cancel the SELL order
             service.cancelOrder(order.getId());
 
-            // Assert: Position quantity restored
+            // Assert: Unsettled order cancellation does not change holdings
             Position restored = mocks.positions.get(1L);
-            assertEquals(positionQtyBefore.add(new BigDecimal("50")), restored.getQuantity()); // 150
+            assertEquals(positionQtyBefore, restored.getQuantity());
         }
 
         @Test
@@ -157,14 +167,12 @@ class OrderCancellationServiceTest {
             order.setStatus(OrderStatus.NEW);
             mocks.orders.put(order.getId(), order);
 
-            // Act: Cancel SELL order (should create position with restored quantity)
+            // Act: Cancel SELL order
             service.cancelOrder(order.getId());
 
-            // Assert: New position created with cancelled order quantity
+            // Assert: No position is created for an unsettled order
             Position created = mocks.positions.get(1L);
-            assertNotNull(created);
-            assertEquals(new BigDecimal("100"), created.getQuantity());
-            assertEquals(new BigDecimal("500.00"), created.getAverageCost());
+            assertNull(created);
         }
     }
 
@@ -317,9 +325,9 @@ class OrderCancellationServiceTest {
             // Act: Cancellation should still work (account exists, just suspended from new orders)
             Order cancelled = service.cancelOrder(order.getId());
 
-            // Assert: Order cancelled, cash refunded
+            // Assert: Order cancelled without changing unsettled account state
             assertEquals(OrderStatus.CANCELLED, cancelled.getStatus());
-            assertEquals(new BigDecimal("15000.00"), account.getCashBalance());
+            assertEquals(new BigDecimal("10000.00"), account.getCashBalance());
         }
     }
         

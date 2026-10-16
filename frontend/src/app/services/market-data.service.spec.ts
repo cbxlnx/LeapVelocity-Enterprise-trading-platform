@@ -71,6 +71,26 @@ describe('MarketDataService', () => {
     http.verify();
   });
 
+  it('splits large batch requests at the API limit', async () => {
+    const symbols = Array.from({ length: 51 }, (_, index) => `SYM${index}`);
+    const result = firstValueFrom(service.getBatchQuotes(symbols));
+    const requests = http.match((request) => request.url === '/api/v1/market-data/quotes');
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0].request.params.get('symbols')?.split(',')).toHaveLength(50);
+    expect(requests[1].request.params.get('symbols')?.split(',')).toHaveLength(1);
+
+    requests[0].flush({ quotes: [aaplQuote], missingSymbols: [], serverTimestamp: 'first' });
+    requests[1].flush({ quotes: [], missingSymbols: ['SYM50'], serverTimestamp: 'second' });
+
+    await expect(result).resolves.toEqual({
+      quotes: [aaplQuote],
+      missingSymbols: ['SYM50'],
+      serverTimestamp: 'second',
+    });
+    http.verify();
+  });
+
   it('returns an empty batch without calling the server when there are no symbols', async () => {
     const result = await firstValueFrom(service.getBatchQuotes([]));
 

@@ -198,6 +198,9 @@ public class OrderExecutionService {
 					"Cannot cancel order with status: " + order.getStatus());
 		}
 
+		accountRepository.findById(order.getAccountId())
+				.orElseThrow(() -> new AccountNotFoundException(order.getAccountId()));
+
 		// NEW orders have not settled yet, so cancellation only changes order state.
 		// Cash and positions are updated later by settleExecution(), if an execution arrives.
 		order.setStatus(OrderStatus.CANCELLED);

@@ -74,12 +74,11 @@
 
     <!-- Positions Table -->
     <div class="positions-section">
-      <div class="positions-header">
-        <h3>Positions</h3>
-        <span class="holdings-count">{{ dashboardData.positions.length }} holdings USD</span>
-      </div>
-
       <mat-card class="positions-card">
+        <div class="positions-header">
+          <h3>Positions</h3>
+          <span class="holdings-count">{{ dashboardData.positions.length }} holdings · USD</span>
+        </div>
         <mat-card-content>
           <div class="table-wrapper">
             <table mat-table [dataSource]="dashboardData.positions" class="positions-table">
@@ -87,7 +86,12 @@
               <ng-container matColumnDef="symbol">
                 <th mat-header-cell *matHeaderCellDef>Symbol</th>
                 <td mat-cell *matCellDef="let position">
-                  <strong>{{ position.symbol }}</strong>
+                  <div class="position-symbol">
+                    <strong>{{ position.symbol }}</strong>
+                    @if (position.instrumentName) {
+                      <span>{{ position.instrumentName }}</span>
+                    }
+                  </div>
                 </td>
               </ng-container>
 
@@ -147,29 +151,98 @@
       </mat-card>
     </div>
 
-    <!-- Workspace Extension -->
-    <div class="workspace-extension">
-      <mat-card class="extension-card">
-        <mat-card-header>
-          <mat-card-title>Market overview</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="extension-description">
-            Reserved for benchmarks, indices, market breadth and watchlists. Account values are live, market widgets are
-            not yet enabled.
+    <!-- Live Market Overview -->
+    <section class="market-overview" aria-labelledby="market-overview-title">
+      <div class="market-overview-header">
+        <div>
+          <p class="eyebrow">LIVE MARKET DATA</p>
+          <h2 id="market-overview-title">Market overview</h2>
+          <p class="market-overview-description">
+            Latest USD quotes from the instrument catalog. Quote availability depends on the live market-data feed.
           </p>
-          <div class="extension-items">
-            <div class="extension-item">
-              <span>Benchmarks & indices</span>
-              <span class="status-planned">Planned</span>
-            </div>
-            <div class="extension-item">
-              <span>Market breadth & watchlist</span>
-              <span class="status-planned">Planned</span>
-            </div>
+        </div>
+        <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+      </div>
+
+      @if (isMarketOverviewLoading) {
+        <div class="market-state" role="status">
+          <mat-spinner diameter="28"></mat-spinner>
+          <span>Loading live market data...</span>
+        </div>
+      } @else if (marketOverviewError) {
+        <div class="market-state market-error" role="alert">
+          <p>{{ marketOverviewError }}</p>
+          <button type="button" class="action-btn action-btn-secondary" (click)="loadMarketOverview()">Retry</button>
+        </div>
+      } @else if (marketOverview; as overview) {
+        <div class="market-stats">
+          <div class="market-stat market-status-stat">
+            <span class="market-stat-label">MARKET STATUS</span>
+            <strong class="market-status-badge">{{ overview.liveQuotes > 0 ? 'LIVE' : 'WAITING' }}</strong>
+            <small>{{ overview.lastUpdated ? formatQuoteTime(overview.lastUpdated) : 'No quote timestamp' }}</small>
           </div>
-        </mat-card-content>
-      </mat-card>
-    </div>
+          <div class="market-stat">
+            <span class="market-stat-label">LIVE QUOTES</span>
+            <strong class="market-stat-value market-gain">{{ overview.liveQuotes | number }}</strong>
+            <small>symbols with a current quote</small>
+          </div>
+          <div class="market-stat">
+            <span class="market-stat-label">AWAITING QUOTES</span>
+            <strong class="market-stat-value market-loss">{{ overview.awaitingQuotes | number }}</strong>
+            <small>symbols not yet received</small>
+          </div>
+          <div class="market-stat">
+            <span class="market-stat-label">TOTAL TRACKED</span>
+            <strong class="market-stat-value">{{ overview.totalTracked | number }}</strong>
+            <small>tradable USD instruments</small>
+          </div>
+        </div>
+
+        <div class="market-snapshot">
+          <div class="market-snapshot-header">
+            <div>
+              <h3>Market snapshot</h3>
+              <p>Latest prices, bid/ask and source for the tracked instrument catalog.</p>
+            </div>
+            <span>{{ overview.rows.length > 12 ? 12 : overview.rows.length }} symbols shown</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="market-table">
+              <thead>
+                <tr>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Instrument</th>
+                  <th scope="col">Asset class</th>
+                  <th scope="col">Last price</th>
+                  <th scope="col">Bid</th>
+                  <th scope="col">Ask</th>
+                  <th scope="col">As of</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of overview.rows.slice(0, 12); track row.instrument.symbol) {
+                  <tr>
+                    <td><strong>{{ row.instrument.symbol }}</strong></td>
+                    <td>{{ row.instrument.name }}</td>
+                    <td>{{ row.instrument.assetClass }}</td>
+                    @if (row.quote; as quote) {
+                      <td class="mono">{{ formatCurrency(quote.lastPrice) }}</td>
+                      <td class="mono">{{ quote.bid === null ? '—' : formatCurrency(quote.bid) }}</td>
+                      <td class="mono">{{ quote.ask === null ? '—' : formatCurrency(quote.ask) }}</td>
+                      <td>{{ formatQuoteTime(quote.asOf) }}</td>
+                      <td><span class="quote-status quote-status-live">LIVE</span></td>
+                    } @else {
+                      <td colspan="4" class="quote-unavailable">Quote unavailable</td>
+                      <td><span class="quote-status quote-status-waiting">WAITING</span></td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </section>
   </ng-container>
 </div>

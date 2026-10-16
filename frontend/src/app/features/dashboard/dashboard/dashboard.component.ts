@@ -8,9 +8,23 @@ import { forkJoin, map, Subject, Subscription, switchMap, timeout, finalize } fr
 import { takeUntil } from 'rxjs/operators';
 import { AccountService } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
-import { Account as ApiAccount, Position as ApiPosition, QuoteSnapshot } from '../../../models/api.models';
+import { Account as ApiAccount, Instrument, Position as ApiPosition, QuoteSnapshot } from '../../../models/api.models';
 import { DashboardData, Position } from '../../../shared/models/account.model';
 import { MarketDataService, normalizeSymbol } from '../../../services/market-data.service';
+import { InstrumentService } from '../../../services/instrument.service';
+
+interface MarketOverviewRow {
+  instrument: Instrument;
+  quote: QuoteSnapshot | null;
+}
+
+interface MarketOverviewData {
+  rows: MarketOverviewRow[];
+  totalTracked: number;
+  liveQuotes: number;
+  awaitingQuotes: number;
+  lastUpdated: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -27,28 +41,45 @@ import { MarketDataService, normalizeSymbol } from '../../../services/market-dat
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   dashboardData: DashboardData | null = null;
+  marketOverview: MarketOverviewData | null = null;
   isLoading = true;
+  isMarketOverviewLoading = true;
   error: string | null = null;
+  marketOverviewError: string | null = null;
 
   displayedColumns: string[] = ['symbol', 'quantity', 'averageCost', 'currentMarketValue', 'gainLoss'];
   private destroy$ = new Subject<void>();
   private dashboardRequest?: Subscription;
+  private marketOverviewRequest?: Subscription;
+  private marketRefreshTimer?: ReturnType<typeof setInterval>;
   private loadingWatchdog?: ReturnType<typeof setTimeout>;
 
   constructor(
     private accountService: AccountService,
     private authService: AuthService,
     private marketDataService: MarketDataService,
+    private instrumentService: InstrumentService,
     private router: Router,
     private changeDetector: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     setTimeout(() => this.loadDashboardData(), 0);
+    this.loadMarketOverview();
+    this.marketRefreshTimer = setInterval(() => {
+      if (!this.isMarketOverviewLoading) {
+        this.loadMarketOverview(false);
+      }
+    }, 10000);
   }
 
   ngOnDestroy(): void {
     this.dashboardRequest?.unsubscribe();
+    this.marketOverviewRequest?.unsubscribe();
+    if (this.marketRefreshTimer) {
+      clearInterval(this.marketRefreshTimer);
+      this.marketRefreshTimer = undefined;
+    }
     this.clearLoadingWatchdog();
     this.destroy$.next();
     this.destroy$.complete();
@@ -83,11 +114,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       account: this.accountService.getAccount(accountId),
       balance: this.accountService.getBalance(accountId),
       positions: this.accountService.getPositions(accountId),
+      instruments: this.instrumentService.getInstruments(),
     })
       .pipe(
-        switchMap(({ account, balance, positions }) =>
+        switchMap(({ account, balance, positions, instruments }) =>
           this.marketDataService.getBatchQuotes(positions.map((position) => position.symbol)).pipe(
-            map((batch) => ({ account, balance, positions, quotes: batch.quotes }))
+            map((batch) => ({ account, balance, positions, instruments, quotes: batch.quotes }))
           )
         ),
         timeout(10000),
@@ -97,9 +129,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ account, balance, positions, quotes }) => {
+        next: ({ account, balance, positions, instruments, quotes }) => {
           try {
-            this.dashboardData = this.buildDashboardData(account, balance, positions, quotes);
+            this.dashboardData = this.buildDashboardData(account, balance, positions, instruments, quotes);
             this.error = null;
           } catch (error) {
             this.dashboardData = null;
@@ -134,14 +166,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
   refreshData(): void {
     this.accountService.clearCache();
     this.loadDashboardData();
+    this.loadMarketOverview();
+  }
+
+  loadMarketOverview(showLoading = true): void {
+    this.marketOverviewRequest?.unsubscribe();
+    if (showLoading) {
+      this.isMarketOverviewLoading = true;
+    }
+    this.marketOverviewError = null;
+
+    this.marketOverviewRequest = this.instrumentService.getInstruments().pipe(
+      map((instruments) => instruments
+        .filter((instrument) => instrument.tradable && instrument.currency === 'USD' && instrument.assetClass !== 'CASH')
+        .sort((left, right) => left.symbol.localeCompare(right.symbol))),
+      switchMap((instruments) => this.marketDataService.getBatchQuotes(instruments.map((instrument) => instrument.symbol)).pipe(
+        map((batch) => ({ instruments, batch }))
+      )),
+      timeout(10000),
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isMarketOverviewLoading = false;
+      })
+    ).subscribe({
+      next: ({ instruments, batch }) => {
+        const quotes = new Map(batch.quotes.map((quote) => [normalizeSymbol(quote.symbol), quote]));
+        const rows = instruments.map((instrument) => ({
+          instrument,
+          quote: quotes.get(normalizeSymbol(instrument.symbol)) ?? null,
+        }));
+
+        this.marketOverview = {
+          rows,
+          totalTracked: instruments.length,
+          liveQuotes: batch.quotes.length,
+          awaitingQuotes: batch.missingSymbols.length,
+          lastUpdated: batch.serverTimestamp,
+        };
+        this.marketOverviewError = null;
+        this.changeDetector.detectChanges();
+      },
+      error: (error) => {
+        this.marketOverview = null;
+        this.marketOverviewError = error?.name === 'TimeoutError'
+          ? 'The market data service took too long to respond. Please retry.'
+          : 'Failed to load live market data. Please try again.';
+        console.error('Market overview error:', error);
+        this.changeDetector.detectChanges();
+      },
+    });
   }
 
   private buildDashboardData(
     account: ApiAccount,
     balance: { accountId: number; cashBalance: number },
     positions: ApiPosition[],
+    instruments: Instrument[],
     quotes: QuoteSnapshot[]
   ): DashboardData {
+    const instrumentNames = new Map(
+      instruments.map((instrument) => [normalizeSymbol(instrument.symbol), instrument.name])
+    );
     const mappedPositions: Position[] = positions.map((position, index) => {
       const costBasis = position.quantity * position.averageCost;
       const quote = quotes.find(
@@ -155,6 +240,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         id: index,
         accountId: position.accountId,
         symbol: position.symbol,
+        instrumentName: instrumentNames.get(normalizeSymbol(position.symbol)),
         quantity: position.quantity,
         averageCost: position.averageCost,
         currentMarketValue: marketValue,
@@ -246,5 +332,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     return `Updated ${datePart}, ${timePart} UTC`;
+  }
+
+  formatQuoteTime(value: Date | string): string {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return 'Unavailable';
+    }
+
+    return date.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'UTC',
+    }) + ' UTC';
   }
 }
