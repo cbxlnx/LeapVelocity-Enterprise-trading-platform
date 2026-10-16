@@ -206,10 +206,21 @@ form {
 }
 
 .security-icon {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
   flex: 0 0 auto;
   color: #526a82;
-  font-family: var(--font-mono);
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
   font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.security-icon::before {
+  content: 'i';
 }
 
 .security-note p {

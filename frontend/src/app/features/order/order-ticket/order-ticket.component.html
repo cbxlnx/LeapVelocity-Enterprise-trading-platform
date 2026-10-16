@@ -135,7 +135,7 @@
         </div>
 
         <div class="ready-note">
-          <strong>ⓘ &nbsp; Ready for review</strong>
+          <strong><span class="ready-icon" aria-hidden="true"></span>Ready for review</strong>
           <span>Check the symbol, side, quantity and price in the summary. No order has been submitted.</span>
         </div>
       </form>
@@ -171,7 +171,7 @@
           {{ isSubmitting ? 'Submitting...' : 'Place Order' }}
         </button>
         <p *ngIf="orderError" class="order-error" role="alert">{{ orderError }}</p>
-        <p class="review-note">ⓘ &nbsp; Submit once. The API will confirm whether the order was accepted.</p>
+        <p class="review-note"><span class="review-icon" aria-hidden="true"></span>Submit once. The API will confirm whether the order was accepted.</p>
       </section>
 
       <section class="result-panel">
@@ -221,7 +221,7 @@
       </header>
 
       <div class="confirmation-notice" role="status">
-        <span class="confirmation-icon" aria-hidden="true">✓</span>
+        <span class="confirmation-icon" aria-hidden="true"></span>
         <div>
           <strong>{{ orderResponse.status }}</strong>
           <p>{{ orderResponse.message }}</p>

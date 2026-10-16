@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { BatchQuotesResponse, QuoteSnapshot } from '../models/api.models';
 import { handleApiError } from './api-error';
@@ -11,6 +11,7 @@ export function normalizeSymbol(symbol: string): string {
 
 @Injectable({ providedIn: 'root' })
 export class MarketDataService {
+  private static readonly maxSymbolsPerRequest = 50;
   private readonly quotesUrl = `${environment.apiUrl}/v1/market-data/quotes`;
 
   constructor(private readonly http: HttpClient) {}
@@ -31,10 +32,20 @@ export class MarketDataService {
       return of({ quotes: [], missingSymbols: [], serverTimestamp: '' });
     }
 
-    return this.http
-      .get<BatchQuotesResponse>(this.quotesUrl, {
-        params: { symbols: uniqueSymbols.join(',') },
-      })
+    const chunks: string[][] = [];
+    for (let index = 0; index < uniqueSymbols.length; index += MarketDataService.maxSymbolsPerRequest) {
+      chunks.push(uniqueSymbols.slice(index, index + MarketDataService.maxSymbolsPerRequest));
+    }
+
+    return forkJoin(chunks.map((chunk) => this.http.get<BatchQuotesResponse>(this.quotesUrl, {
+      params: { symbols: chunk.join(',') },
+    }))).pipe(
+      map((responses) => ({
+        quotes: responses.flatMap((response) => response.quotes),
+        missingSymbols: responses.flatMap((response) => response.missingSymbols),
+        serverTimestamp: responses.at(-1)?.serverTimestamp ?? '',
+      }))
+    )
       .pipe(catchError(handleApiError('load market quotes')));
   }
 }
