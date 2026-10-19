@@ -56,16 +56,16 @@ pipeline {
                         sh -c "npm ci && npm test -- --watch=false --coverage"
 
                         find coverage -type f -name 'lcov.info' -print
-                        test -s coverage/leap-ui/lcov.info
+                        test -s coverage/lcov.info
                     '''
 
                     withSonarQubeEnv('sonar-server') {
                         sh '''
-                            test -s coverage/leap-ui/lcov.info
+                            test -s coverage/lcov.info
                             echo "LCOV report:"
-                            head -10 coverage/leap-ui/lcov.info
+                            head -10 coverage/lcov.info
                             echo "LCOV source files:"
-                            grep '^SF:' coverage/leap-ui/lcov.info | head
+                            grep '^SF:' coverage/lcov.info | head
 
                             docker run --rm \
                             -e SONAR_HOST_URL="$SONAR_HOST_URL" \
@@ -76,7 +76,7 @@ pipeline {
                             sonar-scanner \
                                 -Dsonar.projectBaseDir=/usr/src \
                                 -Dsonar.projectKey=leapvelocity-frontend \
-                                -Dsonar.javascript.lcov.reportPaths=coverage/leap-ui/lcov.info \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                                 -Dsonar.verbose=true
                         '''
                     }
