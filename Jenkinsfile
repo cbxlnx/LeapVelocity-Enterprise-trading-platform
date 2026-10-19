@@ -61,12 +61,23 @@ pipeline {
 
                     withSonarQubeEnv('sonar-server') {
                         sh '''
+                            test -s coverage/leap-ui/lcov.info
+                            echo "LCOV report:"
+                            head -10 coverage/leap-ui/lcov.info
+                            echo "LCOV source files:"
+                            grep '^SF:' coverage/leap-ui/lcov.info | head
+
                             docker run --rm \
                             -e SONAR_HOST_URL="$SONAR_HOST_URL" \
                             -e SONAR_TOKEN="$SONAR_AUTH_TOKEN" \
                             -v "$PWD:/usr/src" \
                             -w /usr/src \
-                            sonarsource/sonar-scanner-cli:latest
+                            sonarsource/sonar-scanner-cli:latest \
+                            sonar-scanner \
+                                -Dsonar.projectBaseDir=/usr/src \
+                                -Dsonar.projectKey=leapvelocity-frontend \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/leap-ui/lcov.info \
+                                -Dsonar.verbose=true
                         '''
                     }
                 }
