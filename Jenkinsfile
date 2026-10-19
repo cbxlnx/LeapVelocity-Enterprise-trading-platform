@@ -46,6 +46,12 @@ pipeline {
             }
         }
         stage('Frontend Tests and Quality Gate') {
+            agent {
+                docker {
+                    image 'node:24-alpine'
+                    reuseNode true
+                }
+            }
             steps {
                 dir('frontend') {
                     sh 'npm ci'
@@ -64,7 +70,6 @@ pipeline {
                 }
             }
         }
-
         stage('Quality Gate Backend') {
             steps {
                 withSonarQubeEnv('sonar-server') {
