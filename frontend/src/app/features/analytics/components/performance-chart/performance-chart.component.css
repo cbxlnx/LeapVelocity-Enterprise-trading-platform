@@ -11,3 +11,13 @@ text { fill: #586c7d; font: 12px var(--font-ui, sans-serif); }
 .point.endpoint, .point:hover { opacity: 1; }
 .portfolio-point { fill: #3f5fa8; }
 .benchmark-point { fill: white; stroke: #c05819; stroke-width: 2; }
+
+:host-context(.dark-theme) {
+	text { fill: #b3c0cb; }
+	.grid-line { stroke: #3d4f5e; }
+	.baseline { stroke: #718596; }
+	.portfolio-line { stroke: #8ca9ff; }
+	.benchmark-line { stroke: #f08a52; }
+	.portfolio-point { fill: #8ca9ff; }
+	.benchmark-point { fill: var(--surface); stroke: #f08a52; }
+}

@@ -34,5 +34,19 @@ tbody th { color: #142337; }
 .valuation-issues ul { padding-left: 20px; line-height: 1.7; }
 .valuation-issues p { margin-bottom: 0; color: inherit; font-size: 13px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+:host-context(.dark-theme) {
+	.overview { background: var(--surface-raised); border-color: var(--border); }
+	h2, h3, .metric strong, tbody th { color: var(--text-strong); }
+	p, .metric span, .metric small { color: var(--text-muted); }
+	button { background: var(--surface); border-color: var(--border); color: var(--text); }
+	.metrics, th, td { border-color: var(--border); }
+	thead th { background: var(--surface-subtle); color: var(--text-muted); }
+	td, .allocation-label { color: var(--text); }
+	.allocation-track { background: #344553; }
+	.positive { color: #71d3a8 !important; }
+	.negative { color: #ff8f8f !important; }
+}
+
 @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .overview { padding: 16px; } .overview-heading { flex-direction: column; } .metrics { gap: 20px 12px; } }

@@ -6,3 +6,10 @@ text { fill: #586c7d; font: 12px var(--font-ui, sans-serif); }
 .price-line { fill: none; stroke: #3f5fa8; stroke-width: 2.5; stroke-linejoin: round; }
 .price-point { fill: #3f5fa8; opacity: 0; }
 .price-point.endpoint, .price-point:hover { opacity: 1; }
+
+:host-context(.dark-theme) {
+	text { fill: #b3c0cb; }
+	.grid-line { stroke: #3d4f5e; }
+	.price-line { stroke: #8ca9ff; }
+	.price-point { fill: #8ca9ff; }
+}

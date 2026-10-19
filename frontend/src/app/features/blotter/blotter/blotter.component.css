@@ -60,6 +60,55 @@ tbody tr:hover { background: #f8fafb; }
 .loading-state, .empty-state, .error-state { padding: 28px 16px; color: #71859a; font-size: 10px; text-align: center; }
 .error-state p { margin: 0 0 10px; color: #b13339; }
 
+:host-context(.dark-theme) {
+  .blotter-container,
+  .filter-panel,
+  .history-card {
+    background: var(--surface-raised);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .blotter-container { background: var(--canvas); }
+  .page-header h1, .history-heading h2 { color: var(--text-strong); }
+  .eyebrow, .page-header p:last-child, .summary-row, .history-heading span, .table-footer, .loading-state, .empty-state { color: var(--text-muted); }
+  .filter-panel label, .filter-panel select, th, td, .page-number { color: var(--text); }
+
+  .filter-panel select,
+  .refresh-button,
+  .table-footer button {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  thead { background: var(--surface-subtle); }
+  td { border-bottom-color: var(--border); }
+  tbody tr:hover { background: var(--surface-subtle); }
+
+  .summary-badge.new,
+  .status-new,
+  .status-cancelled {
+    background: #465666;
+    color: #e8eef3;
+    border: 1px solid #8fa4b5;
+  }
+
+  .summary-badge.filled,
+  .status-filled,
+  .side-badge.buy {
+    background: #176b4b;
+    color: #f4f7fa;
+    border: 1px solid #58c09a;
+  }
+
+  .side-badge.sell,
+  .status-rejected {
+    background: #71343a;
+    color: #fff0f0;
+    border: 1px solid #ff8f8f;
+  }
+}
+
 /* Increase scanability of filters, table content, and status metadata. */
 .eyebrow,
 .page-header p:last-child,

@@ -435,6 +435,7 @@ form {
   margin-top: 0;
   padding: 0 12px;
   border-radius: 3px;
+  border: 1px solid #e7a06f;
   background: #c84f16;
   font-size: 10px;
   font-weight: 600;
@@ -448,6 +449,14 @@ form {
 
 .login-button:active:not(:disabled) {
   transform: none;
+}
+
+.login-button:disabled {
+  background: rgba(63, 95, 168, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .security-note {
@@ -519,6 +528,116 @@ form {
 .restriction {
   right: 36px;
   bottom: 28px;
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 36px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: #eaf0f5;
+  cursor: pointer;
+  font: 500 20px var(--font-ui);
+}
+
+.auth-theme-toggle span {
+  display: block;
+  width: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.auth-theme-toggle:hover,
+.auth-theme-toggle:focus-visible {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #ffffff;
+}
+
+:host-context(.dark-theme) {
+  .login-container {
+    background: var(--canvas);
+    color: var(--text);
+  }
+
+  .login-card {
+    background: var(--surface-raised);
+    border-color: var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .login-header h1,
+  .form-label {
+    color: var(--text-strong);
+  }
+
+  .login-header .eyebrow,
+  .login-header .subtitle,
+  .security-note,
+  .security-icon,
+  .account-link,
+  .copyright,
+  .restriction {
+    color: var(--text-muted);
+  }
+
+  .form-input {
+    background: var(--surface-subtle);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .form-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .form-input:focus {
+    background: var(--surface);
+  }
+
+  .form-input:disabled {
+    background: #263642;
+    color: var(--text-muted);
+  }
+
+  .form-input.input-error {
+    background: #3b252a;
+    border-color: #ff8f8f;
+  }
+
+  .alert-error {
+    background: #3b252a;
+    border-color: #8f4b52;
+    color: #ffb0b0;
+  }
+
+  .error-message {
+    color: #ff9b9b;
+  }
+
+  .security-note {
+    border-top-color: var(--border);
+  }
+
+  .account-link a {
+    color: #b9dcf5;
+  }
+
+  .account-link a:hover {
+    color: #ffffff;
+  }
+
+  .login-button {
+    border: 1px solid #f08a52;
+    box-shadow: 0 0 0 1px rgba(240, 138, 82, .25);
+  }
 }
 
 /* Readability adjustments for dense authentication copy and controls. */

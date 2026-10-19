@@ -18,6 +18,15 @@
             <div class="name">{{ userName }}</div>
             <div class="acc">{{ accountId }}</div>
         </div>
+        <button
+            type="button"
+            class="theme-toggle"
+            (click)="toggleTheme()"
+            [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+            [attr.aria-pressed]="themeService.theme() === 'dark'"
+            [attr.title]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+            <span aria-hidden="true">{{ themeService.theme() === 'dark' ? '☀' : '☾' }}</span>
+        </button>
         <button type="button" class="logout" (click)="logout()">Logout</button>
     </div>
 </header>

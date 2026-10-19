@@ -26,4 +26,27 @@ h2 { margin: 0 0 8px; font-size: 18px; color: #142337; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e1e6ec; border-top-color: #3f5fa8; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+:host-context(.dark-theme) {
+	.analytics-container,
+	.chart-card,
+	.simulation,
+	.overview {
+		background: var(--surface-raised);
+		color: var(--text);
+		border-color: var(--border);
+	}
+
+	.analytics-container { background: var(--canvas); }
+
+	h1, h2, .latest-price strong { color: var(--text-strong); }
+	.eyebrow, .subtitle, .chart-heading p, .chart-note, .latest-price span, .state { color: var(--text-muted); }
+
+	input, select {
+		background: var(--surface);
+		border-color: var(--border);
+		color: var(--text);
+	}
+}
+
 @media (max-width: 640px) { .analytics-container { padding: 20px 12px; } .chart-card { padding: 16px; } .chart-heading { flex-direction: column; } .latest-price { text-align: left; } h1 { font-size: 23px; } }

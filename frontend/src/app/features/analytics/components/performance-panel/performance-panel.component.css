@@ -25,6 +25,15 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 .initial-weights span { display: inline-block; margin-right: 12px; color: #243444; }
 .simulation-state { min-height: 100px; padding: 28px 0; color: #586c7d; line-height: 1.7; }
 .simulation-error { color: #b13339; }
+
+:host-context(.dark-theme) {
+	.simulation { background: var(--surface-raised); border-color: var(--border); }
+	h2, label, .initial-weights span { color: var(--text-strong); }
+	.simulation-heading p, .effective-range, .simulation-returns span, .legend, .method-note, .initial-weights, .simulation-state { color: var(--text-muted); }
+	select, button { background: var(--surface); border-color: var(--border); color: var(--text); }
+	.simulation-returns strong { color: #71d3a8; }
+	.simulation-returns strong.negative { color: #ff8f8f; }
+}
 .simulation-error ul { padding-left: 20px; }
 @media (max-width: 900px) { .simulation-heading { flex-direction: column; } }
 @media (max-width: 480px) { .simulation { padding: 16px; } .simulation-returns { gap: 28px; } .simulation-returns strong { font-size: 22px; } }
