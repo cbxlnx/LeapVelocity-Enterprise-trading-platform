@@ -14,6 +14,14 @@
     </nav>
 
     <div class="user-area">
+        <a
+            routerLink="/settings"
+            routerLinkActive="settings-active"
+            class="settings-link"
+            aria-label="Open account settings"
+            title="Account settings">
+            <span aria-hidden="true">⚙</span>
+        </a>
         <div class="user-meta">
             <div class="name">{{ userName }}</div>
             <div class="acc">{{ accountId }}</div>

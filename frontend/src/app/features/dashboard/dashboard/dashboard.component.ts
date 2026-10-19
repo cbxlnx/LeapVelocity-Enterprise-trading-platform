@@ -16,6 +16,7 @@ import { InstrumentService } from '../../../services/instrument.service';
 interface MarketOverviewRow {
   instrument: Instrument;
   quote: QuoteSnapshot | null;
+  priceDirection: 'up' | 'down' | 'unchanged';
 }
 
 interface MarketOverviewData {
@@ -67,9 +68,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     setTimeout(() => this.loadDashboardData(), 0);
     this.loadMarketOverview();
     this.marketRefreshTimer = setInterval(() => {
-      if (!this.isMarketOverviewLoading) {
-        this.loadMarketOverview(false);
-      }
+      this.refreshMarketData();
     }, 10000);
   }
 
@@ -169,6 +168,51 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadMarketOverview();
   }
 
+  private refreshMarketData(): void {
+    if (this.isMarketOverviewLoading || !this.dashboardData) {
+      return;
+    }
+
+    const positions = this.dashboardData.positions;
+    this.marketOverviewRequest?.unsubscribe();
+    this.isMarketOverviewLoading = true;
+    this.marketOverviewError = null;
+
+    this.marketOverviewRequest = this.instrumentService.getInstruments().pipe(
+      map((instruments) => instruments
+        .filter((instrument) => instrument.tradable && instrument.currency === 'USD' && instrument.assetClass !== 'CASH')
+        .sort((left, right) => left.symbol.localeCompare(right.symbol))),
+      switchMap((instruments) => {
+        const symbols = [
+          ...instruments.map((instrument) => instrument.symbol),
+          ...positions.map((position) => position.symbol),
+        ];
+        return this.marketDataService.getBatchQuotes(symbols).pipe(
+          map((batch) => ({ instruments, batch }))
+        );
+      }),
+      timeout(10000),
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.isMarketOverviewLoading = false;
+        this.changeDetector.detectChanges();
+      })
+    ).subscribe({
+      next: ({ instruments, batch }) => {
+        this.updateMarketOverview(instruments, batch);
+        this.updatePositionData(batch);
+        this.changeDetector.detectChanges();
+      },
+      error: (error) => {
+        this.marketOverviewError = error?.name === 'TimeoutError'
+          ? 'The market data service took too long to respond. Please retry.'
+          : 'Failed to refresh live market data. Please try again.';
+        console.error('Market refresh error:', error);
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
   loadMarketOverview(showLoading = true): void {
     this.marketOverviewRequest?.unsubscribe();
     if (showLoading) {
@@ -187,22 +231,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$),
       finalize(() => {
         this.isMarketOverviewLoading = false;
+        this.changeDetector.detectChanges();
       })
     ).subscribe({
       next: ({ instruments, batch }) => {
-        const quotes = new Map(batch.quotes.map((quote) => [normalizeSymbol(quote.symbol), quote]));
-        const rows = instruments.map((instrument) => ({
-          instrument,
-          quote: quotes.get(normalizeSymbol(instrument.symbol)) ?? null,
-        }));
-
-        this.marketOverview = {
-          rows,
-          totalTracked: instruments.length,
-          liveQuotes: batch.quotes.length,
-          awaitingQuotes: batch.missingSymbols.length,
-          lastUpdated: batch.serverTimestamp,
-        };
+        this.updateMarketOverview(instruments, batch);
         this.marketOverviewError = null;
         this.changeDetector.detectChanges();
       },
@@ -215,6 +248,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.changeDetector.detectChanges();
       },
     });
+  }
+
+  private updateMarketOverview(instruments: Instrument[], batch: { quotes: QuoteSnapshot[]; missingSymbols: string[]; serverTimestamp: string }): void {
+    const quotes = new Map(batch.quotes.map((quote) => [normalizeSymbol(quote.symbol), quote]));
+    const previousQuotes = new Map(
+      (this.marketOverview?.rows ?? [])
+        .filter((row) => row.quote)
+        .map((row) => [normalizeSymbol(row.instrument.symbol), row.quote as QuoteSnapshot])
+    );
+    const rows = instruments.map((instrument) => ({
+      instrument,
+      quote: quotes.get(normalizeSymbol(instrument.symbol)) ?? null,
+      priceDirection: this.getPriceDirection(
+        previousQuotes.get(normalizeSymbol(instrument.symbol)),
+        quotes.get(normalizeSymbol(instrument.symbol))
+      ),
+    }));
+
+    this.marketOverview = {
+      rows,
+      totalTracked: instruments.length,
+      liveQuotes: batch.quotes.length,
+      awaitingQuotes: batch.missingSymbols.length,
+      lastUpdated: batch.serverTimestamp,
+    };
+  }
+
+  private updatePositionData(batch: { quotes: QuoteSnapshot[] }): void {
+    const positions = this.dashboardData?.positions;
+    if (!positions?.length) {
+      return;
+    }
+
+    const quotes = new Map(batch.quotes.map((quote) => [normalizeSymbol(quote.symbol), quote]));
+    const updatedPositions = positions.map((position) => {
+            const quote = quotes.get(normalizeSymbol(position.symbol));
+            if (!quote) {
+              return { ...position, quoteAvailable: false };
+            }
+
+            const costBasis = position.quantity * position.averageCost;
+            const currentMarketValue = position.quantity * quote.lastPrice;
+            const gainLoss = currentMarketValue - costBasis;
+            return {
+              ...position,
+              currentMarketValue,
+              gainLoss,
+              gainLossPercent: costBasis === 0 ? 0 : (gainLoss / costBasis) * 100,
+              quoteAvailable: true,
+            };
+          });
+    const totalMarketValue = updatedPositions.reduce(
+            (total, position) => total + (position.currentMarketValue ?? 0),
+            0
+          );
+    const unrealizedGainLoss = updatedPositions.reduce(
+            (total, position) => total + (position.gainLoss ?? 0),
+            0
+          );
+    const portfolioCostBasis = updatedPositions
+            .filter((position) => position.quoteAvailable)
+            .reduce((total, position) => total + position.quantity * position.averageCost, 0);
+
+    if (this.dashboardData) {
+      this.dashboardData = {
+              ...this.dashboardData,
+              positions: updatedPositions,
+              totalMarketValue,
+              totalEquity: this.dashboardData.balance.cashBalance + totalMarketValue,
+              portfolioCostBasis,
+              unrealizedGainLoss,
+              unrealizedGainLossPercent: portfolioCostBasis === 0
+                ? 0
+                : (unrealizedGainLoss / portfolioCostBasis) * 100,
+              unavailableQuoteCount: updatedPositions.filter((position) => !position.quoteAvailable).length,
+            };
+    }
   }
 
   private buildDashboardData(
@@ -300,6 +410,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getGainLossClass(gainLoss: number | undefined): string {
     return gainLoss !== undefined && gainLoss < 0 ? 'loss' : 'gain';
+  }
+
+  getGainLossDirection(gainLoss: number | undefined): string {
+    if (gainLoss === undefined || gainLoss === 0) {
+      return '→';
+    }
+    return gainLoss > 0 ? '↑' : '↓';
+  }
+
+  getPriceDirection(previous: QuoteSnapshot | undefined, current: QuoteSnapshot | undefined): 'up' | 'down' | 'unchanged' {
+    if (!previous || !current || current.lastPrice === previous.lastPrice) {
+      return 'unchanged';
+    }
+    return current.lastPrice > previous.lastPrice ? 'up' : 'down';
+  }
+
+  getPriceDirectionArrow(direction: 'up' | 'down' | 'unchanged'): string {
+    return direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→';
   }
 
   formatCurrency(value: number): string {

@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, MonoTypeOperatorFunction, catchError, retry, shareReplay, timer } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Account, Balance, Order, Position } from '../models/api.models';
+import { Account, Balance, DepositCashRequest, Order, Position } from '../models/api.models';
 import { handleApiError } from './api-error';
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +27,12 @@ export class AccountService {
         this.retryTransient(),
         catchError(handleApiError('load the account balance'))
       )
+    );
+  }
+
+  depositCash(accountId: number, amount: number): Observable<Balance> {
+    return this.http.post<Balance>(`${this.accountsUrl}/${accountId}/deposit`, { amount } as DepositCashRequest).pipe(
+      catchError(handleApiError('deposit account cash'))
     );
   }
 

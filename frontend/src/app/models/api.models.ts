@@ -16,6 +16,10 @@ export interface Balance {
   cashBalance: number;
 }
 
+export interface DepositCashRequest {
+  amount: number;
+}
+
 export interface Position {
   accountId: number;
   symbol: string;

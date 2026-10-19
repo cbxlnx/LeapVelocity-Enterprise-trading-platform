@@ -52,6 +52,7 @@
           <div class="card-section">
             <p class="label">UNREALIZED GAIN / LOSS</p>
             <h3 class="gain-loss-value" [ngClass]="getGainLossClass(dashboardData.unrealizedGainLoss)">
+              <span class="gain-loss-direction" aria-hidden="true">{{ getGainLossDirection(dashboardData.unrealizedGainLoss) }}</span>
               {{ formatCurrency(dashboardData.unrealizedGainLoss) }}
             </h3>
             <p class="gain-loss-percent" [ngClass]="getGainLossClass(dashboardData.unrealizedGainLoss)">
@@ -124,6 +125,7 @@
                 <th mat-header-cell *matHeaderCellDef>Gain/Loss</th>
                 <td mat-cell *matCellDef="let position" [ngClass]="position.quoteAvailable ? getGainLossClass(position.gainLoss) : ''">
                   @if (position.quoteAvailable) {
+                    <span class="gain-loss-direction" aria-hidden="true">{{ getGainLossDirection(position.gainLoss) }}</span>
                     <strong>{{ formatCurrency(position.gainLoss || 0) }}</strong>
                     <span class="percent">({{ formatPercent(position.gainLossPercent || 0) }})</span>
                   } @else {
@@ -227,7 +229,10 @@
                     <td>{{ row.instrument.name }}</td>
                     <td>{{ row.instrument.assetClass }}</td>
                     @if (row.quote; as quote) {
-                      <td class="mono">{{ formatCurrency(quote.lastPrice) }}</td>
+                      <td class="mono" [ngClass]="'price-' + row.priceDirection">
+                        <span class="price-direction" aria-hidden="true">{{ getPriceDirectionArrow(row.priceDirection) }}</span>
+                        {{ formatCurrency(quote.lastPrice) }}
+                      </td>
                       <td class="mono">{{ quote.bid === null ? '—' : formatCurrency(quote.bid) }}</td>
                       <td class="mono">{{ quote.ask === null ? '—' : formatCurrency(quote.ask) }}</td>
                       <td>{{ formatQuoteTime(quote.asOf) }}</td>
