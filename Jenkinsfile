@@ -45,8 +45,27 @@ pipeline {
                 '''
             }
         }
+        stage('Frontend Tests and Quality Gate') {
+            steps {
+                dir('frontend') {
+                    sh 'npm ci'
+                    sh 'npm test -- --watch=false --coverage'
 
-        stage('Quality Gate') {
+                    withSonarQubeEnv('sonar-server') {
+                        sh '''
+                            docker run --rm \
+                            -e SONAR_HOST_URL="$SONAR_HOST_URL" \
+                            -e SONAR_TOKEN="$SONAR_AUTH_TOKEN" \
+                            -v "$(pwd):/usr/src" \
+                            -w /usr/src \
+                            sonarsource/sonar-scanner-cli:latest
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate Backend') {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''
