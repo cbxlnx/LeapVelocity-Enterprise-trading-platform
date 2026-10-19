@@ -11,6 +11,27 @@
 :root {
 --font-ui: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+--canvas: #f3f5f6;
+--surface: #ffffff;
+--surface-subtle: #f8fafc;
+--text: #192830;
+--text-strong: #142337;
+--text-muted: #586c7d;
+--border: #d5dde6;
+--surface-raised: #ffffff;
+--surface-inset: #f3f5f6;
+}
+
+:root.dark-theme {
+  --canvas: #0f161e;
+  --surface: #1a2631;
+  --surface-raised: #22313e;
+  --surface-subtle: #293b4a;
+  --surface-inset: #131e27;
+  --text: #e8eef3;
+  --text-strong: #f4f7fa;
+  --text-muted: #b3c0cb;
+  --border: #4b6071;
 }
 
 // Keep Angular Material typography on the same bundled font as the application.
@@ -40,8 +61,207 @@ html, body {
 
 body {
   font-family: var(--font-ui);
-  background-color: #f3f5f6;
-  color: #192830;
+  background-color: var(--canvas);
+  color: var(--text);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+:root.dark-theme body {
+  color-scheme: dark;
+}
+
+:root.dark-theme body h1,
+:root.dark-theme body h2,
+:root.dark-theme body h3,
+:root.dark-theme body h4,
+:root.dark-theme body strong,
+:root.dark-theme body label,
+:root.dark-theme body th,
+:root.dark-theme body td,
+:root.dark-theme body p,
+:root.dark-theme body span {
+  color: var(--text);
+}
+
+:root.dark-theme body h1,
+:root.dark-theme body h2,
+:root.dark-theme body h3,
+:root.dark-theme body h4 {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body input,
+:root.dark-theme body select,
+:root.dark-theme body textarea,
+:root.dark-theme body button {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body input::placeholder,
+:root.dark-theme body textarea::placeholder {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body table thead tr,
+:root.dark-theme body table tbody tr:hover {
+  background-color: var(--surface-subtle);
+}
+
+:root.dark-theme body table,
+:root.dark-theme body table tbody tr,
+:root.dark-theme body .simulation,
+:root.dark-theme body .overview,
+:root.dark-theme body .filter-panel,
+:root.dark-theme body .history-card,
+:root.dark-theme body mat-card {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+:root.dark-theme body mat-card,
+:root.dark-theme body .chart-card,
+:root.dark-theme body .simulation,
+:root.dark-theme body .overview,
+:root.dark-theme body .filter-panel,
+:root.dark-theme body .history-card,
+:root.dark-theme body .order-panel,
+:root.dark-theme body .review-panel,
+:root.dark-theme body .result-panel,
+:root.dark-theme body .account-strip {
+  background-color: var(--surface-raised);
+}
+
+:root.dark-theme body table thead tr,
+:root.dark-theme body .table-wrapper,
+:root.dark-theme body .holdings-scroll {
+  background-color: var(--surface-inset);
+}
+
+:root.dark-theme body .text-muted,
+:root.dark-theme body .text-slate,
+:root.dark-theme body .eyebrow,
+:root.dark-theme body .subtitle {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .bg-canvas {
+  background-color: var(--canvas);
+}
+
+:root.dark-theme body .bg-surface {
+  background-color: var(--surface);
+}
+
+:root.dark-theme body .analytics-container,
+:root.dark-theme body .blotter-container,
+:root.dark-theme body .dashboard-container,
+:root.dark-theme body .order-container,
+:root.dark-theme body .login-container,
+:root.dark-theme body .register-container,
+:root.dark-theme body .signed-out-container,
+:root.dark-theme body .not-found-container {
+  background-color: var(--canvas);
+  color: var(--text);
+}
+
+:root.dark-theme body .mat-mdc-menu-panel,
+:root.dark-theme body .mat-mdc-dialog-container,
+:root.dark-theme body .mat-mdc-select-panel,
+:root.dark-theme body .mat-mdc-autocomplete-panel {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+:root.dark-theme body .order-confirmation,
+:root.dark-theme body .cancel-confirmation {
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+
+:root.dark-theme body .confirmation-header h2,
+:root.dark-theme body .confirmation-order-id,
+:root.dark-theme body .confirmation-summary dd,
+:root.dark-theme body .cancel-confirmation-header h2,
+:root.dark-theme body .cancel-order-summary strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .confirmation-header p,
+:root.dark-theme body .confirmation-summary dt,
+:root.dark-theme body .cancel-confirmation-header > p:last-child,
+:root.dark-theme body .cancel-order-summary span,
+:root.dark-theme body .cancel-confirmation-note {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .confirmation-summary dl,
+:root.dark-theme body .cancel-order-summary {
+  border-color: var(--border);
+}
+
+:root.dark-theme body .confirmation-secondary,
+:root.dark-theme body .cancel-keep-button {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .confirmation-secondary:hover,
+:root.dark-theme body .cancel-keep-button:hover {
+  background: var(--surface-subtle);
+}
+
+:root.dark-theme body .confirmation-notice {
+  background: #193f32;
+  color: #9ce4bf;
+}
+
+:root.dark-theme body .status-badge {
+  background: #176b4b;
+  border: 1px solid #58c09a;
+  color: #f4f7fa;
+}
+
+:root.dark-theme body .status-badge.status-suspended,
+:root.dark-theme body .status-badge.status-closed,
+:root.dark-theme body .status-badge.status-unavailable {
+  background: #71343a;
+  border-color: #ff8f8f;
+  color: #fff0f0;
+}
+
+:root.dark-theme body .instrument-options {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+:root.dark-theme body .instrument-option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+:root.dark-theme body .instrument-option:hover,
+:root.dark-theme body .instrument-option:focus-visible {
+  background: #385164;
+  color: #ffffff;
+}
+
+:root.dark-theme body .instrument-option strong {
+  color: #ffffff;
+}
+
+:root.dark-theme body .instrument-option span {
+  color: #c4d0da;
+}
+
+.place-order-button:disabled {
+  background: rgba(63, 95, 168, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 // ===== ENTERPRISE COLOR UTILITIES =====

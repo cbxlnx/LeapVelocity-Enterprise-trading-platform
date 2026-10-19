@@ -237,7 +237,7 @@
 .action-btn-primary {
   background: #c05819;
   color: #ffffff;
-  border-color: #c05819;
+  border-color: #e7a06f;
 }
 
 .action-btn-primary:hover {
@@ -576,6 +576,114 @@
 
 .market-error p {
   margin: 0;
+}
+
+:host-context(.dark-theme) {
+  .dashboard-container {
+    background-color: var(--canvas);
+    color: var(--text);
+  }
+
+  .header-content h1,
+  .market-overview-header h2,
+  .positions-header h3,
+  .market-snapshot-header h3 {
+    color: var(--text-strong);
+  }
+
+  .eyebrow,
+  .subtitle,
+  .holdings-count,
+  .position-symbol span,
+  .quote-unavailable,
+  .quote-note,
+  .market-overview-description,
+  .market-snapshot-header p,
+  .market-snapshot-header > span,
+  .market-state {
+    color: var(--text-muted);
+  }
+
+  .refresh-btn,
+  .action-btn-secondary {
+    background-color: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .refresh-btn:hover,
+  .action-btn-secondary:hover {
+    background-color: var(--surface-subtle);
+  }
+
+  .positions-card,
+  .market-overview,
+  .market-snapshot {
+    background-color: var(--surface-raised);
+    border-color: var(--border);
+  }
+
+  .positions-table thead tr,
+  .market-table thead,
+  .total-row {
+    background-color: var(--surface-subtle);
+  }
+
+  .positions-table th,
+  .market-table th,
+  .positions-table td,
+  .market-table td,
+  .total-row,
+  .position-symbol strong {
+    color: var(--text);
+  }
+
+  .positions-table td,
+  .market-table td {
+    border-bottom-color: var(--border);
+  }
+
+  .positions-table tbody tr:hover,
+  .market-table tbody tr:hover {
+    background-color: var(--surface-subtle);
+  }
+
+  .status-badge,
+  .market-status-badge,
+  .quote-status {
+    border: 1px solid transparent;
+    color: #f4f7fa;
+  }
+
+  .status-active,
+  .market-status-badge,
+  .quote-status-live {
+    background-color: #176b4b;
+    border-color: #58c09a;
+  }
+
+  .status-inactive,
+  .quote-status-waiting {
+    background-color: #465666;
+    border-color: #8fa4b5;
+  }
+
+  .positions-table .gain,
+  .positions-table .gain strong,
+  .positions-table .loss,
+  .positions-table .loss strong {
+    font-weight: 600;
+  }
+
+  .positions-table .gain,
+  .positions-table .gain strong {
+    color: #71d3a8 !important;
+  }
+
+  .positions-table .loss,
+  .positions-table .loss strong {
+    color: #ff8f8f !important;
+  }
 }
 
 /* Responsive */

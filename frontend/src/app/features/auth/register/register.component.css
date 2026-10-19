@@ -161,7 +161,7 @@ form {
   width: 100%;
   min-height: 34px;
   margin-top: 3px;
-  border: 0;
+  border: 1px solid #e7a06f;
   border-radius: 3px;
   background: #c84f16;
   color: #ffffff;
@@ -176,6 +176,9 @@ form {
 }
 
 .register-button:disabled {
+  background: rgba(63, 95, 168, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -261,6 +264,50 @@ form {
 
 .restriction {
   right: 36px;
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 36px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: #eaf0f5;
+  cursor: pointer;
+  font: 500 20px var(--font-ui);
+}
+
+.auth-theme-toggle span {
+  display: block;
+  width: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.auth-theme-toggle:hover,
+.auth-theme-toggle:focus-visible {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #ffffff;
+}
+
+:host-context(.dark-theme) {
+  .register-container { background: var(--canvas); color: var(--text); }
+  .register-card { background: var(--surface-raised); border-color: var(--border); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+  .register-header h1, .form-label { color: var(--text-strong); }
+  .eyebrow, .subtitle, .security-note, .security-icon, .account-link, .copyright, .restriction { color: var(--text-muted); }
+  .form-input { background: var(--surface-subtle); border-color: var(--border); color: var(--text); }
+  .form-input::placeholder { color: var(--text-muted); }
+  .alert { background: #3b252a; border-color: #8f4b52; }
+  .alert-message, .error-message { color: #ff9b9b; }
+  .security-note { border-top-color: var(--border); }
+  .account-link a { color: #b9dcf5; }
 }
 
 /* Readability adjustments for dense registration copy and controls. */

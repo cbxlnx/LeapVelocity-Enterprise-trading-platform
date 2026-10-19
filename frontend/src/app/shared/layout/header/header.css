@@ -122,6 +122,35 @@
   padding: 0;
 }
 
+.theme-toggle {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  color: #eaf0f5;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 500;
+  padding: 0;
+}
+
+.theme-toggle span {
+  display: block;
+  width: 1em;
+  line-height: 1;
+  text-align: center;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #ffffff;
+}
+
 .logout:hover {
   color: #ffffff;
 }

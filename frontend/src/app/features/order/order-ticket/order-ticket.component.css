@@ -12,6 +12,30 @@
   font-family: var(--font-ui);
 }
 
+:host-context(.dark-theme) {
+  .order-container,
+  .account-strip,
+  .order-panel,
+  .review-panel,
+  .result-panel {
+    background: var(--surface-raised);
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .order-container { background: var(--canvas); }
+  .page-header h1, .panel-heading h2, label, legend { color: var(--text-strong); }
+  .eyebrow, .page-header > p:last-child, .account-label, .account-cash, .panel-heading p { color: var(--text-muted); }
+
+  select,
+  input,
+  textarea {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+  }
+}
+
 .page-header {
   margin-bottom: 20px;
 }
@@ -497,7 +521,7 @@ input.input-invalid:focus {
 .place-order-button {
   width: 100%;
   height: 34px;
-  border: 0;
+  border: 1px solid #e7a06f;
   border-radius: 3px;
   background: #c84f16;
   color: #ffffff;
@@ -512,7 +536,8 @@ input.input-invalid:focus {
 }
 
 .place-order-button:disabled {
-  background: #9caab6;
+  background: rgba(63, 95, 168, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
   cursor: wait;
 }
 
@@ -921,6 +946,34 @@ input.input-invalid:focus {
 
 .cancel-confirm-button:hover {
   background: #922c31;
+}
+
+:host-context(.dark-theme) {
+  .side-toggle { background: #344553; }
+  .side-toggle label { color: #b3c0cb; }
+  .side-toggle label.selected { background: #176b4b; }
+  .side-toggle label.selected-sell { background: #8f3d43; }
+
+  .market-reference,
+  .ready-note {
+    background: var(--surface-subtle);
+    border-color: #4d91c4;
+    color: var(--text-muted);
+  }
+
+  .market-reference strong,
+  .ready-note strong { color: #b9dcf5; }
+  .review-instrument, .review-details dd, .cash-after strong, .estimated-value strong, .result-panel strong, .recent-order-row strong { color: var(--text-strong); }
+  .review-details dt, .cash-after span, .estimated-value span, .estimated-value small, .review-note, .result-panel p:last-child, .recent-order-meta { color: var(--text-muted); }
+  .review-details, .estimated-value, .recent-orders-list, .recent-order-row { border-color: var(--border); }
+  .side-chip { background: #176b4b; color: #f4f7fa; }
+  .side-chip.sell { background: #8f3d43; color: #fff0f0; }
+  .place-order-button { border: 1px solid #f08a52; box-shadow: 0 0 0 1px rgba(240, 138, 82, .25); }
+  .cancel-order-button, .confirmation-secondary, .cancel-keep-button { background: var(--surface); border-color: var(--border); color: #ff9a9a; }
+  .recent-order-status { background: #465666; color: #e8eef3; border: 1px solid #8fa4b5; }
+  .recent-order-status.filled { background: #176b4b; color: #f4f7fa; border-color: #58c09a; }
+  .recent-order-status.rejected, .recent-order-status.cancelled { background: #71343a; color: #fff0f0; border-color: #ff8f8f; }
+
 }
 
 /* Keep order entry readable while preserving the compact trading layout. */

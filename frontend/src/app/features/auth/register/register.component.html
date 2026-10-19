@@ -7,6 +7,16 @@
     </div>
   </div>
 
+  <button
+    type="button"
+    class="auth-theme-toggle"
+    (click)="toggleTheme()"
+    [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+    [attr.aria-pressed]="themeService.theme() === 'dark'"
+    [attr.title]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+    <span aria-hidden="true">{{ themeService.theme() === 'dark' ? '☀' : '☾' }}</span>
+  </button>
+
   <div class="register-card">
     <header class="register-header">
       <p class="eyebrow">GET STARTED</p>

@@ -9,6 +9,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
+import { ThemeService } from '../../../services/theme.service';
 
 @Component({
   selector: 'app-register',
@@ -25,8 +26,13 @@ export class RegisterComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    readonly themeService: ThemeService
   ) {}
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
 
   ngOnInit(): void {
     this.registerForm = this.fb.group(
