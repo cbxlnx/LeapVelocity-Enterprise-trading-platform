@@ -50,8 +50,8 @@ pipeline {
                 dir('frontend') {
                     sh '''
                         docker run --rm \
-                        -v "$PWD:/app" \
-                        -w /app \
+                        -v "$PWD:/workspace" \
+                        -w /workspace \
                         node:24-alpine \
                         sh -c "npm ci && npm test -- --watch=false --coverage"
 
@@ -62,22 +62,19 @@ pipeline {
                     withSonarQubeEnv('sonar-server') {
                         sh '''
                             test -s coverage/lcov.info
-                            echo "LCOV report:"
-                            head -10 coverage/lcov.info
                             echo "LCOV source files:"
                             grep '^SF:' coverage/lcov.info | head
 
                             docker run --rm \
                             -e SONAR_HOST_URL="$SONAR_HOST_URL" \
                             -e SONAR_TOKEN="$SONAR_AUTH_TOKEN" \
-                            -v "$PWD:/usr/src" \
-                            -w /usr/src \
+                            -v "$PWD:/workspace" \
+                            -w /workspace \
                             sonarsource/sonar-scanner-cli:latest \
-                            sonar-scanner \
-                                -Dsonar.projectBaseDir=/usr/src \
-                                -Dsonar.projectKey=leapvelocity-frontend \
-                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                                -Dsonar.verbose=true
+                            -Dsonar.projectBaseDir=/workspace \
+                            -Dsonar.projectKey=leapvelocity-frontend \
+                            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                            -Dsonar.verbose=true
                         '''
                     }
                 }
