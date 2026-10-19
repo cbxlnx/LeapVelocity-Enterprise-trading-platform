@@ -54,6 +54,9 @@ pipeline {
                         -w /app \
                         node:24-alpine \
                         sh -c "npm ci && npm test -- --watch=false --coverage"
+
+                        find coverage -type f -name 'lcov.info' -print
+                        test -s coverage/leap-ui/lcov.info
                     '''
 
                     withSonarQubeEnv('sonar-server') {
