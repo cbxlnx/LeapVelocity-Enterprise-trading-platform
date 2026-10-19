@@ -45,8 +45,42 @@ pipeline {
                 '''
             }
         }
+        stage('Frontend Tests and Quality Gate') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                        docker run --rm \
+                        -v "$PWD:/workspace" \
+                        -w /workspace \
+                        node:24-alpine \
+                        sh -c "npm ci && npm test -- --watch=false --coverage"
 
-        stage('Quality Gate') {
+                        find coverage -type f -name 'lcov.info' -print
+                        test -s coverage/leap-ui/lcov.info
+                    '''
+
+                    withSonarQubeEnv('sonar-server') {
+                        sh '''
+                            test -s coverage/leap-ui/lcov.info
+                            echo "LCOV source files:"
+                            grep '^SF:' coverage/leap-ui/lcov.info | head
+
+                            docker run --rm \
+                            -e SONAR_HOST_URL="$SONAR_HOST_URL" \
+                            -e SONAR_TOKEN="$SONAR_AUTH_TOKEN" \
+                            -v "$PWD:/workspace" \
+                            -w /workspace \
+                            sonarsource/sonar-scanner-cli:latest \
+                            -Dsonar.projectBaseDir=/workspace \
+                            -Dsonar.projectKey=leapvelocity-frontend \
+                            -Dsonar.javascript.lcov.reportPaths=coverage/leap-ui/lcov.info \
+                            -Dsonar.verbose=true
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Quality Gate Backend') {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''

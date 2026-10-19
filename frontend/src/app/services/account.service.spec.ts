@@ -50,4 +50,48 @@ describe('AccountService', () => {
     await expect(result).rejects.toThrow('Unable to load the account balance. Account not found');
     http.verify();
   });
+
+  it('loads positions and orders from their account endpoints', async () => {
+    const positions = [{ symbol: 'AAPL', quantity: 2 }];
+    const orders = [{ id: 'order-1', symbol: 'AAPL', status: 'FILLED' }];
+
+    const positionsResult = firstValueFrom(service.getPositions(7));
+    const positionsRequest = http.expectOne('/api/v1/accounts/7/positions');
+    positionsRequest.flush(positions);
+
+    const ordersResult = firstValueFrom(service.getOrders(7));
+    const ordersRequest = http.expectOne('/api/v1/accounts/7/orders');
+    ordersRequest.flush(orders);
+
+    await expect(positionsResult).resolves.toEqual(positions);
+    await expect(ordersResult).resolves.toEqual(orders);
+    http.verify();
+  });
+
+  it('clears cached requests so the next call goes to the server', async () => {
+    const firstResult = firstValueFrom(service.getAccount(1));
+    http.expectOne('/api/v1/accounts/1').flush({ id: 1 });
+    await expect(firstResult).resolves.toEqual({ id: 1 });
+
+    service.clearCache();
+
+    const secondResult = firstValueFrom(service.getAccount(1));
+    http.expectOne('/api/v1/accounts/1').flush({ id: 1, refreshed: true });
+    await expect(secondResult).resolves.toEqual({ id: 1, refreshed: true });
+    http.verify();
+  });
+
+  it('retries transient account failures before succeeding', async () => {
+    const result = firstValueFrom(service.getBalance(1));
+    const requests = http.match('/api/v1/accounts/1/balance');
+    expect(requests).toHaveLength(1);
+    requests[0].flush({}, { status: 500, statusText: 'Server Error' });
+
+    await new Promise((resolve) => setTimeout(resolve, 1050));
+    const retryRequest = http.expectOne('/api/v1/accounts/1/balance');
+    retryRequest.flush({ cash: 100 });
+
+    await expect(result).resolves.toEqual({ cash: 100 });
+    http.verify();
+  });
 });
