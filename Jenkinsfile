@@ -46,23 +46,22 @@ pipeline {
             }
         }
         stage('Frontend Tests and Quality Gate') {
-            agent {
-                docker {
-                    image 'node:24-alpine'
-                    reuseNode true
-                }
-            }
             steps {
                 dir('frontend') {
-                    sh 'npm ci'
-                    sh 'npm test -- --watch=false --coverage'
+                    sh '''
+                        docker run --rm \
+                        -v "$PWD:/app" \
+                        -w /app \
+                        node:24-alpine \
+                        sh -c "npm ci && npm test -- --watch=false --coverage"
+                    '''
 
                     withSonarQubeEnv('sonar-server') {
                         sh '''
                             docker run --rm \
                             -e SONAR_HOST_URL="$SONAR_HOST_URL" \
                             -e SONAR_TOKEN="$SONAR_AUTH_TOKEN" \
-                            -v "$(pwd):/usr/src" \
+                            -v "$PWD:/usr/src" \
                             -w /usr/src \
                             sonarsource/sonar-scanner-cli:latest
                         '''
