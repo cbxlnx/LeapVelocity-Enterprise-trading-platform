@@ -289,6 +289,14 @@
   padding: 22px 22px 20px;
 }
 
+.positions-kicker {
+  margin: 0 0 5px;
+  color: #60758a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
 .positions-header h3 {
   margin: 0;
   font-size: 17px;
@@ -297,9 +305,44 @@
 }
 
 .holdings-count {
+  display: block;
+  margin-top: 5px;
   font-size: 11px;
   color: #60758a;
   font-weight: 500;
+}
+
+.allocation-bar {
+  display: flex;
+  height: 28px;
+  margin: 0 22px 12px;
+  overflow: hidden;
+  border: 1px solid #b8c9d6;
+  border-radius: 999px;
+  background: #e8f0f5;
+  transition: width 300ms ease;
+}
+
+.allocation-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 22px 18px;
+  color: #465f73;
+  font: 10px var(--font-mono);
+}
+
+.allocation-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.allocation-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .table-wrapper {
@@ -735,7 +778,10 @@
   .market-overview-description,
   .market-snapshot-header p,
   .market-snapshot-header > span,
-  .market-state {
+  .market-state,
+  .positions-kicker,
+  .positions-total span,
+  .allocation-legend {
     color: var(--text-muted);
   }
 
@@ -776,6 +822,11 @@
   .positions-table td,
   .market-table td {
     border-bottom-color: var(--border);
+  }
+
+  .allocation-bar {
+    border-color: var(--border);
+    background: var(--surface-subtle);
   }
 
   .positions-table tbody tr:hover,

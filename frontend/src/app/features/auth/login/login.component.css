@@ -302,21 +302,16 @@ form {
   left: 36px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #ffffff;
 }
 
-.brand-mark {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 3px;
-  background: #c84f16;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
+.brand-logo {
+  width: 160px;
+  height: 48px;
+  border-radius: 4px;
+  background: #ffffff;
+  object-fit: contain;
 }
 
 .brand-name {
