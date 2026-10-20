@@ -8,7 +8,9 @@
     <div class="logo">ET</div>
     <div class="brand-text">
       <div class="title">Enterprise Trading Platform</div>
-      <div class="subtitle">INSTITUTIONAL EXECUTION</div>
+      @if (variant === 'application') {
+        <div class="subtitle">INSTITUTIONAL EXECUTION</div>
+      }
     </div>
   </div>
   @if (variant === 'welcome') {
