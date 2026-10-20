@@ -16,7 +16,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css',
+  styleUrls: ['../auth-page.css', '../auth-controls.css', './login.component.css'],
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
