@@ -174,38 +174,43 @@
         <p class="review-note"><span class="review-icon" aria-hidden="true"></span>Submit once. The API will confirm whether the order was accepted.</p>
       </section>
 
-      <section class="result-panel">
-        <p class="eyebrow">ORDER RESULT</p>
-        <strong>Recent orders</strong>
-        <p *ngIf="recentOrdersError" class="recent-orders-error">{{ recentOrdersError }}</p>
-        <p *ngIf="!recentOrdersError && recentOrders.length === 0" class="recent-orders-empty">
-          No orders have been placed for this account yet.
-        </p>
-        <div *ngIf="!recentOrdersError && recentOrders.length > 0" class="recent-orders-list">
-          <div *ngFor="let order of recentOrders" class="recent-order-row">
-            <div>
-              <strong>{{ order.symbol }}</strong>
-              <span class="recent-order-meta">
-                {{ order.side }} · {{ order.quantity }} shares · {{ order.price | currency:'USD':'symbol':'1.2-2' }}
-              </span>
-            </div>
-            <div class="recent-order-actions">
-              <span class="recent-order-status" [class]="order.status.toLowerCase()">{{ order.status }}</span>
-              <button
-                *ngIf="order.status === 'NEW'"
-                type="button"
-                class="cancel-order-button"
-                [disabled]="cancellingOrderId !== null"
-                (click)="cancelOrder(order)"
-              >
-                {{ cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel' }}
-              </button>
-            </div>
-          </div>
+    </aside>
+
+    <section class="result-panel" aria-labelledby="recent-activity-title">
+      <div class="result-panel-heading">
+        <div>
+          <p class="eyebrow">ORDER ACTIVITY</p>
+          <h2 id="recent-activity-title">Recent orders</h2>
+          <p>Latest instructions submitted for this trading account.</p>
         </div>
         <a routerLink="/blotter" class="recent-orders-link">View all order history</a>
-      </section>
-    </aside>
+      </div>
+      <p *ngIf="recentOrdersError" class="recent-orders-error">{{ recentOrdersError }}</p>
+      <p *ngIf="!recentOrdersError && recentOrders.length === 0" class="recent-orders-empty">
+        No orders have been placed for this account yet.
+      </p>
+      <div *ngIf="!recentOrdersError && recentOrders.length > 0" class="recent-orders-list">
+        <div *ngFor="let order of recentOrders" class="recent-order-row">
+          <div class="recent-order-instrument">
+            <strong>{{ order.symbol }}</strong>
+            <span class="recent-order-meta">{{ order.side }} · {{ order.quantity }} shares · {{ order.price | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+          <span class="recent-order-time">{{ order.createdOn | date:'short' }}</span>
+          <div class="recent-order-actions">
+            <span class="recent-order-status" [class]="order.status.toLowerCase()">{{ order.status }}</span>
+            <button
+              *ngIf="order.status === 'NEW'"
+              type="button"
+              class="cancel-order-button"
+              [disabled]="cancellingOrderId !== null"
+              (click)="cancelOrder(order)"
+            >
+              {{ cancellingOrderId === order.id ? 'Cancelling...' : 'Cancel' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div *ngIf="orderSubmitted && orderResponse" class="order-modal-backdrop">
