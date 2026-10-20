@@ -30,6 +30,8 @@
       <a routerLink="/order" routerLinkActive="active">Order Ticket</a>
       <a routerLink="/blotter" routerLinkActive="active">Blotter</a>
     </nav>
+  }
+
   <div class="user-area">
     @if (variant === 'application') {
       <a
@@ -47,13 +49,35 @@
       </div>
     }
 
-    <button type="button" class="theme-toggle" ...>
-      ...
+    <button
+      type="button"
+      class="theme-toggle"
+      (click)="toggleTheme()"
+      [attr.aria-label]="
+        themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+      "
+      [attr.aria-pressed]="themeService.theme() === 'dark'"
+      [attr.title]="
+        themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+      "
+    >
+      <span aria-hidden="true">{{ themeService.theme() === 'dark' ? '☀' : '☾' }}</span>
     </button>
 
     @if (variant === 'welcome') {
       <a class="client-area" routerLink="/login">
-        ...
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="8" r="3" />
+          <path d="M5 21v-3a7 7 0 0 1 14 0v3M16 4h5m-2.5-2.5v5" />
+        </svg>
         Client area
       </a>
     } @else {
@@ -61,8 +85,30 @@
     }
 
     @if (variant === 'welcome') {
-      <button class="menu-toggle" ...>
-        ...
+      <button
+        #menuToggle
+        type="button"
+        class="menu-toggle"
+        aria-controls="welcome-navigation"
+        [attr.aria-expanded]="menuOpen"
+        [attr.aria-label]="menuOpen ? 'Close navigation' : 'Open navigation'"
+        (click)="menuOpen = !menuOpen"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          @if (menuOpen) {
+            <path d="m6 6 12 12M6 18 18 6" />
+          } @else {
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          }
+        </svg>
       </button>
     }
   </div>
