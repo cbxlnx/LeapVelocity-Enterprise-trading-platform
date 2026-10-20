@@ -50,7 +50,7 @@ public class Account {
     
     // deduct cash from account
     public void debit(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
         if (this.cashBalance.compareTo(amount) < 0) {

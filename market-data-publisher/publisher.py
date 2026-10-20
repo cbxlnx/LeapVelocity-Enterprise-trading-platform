@@ -88,12 +88,22 @@ def build_quote(symbol: str, info: Mapping, fetched_at: datetime) -> Optional[di
     Returns None unless the quote is two-sided: bid and ask both positive and ask >= bid.
     """
     last_price = _positive_number(info.get("regularMarketPrice") or info.get("currentPrice"))
+    previous_close = _positive_number(info.get("regularMarketPreviousClose"))
     bid = _positive_number(info.get("bid"))
     ask = _positive_number(info.get("ask"))
+    day_high = _positive_number(info.get("dayHigh"))
+    day_low = _positive_number(info.get("dayLow"))
+    volume = info.get("regularMarketVolume")
     currency = info.get("currency")
     if last_price is None or bid is None or ask is None or ask < bid or not currency:
         return None
     as_of = _as_of(info.get("regularMarketTime"), fetched_at)
+    try:
+        volume = int(volume) if volume is not None and int(volume) >= 0 else None
+    except (TypeError, ValueError):
+        volume = None
+    change = round(last_price - previous_close, 4) if previous_close is not None else None
+    change_percent = round((change / previous_close) * 100, 4) if change is not None else None
     return {
         "symbol": symbol,
         "lastPrice": round(last_price, 4),
@@ -102,6 +112,11 @@ def build_quote(symbol: str, info: Mapping, fetched_at: datetime) -> Optional[di
         "currency": currency,
         "asOf": as_of.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": SOURCE,
+        "change": change,
+        "changePercent": change_percent,
+        "dayHigh": round(day_high, 4) if day_high is not None else None,
+        "dayLow": round(day_low, 4) if day_low is not None else None,
+        "volume": volume,
     }
 
 
