@@ -68,6 +68,17 @@ describe('AccountService', () => {
     http.verify();
   });
 
+  it('submits a cash deposit request and returns the updated balance', async () => {
+    const result = firstValueFrom(service.depositCash(7, 125.5));
+    const request = http.expectOne('/api/v1/accounts/7/deposit');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ amount: 125.5 });
+    request.flush({ accountId: 7, cashBalance: 874.5 });
+
+    await expect(result).resolves.toEqual({ accountId: 7, cashBalance: 874.5 });
+    http.verify();
+  });
+
   it('clears cached requests so the next call goes to the server', async () => {
     const firstResult = firstValueFrom(service.getAccount(1));
     http.expectOne('/api/v1/accounts/1').flush({ id: 1 });

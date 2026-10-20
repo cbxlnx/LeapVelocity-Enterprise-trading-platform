@@ -142,6 +142,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /accounts/{id}/deposit:
+    post:
+      summary: Deposit cash into an account
+      tags:
+        - accounts
+      operationId: depositAccountCash
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositCashRequest'
+      responses:
+        '200':
+          description: Cash deposited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalanceDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '404':
+          description: Account not found
+        '422':
+          description: Invalid deposit amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /accounts/{id}/orders:
     get:
       summary: Retrieve all orders for an account
@@ -434,6 +473,28 @@ components:
           format: date-time
           description: Last update timestamp
 
+    AccountBalanceDto:
+      type: object
+      required: [accountId, cashBalance]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
+          description: Updated available cash balance
+
+    DepositCashRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Amount to add to available cash
+
     PositionDto:
       type: object
       required: [id, accountId, symbol, quantity, averageCost]
@@ -491,6 +552,31 @@ components:
           type: string
           description: Data source name
           example: yfinance
+        change:
+          type: number
+          format: double
+          nullable: true
+          description: Price change from the previous close
+        changePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Percentage change from the previous close
+        dayHigh:
+          type: number
+          format: double
+          nullable: true
+          description: Session high price
+        dayLow:
+          type: number
+          format: double
+          nullable: true
+          description: Session low price
+        volume:
+          type: integer
+          format: int64
+          nullable: true
+          description: Reported session volume
 
     BatchQuotesDto:
       type: object

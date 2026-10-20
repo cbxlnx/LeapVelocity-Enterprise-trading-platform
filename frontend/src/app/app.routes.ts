@@ -38,6 +38,14 @@ export const routes: Routes = [
     loadChildren: () => import('./features/blotter/blotter.routes').then((m) => m.BLOTTER_ROUTES),
   },
   {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/account-settings.component').then(
+        (m) => m.AccountSettingsComponent
+      ),
+  },
+  {
     path: 'signed-out',
     component: SignedOutComponent,
   },

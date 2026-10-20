@@ -73,6 +73,43 @@ class AccountServiceTest {
     }
 
     @Test
+    @DisplayName("depositCash increases the available cash balance")
+    void depositCashIncreasesAvailableCashBalance() {
+        Account account = account(1L);
+        mocks.accounts.put(1L, account);
+
+        AccountBalanceDto result = accountService.depositCash(1L, new BigDecimal("1250.50"));
+
+        assertEquals(new BigDecimal("251250.50"), result.cashBalance());
+        assertEquals(new BigDecimal("251250.50"), account.getCashBalance());
+    }
+
+    @Test
+    @DisplayName("depositCash allows funding a zero balance")
+    void depositCashAllowsFundingZeroBalance() {
+        Account account = account(1L);
+        account.setCashBalance(BigDecimal.ZERO);
+        mocks.accounts.put(1L, account);
+
+        AccountBalanceDto result = accountService.depositCash(1L, new BigDecimal("500.00"));
+
+        assertEquals(new BigDecimal("500.00"), result.cashBalance());
+        assertEquals(new BigDecimal("500.00"), account.getCashBalance());
+    }
+
+    @Test
+    @DisplayName("depositCash rejects non-positive amounts without changing balance")
+    void depositCashRejectsNonPositiveAmountsWithoutChangingBalance() {
+        Account account = account(1L);
+        mocks.accounts.put(1L, account);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> accountService.depositCash(1L, BigDecimal.ZERO));
+
+        assertEquals(new BigDecimal("250000.00"), account.getCashBalance());
+    }
+
+    @Test
     @DisplayName("getPositions returns positions for existing account")
     void getPositionsReturnsPositionsForExistingAccount() {
         mocks.accounts.put(1L, account(1L));

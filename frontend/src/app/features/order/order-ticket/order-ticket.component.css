@@ -128,12 +128,18 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(280px, 0.92fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .order-panel,
 .review-panel {
+  box-sizing: border-box;
+  height: 100%;
   padding: 18px 16px;
+}
+
+.review-column {
+  height: 100%;
 }
 
 .panel-heading {
@@ -562,44 +568,74 @@ input.input-invalid:focus {
 }
 
 .result-panel {
-  padding: 14px 16px;
-  background: transparent;
+  grid-column: 1 / -1;
+  padding: 16px;
+  background: #ffffff;
 }
 
-.result-panel strong {
-  color: #34495d;
-  font-size: 10px;
+.result-panel-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #dce4eb;
 }
 
-.result-panel p:last-child {
-  margin: 7px 0 0;
+.result-panel-heading .eyebrow {
+  margin-bottom: 5px;
+}
+
+.result-panel-heading h2 {
+  margin: 0;
+  color: #263b50;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.result-panel-heading p:last-child {
+  margin: 4px 0 0;
   color: #71859a;
   font-size: 9px;
-  line-height: 1.4;
+}
+
+.recent-orders-link {
+  margin: 0;
+  color: #3d6f96;
+  font-size: 9px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .recent-orders-list {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 12px;
-  border-top: 1px solid #dce4eb;
+  margin-top: 0;
 }
 
 .recent-order-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
-  padding: 10px 0;
+  min-height: 48px;
+  padding: 8px 0;
   border-bottom: 1px solid #dce4eb;
+}
+
+.recent-order-instrument {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .recent-order-row > div {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .recent-order-row strong {
@@ -631,6 +667,13 @@ input.input-invalid:focus {
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
+}
+
+.recent-order-time {
+  flex: 0 0 130px;
+  color: #71859a;
+  font-size: 9px;
+  text-align: right;
 }
 
 .cancel-order-button {
@@ -673,15 +716,6 @@ input.input-invalid:focus {
 
 .recent-orders-error {
   color: #b13339 !important;
-}
-
-.recent-orders-link {
-  display: inline-block;
-  margin-top: 12px;
-  color: #3d6f96;
-  font-size: 9px;
-  font-weight: 600;
-  text-decoration: none;
 }
 
 .recent-orders-link:hover {
@@ -1032,6 +1066,26 @@ input,
   .account-cash {
     width: 100%;
     margin-left: 0;
+  }
+
+  .result-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .recent-order-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .recent-order-instrument {
+    flex-basis: calc(100% - 10px);
+  }
+
+  .recent-order-time {
+    flex: 1 1 auto;
+    text-align: left;
   }
 
   .field-row {

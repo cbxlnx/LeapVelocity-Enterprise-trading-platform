@@ -3,6 +3,7 @@ package com.leapvelocity.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leapvelocity.dto.response.AccountBalanceDto;
 import com.leapvelocity.dto.response.AccountDto;
+import com.leapvelocity.dto.request.DepositCashRequestDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.dto.response.PositionDto;
 import com.leapvelocity.entities.Account;
@@ -36,6 +37,7 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -135,6 +137,33 @@ class AccountControllerTest {
 
         verify(accountService, times(1)).getAccount(1L);
     }
+
+    @Test
+    @DisplayName("POST /api/v1/accounts/{id}/deposit - Adds cash and returns updated balance")
+    void depositCashReturnsUpdatedBalance() throws Exception {
+        when(accountService.depositCash(1L, new BigDecimal("125.50")))
+                .thenReturn(new AccountBalanceDto(1L, new BigDecimal("250125.50")));
+
+        mockMvc.perform(post("/api/v1/accounts/1/deposit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DepositCashRequestDto(new BigDecimal("125.50")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId", equalTo(1)))
+                .andExpect(jsonPath("$.cashBalance", equalTo(250125.50)));
+
+        verify(accountService).depositCash(1L, new BigDecimal("125.50"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/accounts/{id}/deposit - Rejects invalid amount")
+    void depositCashRejectsInvalidAmount() throws Exception {
+        mockMvc.perform(post("/api/v1/accounts/1/deposit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DepositCashRequestDto(BigDecimal.ZERO))))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(accountService, never()).depositCash(anyLong(), any());
+        }
 
     @Test
     @DisplayName("GET /api/v1/accounts/{id} - Returns HTTP 200 OK")

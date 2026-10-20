@@ -16,6 +16,10 @@ export interface Balance {
   cashBalance: number;
 }
 
+export interface DepositCashRequest {
+  amount: number;
+}
+
 export interface Position {
   accountId: number;
   symbol: string;
@@ -71,6 +75,11 @@ export interface QuoteSnapshot {
   currency: string;
   asOf: string;
   source: string;
+  change?: number | null;
+  changePercent?: number | null;
+  dayHigh?: number | null;
+  dayLow?: number | null;
+  volume?: number | null;
 }
 
 export interface BatchQuotesResponse {

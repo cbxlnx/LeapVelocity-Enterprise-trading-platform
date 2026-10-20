@@ -12,7 +12,12 @@ public record QuoteDto(
         BigDecimal ask,
         String currency,
         Instant asOf,
-        String source
+        String source,
+        BigDecimal change,
+        BigDecimal changePercent,
+        BigDecimal dayHigh,
+        BigDecimal dayLow,
+        Long volume
 ) {
 
     public static QuoteDto from(MarketDataEvent quote) {
@@ -23,7 +28,12 @@ public record QuoteDto(
                 quote.ask(),
                 quote.currency(),
                 quote.asOf(),
-                quote.source()
+                quote.source(),
+                quote.change(),
+                quote.changePercent(),
+                quote.dayHigh(),
+                quote.dayLow(),
+                quote.volume()
         );
     }
 }
