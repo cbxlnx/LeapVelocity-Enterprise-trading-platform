@@ -6,43 +6,36 @@ import { authGuard } from './guards/auth.guard';
 export const routes: Routes = [
   {
     path: 'login',
-    loadChildren: () =>
-      import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+    loadChildren: () => import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {
     path: 'register',
     loadComponent: () =>
-      import('./features/auth/register/register.component').then(
-        (m) => m.RegisterComponent
-      ),
+      import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
     path: 'dashboard',
     canActivate: [authGuard],
     loadChildren: () =>
-      import('./features/dashboard/dashboard.routes').then(
-        (m) => m.DASHBOARD_ROUTES
-      ),
+      import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
   },
   {
     path: 'analytics',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/analytics/pages/analytics-dashboard/analytics-dashboard.component').then(
-        (m) => m.AnalyticsDashboardComponent
+        (m) => m.AnalyticsDashboardComponent,
       ),
   },
   {
     path: 'order',
     canActivate: [authGuard],
-    loadChildren: () =>
-      import('./features/order/order.routes').then((m) => m.ORDER_ROUTES),
+    loadChildren: () => import('./features/order/order.routes').then((m) => m.ORDER_ROUTES),
   },
   {
     path: 'blotter',
     canActivate: [authGuard],
-    loadChildren: () =>
-      import('./features/blotter/blotter.routes').then((m) => m.BLOTTER_ROUTES),
+    loadChildren: () => import('./features/blotter/blotter.routes').then((m) => m.BLOTTER_ROUTES),
   },
   {
     path: 'signed-out',
@@ -50,7 +43,9 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: '/dashboard',
+    title: 'Welcome | Enterprise Trading Platform',
+    loadComponent: () =>
+      import('./features/welcome/welcome-page.component').then((m) => m.WelcomePageComponent),
     pathMatch: 'full',
   },
   {

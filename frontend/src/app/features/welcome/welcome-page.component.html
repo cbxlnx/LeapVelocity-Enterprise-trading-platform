@@ -1,0 +1,91 @@
+<main id="welcome-main">
+  <section class="hero" aria-labelledby="welcome-heading">
+    <div class="hero-stage container">
+      <div class="hero-copy">
+        <p class="hero-eyebrow">AMBITION MEETS OPPORTUNITY</p>
+        <h1 id="welcome-heading">
+          Your Skill and<br />our Capital <em>Join Forces</em>
+        </h1>
+        <p class="hero-intro">
+          Get access to top traders during your<br class="desktop-break" />
+          evaluation process
+        </p>
+        <p class="hero-description">
+          Creating the perfect symbiosis for<br class="desktop-break" />
+          education and trading
+        </p>
+        <a routerLink="/register" class="funded-button"
+          >Get funded <span aria-hidden="true">↗</span></a
+        >
+      </div>
+      <app-geometric-market-illustration />
+      <div class="scene-caption" aria-hidden="true">
+        <span class="caption-line"></span> TWO PERSPECTIVES. ONE MARKET.
+      </div>
+    </div>
+    <div class="stats-band">
+      <div class="container">
+        <dl
+          class="hero-stats"
+          aria-label="Illustrative programme statistics"
+          aria-describedby="stats-note"
+        >
+          @for (stat of content.stats; track stat.value; let i = $index) {
+            <div class="stat">
+              <dt>{{ stat.description }}</dt>
+              <dd>{{ stat.value }}</dd>
+            </div>
+          }
+        </dl>
+        <p id="stats-note" class="stats-note">{{ content.statsNote }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="how-it-works"
+    class="information-section container"
+    aria-labelledby="how-heading"
+    tabindex="-1"
+  >
+    <div class="section-heading">
+      <p class="section-kicker">YOUR NEXT MOVE</p>
+      <h2 id="how-heading">A workspace for your ambition.</h2>
+      <p>From your first sign-in to your next trade, keep everything in view.</p>
+    </div>
+    <ol class="steps">
+      @for (step of content.steps; track step.number) {
+        <li>
+          <div class="step-number">{{ step.number }}</div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.description }}</p>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section
+    id="faq"
+    class="information-section faq-section container"
+    aria-labelledby="faq-heading"
+    tabindex="-1"
+  >
+    <div class="section-heading">
+      <p class="section-kicker">A LITTLE CLARITY</p>
+      <h2 id="faq-heading">Before you get started.</h2>
+    </div>
+    <div class="faq-list">
+      @for (faq of content.faqs; track faq.question) {
+        <details>
+          <summary>{{ faq.question }}<span class="faq-plus" aria-hidden="true">+</span></summary>
+          <p>{{ faq.answer }}</p>
+        </details>
+      }
+    </div>
+  </section>
+
+</main>
+<footer class="welcome-footer container">
+  <p>&copy; 2026 Enterprise Trading Platform</p>
+  <a routerLink="/login">Client area <span aria-hidden="true">↗</span></a>
+</footer>
