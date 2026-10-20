@@ -20,6 +20,11 @@
 --border: #d5dde6;
 --surface-raised: #ffffff;
 --surface-inset: #f3f5f6;
+--accent: #c05819;
+--accent-hover: #a84715;
+--on-accent: #ffffff;
+--market-cyan: #087f91;
+--market-green: #106647;
 }
 
 :root.dark-theme {
@@ -32,6 +37,8 @@
   --text-strong: #f4f7fa;
   --text-muted: #b3c0cb;
   --border: #4b6071;
+  --market-cyan: #26cdd0;
+  --market-green: #34df9b;
 }
 
 // Keep Angular Material typography on the same bundled font as the application.

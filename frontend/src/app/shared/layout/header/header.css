@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: clamp(12px, 1.4vw, 22px);
-  border-bottom: 0; 
+  border-bottom: 0;
   font-family: var(--font-ui);
 }
 
@@ -64,9 +64,11 @@
   font-weight: 500;
   line-height: 1;
   padding: 6px 0 10px;
-  border-bottom: 2px solid transparent; 
+  border-bottom: 2px solid transparent;
   white-space: nowrap;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .nav-links a:hover {
@@ -139,7 +141,7 @@
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  text-transform: none; 
+  text-transform: none;
   letter-spacing: 0;
   padding: 0;
 }
@@ -240,5 +242,197 @@
   .nav-links a {
     font-size: 16px;
     padding-bottom: 8px;
+  }
+}
+.menu-toggle {
+  display: none;
+}
+
+/* Public variant of the existing shell: the workspace header keeps its layout. */
+.welcome-topbar {
+  position: relative;
+  z-index: 5;
+  min-height: 88px;
+  padding: 18px max(24px, calc((100vw - 1280px) / 2));
+  gap: 28px;
+  flex-wrap: nowrap;
+  background: var(--canvas);
+  color: var(--text);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.welcome-topbar .brand {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.welcome-topbar .brand-text .title {
+  font-size: 15px;
+  color: var(--text-strong);
+  line-height: 1.3;
+}
+
+.welcome-topbar .brand-text .subtitle {
+  font-size: 8px;
+  letter-spacing: 1.7px;
+  color: var(--text-muted);
+}
+
+.welcome-topbar .nav-links {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 28px;
+  order: initial;
+}
+
+.welcome-topbar .nav-links a {
+  font-size: 12px;
+  padding: 10px 0;
+  color: var(--text-muted);
+}
+
+.welcome-topbar .nav-links a:hover {
+  color: var(--text-strong);
+  border-bottom-color: var(--accent);
+}
+
+.welcome-topbar .user-area {
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 20px;
+}
+
+.welcome-topbar .theme-toggle {
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+}
+
+.welcome-topbar .theme-toggle:hover {
+  color: var(--text-strong);
+}
+
+.client-area {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 22px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.client-area:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.client-area:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 1100px) {
+  .welcome-topbar {
+    gap: 20px;
+  }
+  .welcome-topbar .nav-links {
+    gap: 20px;
+  }
+  .welcome-topbar .brand-text .title {
+    max-width: 170px;
+    font-size: 13px;
+  }
+  .welcome-topbar .user-area {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .welcome-topbar {
+    min-height: 80px;
+    padding: 16px 24px;
+    gap: 12px;
+  }
+  .welcome-topbar .brand {
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+  .welcome-topbar .brand-text .title {
+    max-width: 145px;
+    font-size: 12px;
+  }
+  .welcome-topbar .brand-text .subtitle {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  .welcome-topbar .logo {
+    width: 30px;
+    height: 34px;
+    flex-shrink: 0;
+    font-size: 17px;
+  }
+  .welcome-topbar .user-area {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+  .welcome-topbar .client-area {
+    display: none;
+  }
+  .welcome-topbar .menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .welcome-topbar .welcome-nav {
+    display: none;
+    position: absolute;
+    inset: 100% 0 auto;
+    padding: 12px 24px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--text) 8%, transparent);
+  }
+  .welcome-topbar.menu-open .welcome-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .welcome-topbar .welcome-nav a {
+    min-height: 44px;
+    padding: 14px 0;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-topbar a {
+    transition: none;
+    transform: none;
+  }
+}
+
+.welcome-topbar .mobile-client-area {
+  display: none;
+}
+@media (max-width: 760px) {
+  .welcome-topbar .mobile-client-area {
+    display: block;
+    color: var(--accent);
   }
 }

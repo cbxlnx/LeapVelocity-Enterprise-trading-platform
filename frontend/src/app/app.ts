@@ -14,12 +14,18 @@ import { HeaderComponent } from './shared/layout/header/header';
 })
 export class App {
   isAuthRoute$: Observable<boolean>;
+  isWelcomeRoute$: Observable<boolean>;
 
   constructor(private router: Router) {
+    this.isWelcomeRoute$ = this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.router.url.split(/[?#]/)[0] === '/'),
+    );
     this.isAuthRoute$ = this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.isAuthPath(this.router.url))
+      map(() => this.isAuthPath(this.router.url)),
     );
   }
 

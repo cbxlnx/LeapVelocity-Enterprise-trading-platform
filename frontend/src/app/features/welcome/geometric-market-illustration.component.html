@@ -1,0 +1,35 @@
+<div class="market-stage">
+  <svg viewBox="0 0 1200 660" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="market-wire" x1="0" y1="0" x2="560" y2="280" gradientUnits="userSpaceOnUse">
+        <stop stop-color="var(--market-cyan)" />
+        <stop offset="1" stop-color="var(--market-green)" />
+      </linearGradient>
+      <linearGradient id="market-area" x1="0" y1="0" x2="0" y2="1">
+        <stop stop-color="var(--market-cyan)" stop-opacity=".16" />
+        <stop offset="1" stop-color="var(--market-cyan)" stop-opacity="0" />
+      </linearGradient>
+      <radialGradient id="market-halo">
+        <stop stop-color="var(--market-cyan)" stop-opacity=".08" />
+        <stop offset="1" stop-color="var(--market-cyan)" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <ellipse cx="880" cy="260" rx="340" ry="240" fill="url(#market-halo)" />
+    <ellipse cx="555" cy="558" rx="320" ry="150" fill="url(#market-halo)" />
+    <g class="market-grid">
+      <path d="M120 120H1120M120 220H1120M120 320H1120M120 420H1120M120 520H1120" />
+      <path d="M220 70V570M420 70V570M620 70V570M820 70V570M1020 70V570" />
+    </g>
+    <path class="chart-area" d="M120 470 230 420 300 440 390 330 470 365 560 250 650 290 750 190 840 235 930 145 1020 175 1120 85V570H120Z" />
+    <path class="chart-line" pathLength="1" d="M120 470 230 420 300 440 390 330 470 365 560 250 650 290 750 190 840 235 930 145 1020 175 1120 85" />
+    <g class="chart-markers">
+      <circle cx="560" cy="250" r="5" />
+      <circle cx="750" cy="190" r="5" />
+      <circle cx="930" cy="145" r="5" />
+    </g>
+    <g class="chart-labels">
+      <text x="120" y="610">MARKET MOMENTUM</text>
+      <text x="930" y="118">+18.42%</text>
+    </g>
+  </svg>
+</div>
