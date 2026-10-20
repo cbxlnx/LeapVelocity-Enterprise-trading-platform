@@ -16,7 +16,7 @@ import { ThemeService } from '../../../services/theme.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.css',
+  styleUrls: ['../auth-page.css', '../auth-controls.css', './register.component.css'],
 })
 export class RegisterComponent implements OnInit {
   registerForm!: FormGroup;
