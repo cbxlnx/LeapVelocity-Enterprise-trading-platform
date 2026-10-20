@@ -352,20 +352,11 @@ form {
 
   .register-brand {
     top: 22px;
-    left: 20px;
+    gap: 8px;
   }
 
   .register-card {
     padding: 24px;
-  }
-
-  .field-row {
-    grid-template-columns: 1fr;
-  }
-
-  .copyright,
-  .restriction {
-    display: none;
   }
 }
 

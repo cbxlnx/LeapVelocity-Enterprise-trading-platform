@@ -77,10 +77,28 @@
     <div class="positions-section">
       <mat-card class="positions-card">
         <div class="positions-header">
-          <h3>Positions</h3>
-          <span class="holdings-count">{{ dashboardData.positions.length }} holdings · USD</span>
+          <div>
+            <p class="positions-kicker">PORTFOLIO ALLOCATION</p>
+            <h3>Positions</h3>
+            <span class="holdings-count">{{ dashboardData.positions.length }} holdings · USD</span>
+          </div>
         </div>
         <mat-card-content>
+          <div class="allocation-bar" aria-label="Portfolio allocation">
+            @for (segment of getAllocationSegments(dashboardData); track segment.symbol) {
+              <span
+                class="allocation-segment"
+                [style.width.%]="segment.percentage"
+                [style.backgroundColor]="segment.color"
+                [attr.title]="segment.symbol + ' ' + formatPercent(segment.percentage)">
+              </span>
+            }
+          </div>
+          <div class="allocation-legend">
+            @for (segment of getAllocationSegments(dashboardData); track segment.symbol) {
+              <span><i [style.backgroundColor]="segment.color" aria-hidden="true"></i>{{ segment.symbol }} {{ formatPercent(segment.percentage) }}</span>
+            }
+          </div>
           <div class="table-wrapper">
             <table mat-table [dataSource]="dashboardData.positions" class="positions-table">
               <!-- Symbol Column -->

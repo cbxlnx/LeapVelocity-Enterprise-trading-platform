@@ -19,17 +19,15 @@
 }
 
 .logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 4px;
-  background: #c05819;
-  color: #fff;
   display: grid;
+  width: 36px;
+  height: 36px;
   place-items: center;
-  font-size: 20px;
+  border-radius: 4px;
+  background: #fff;
+  color: #142337;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  line-height: 1;
 }
 
 .brand-text .title {
