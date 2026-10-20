@@ -25,6 +25,10 @@ interface MarketOverviewData {
   liveQuotes: number;
   awaitingQuotes: number;
   lastUpdated: string;
+  marketStatus: 'OPEN' | 'CLOSED';
+  gainers: MarketOverviewRow[];
+  decliners: MarketOverviewRow[];
+  mostActive: MarketOverviewRow[];
 }
 
 @Component({
@@ -265,13 +269,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
         quotes.get(normalizeSymbol(instrument.symbol))
       ),
     }));
+    const trackedSymbols = new Set(instruments.map((instrument) => normalizeSymbol(instrument.symbol)));
+    const liveQuotes = batch.quotes.filter((quote) => trackedSymbols.has(normalizeSymbol(quote.symbol))).length;
+    const awaitingQuotes = instruments.length - liveQuotes;
 
     this.marketOverview = {
       rows,
       totalTracked: instruments.length,
-      liveQuotes: batch.quotes.length,
-      awaitingQuotes: batch.missingSymbols.length,
+      liveQuotes,
+      awaitingQuotes,
       lastUpdated: batch.serverTimestamp,
+      marketStatus: this.getMarketStatus(),
+      ...this.buildMoverGroups(rows),
+    };
+  }
+
+  private buildMoverGroups(rows: MarketOverviewRow[]): Pick<MarketOverviewData, 'gainers' | 'decliners' | 'mostActive'> {
+    const quotedRows = rows.filter((row) => row.quote);
+    const byChange = (row: MarketOverviewRow): number => row.quote?.changePercent ?? 0;
+    const byVolume = (row: MarketOverviewRow): number => row.quote?.volume ?? 0;
+
+    return {
+      gainers: quotedRows.filter((row) => byChange(row) > 0).sort((left, right) => byChange(right) - byChange(left)).slice(0, 3),
+      decliners: quotedRows.filter((row) => byChange(row) < 0).sort((left, right) => byChange(left) - byChange(right)).slice(0, 3),
+      mostActive: quotedRows.sort((left, right) => byVolume(right) - byVolume(left)).slice(0, 3),
     };
   }
 
@@ -427,7 +448,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getPriceDirectionArrow(direction: 'up' | 'down' | 'unchanged'): string {
-    return direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→';
+    return direction === 'up' ? '+' : direction === 'down' ? '-' : '';
+  }
+
+  getQuoteChangeClass(change: number | null | undefined): string {
+    return change === undefined || change === null || change === 0
+      ? 'price-unchanged'
+      : change > 0 ? 'price-up' : 'price-down';
+  }
+
+  getQuoteChangeSign(change: number | null | undefined): string {
+    return change !== undefined && change !== null && change > 0 ? '+' : '';
+  }
+
+  getMarketStatus(): 'OPEN' | 'CLOSED' {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    }).formatToParts(new Date());
+    const weekday = parts.find((part) => part.type === 'weekday')?.value;
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+    const minutes = hour * 60 + minute;
+    const isWeekday = weekday !== 'Sat' && weekday !== 'Sun';
+    return isWeekday && minutes >= 570 && minutes < 960 ? 'OPEN' : 'CLOSED';
   }
 
   formatCurrency(value: number): string {
@@ -437,6 +484,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+  }
+
+  formatOptionalCurrency(value: number | null | undefined): string {
+    return value === null || value === undefined ? '—' : this.formatCurrency(value);
+  }
+
+  formatOptionalPercent(value: number | null | undefined): string {
+    return value === null || value === undefined ? '—' : this.formatPercent(value);
+  }
+
+  formatVolume(value: number | null | undefined): string {
+    return value === null || value === undefined ? '—' : new Intl.NumberFormat('en-US').format(value);
   }
 
   formatPercent(value: number): string {

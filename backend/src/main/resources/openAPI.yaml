@@ -552,6 +552,31 @@ components:
           type: string
           description: Data source name
           example: yfinance
+        change:
+          type: number
+          format: double
+          nullable: true
+          description: Price change from the previous close
+        changePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Percentage change from the previous close
+        dayHigh:
+          type: number
+          format: double
+          nullable: true
+          description: Session high price
+        dayLow:
+          type: number
+          format: double
+          nullable: true
+          description: Session low price
+        volume:
+          type: integer
+          format: int64
+          nullable: true
+          description: Reported session volume
 
     BatchQuotesDto:
       type: object

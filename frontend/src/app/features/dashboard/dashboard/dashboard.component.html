@@ -154,8 +154,40 @@
     </div>
 
     <!-- Live Market Overview -->
-    <section class="market-overview" aria-labelledby="market-overview-title">
-      <div class="market-overview-header">
+    @if (isMarketOverviewLoading) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
+          <div>
+            <p class="eyebrow">LIVE MARKET DATA</p>
+            <h2 id="market-overview-title">Market overview</h2>
+            <p class="market-overview-description">
+              Latest USD quotes from the instrument catalog. Quote availability depends on the live market-data feed.
+            </p>
+          </div>
+          <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+        </div>
+        <div class="market-state" role="status">
+          <mat-spinner diameter="28"></mat-spinner>
+          <span>Loading live market data...</span>
+        </div>
+      </section>
+    } @else if (marketOverviewError) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
+          <div>
+            <p class="eyebrow">LIVE MARKET DATA</p>
+            <h2 id="market-overview-title">Market overview</h2>
+          </div>
+          <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+        </div>
+        <div class="market-state market-error" role="alert">
+          <p>{{ marketOverviewError }}</p>
+          <button type="button" class="action-btn action-btn-secondary" (click)="loadMarketOverview()">Retry</button>
+        </div>
+      </section>
+    } @else if (marketOverview; as overview) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
         <div>
           <p class="eyebrow">LIVE MARKET DATA</p>
           <h2 id="market-overview-title">Market overview</h2>
@@ -166,21 +198,10 @@
         <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
       </div>
 
-      @if (isMarketOverviewLoading) {
-        <div class="market-state" role="status">
-          <mat-spinner diameter="28"></mat-spinner>
-          <span>Loading live market data...</span>
-        </div>
-      } @else if (marketOverviewError) {
-        <div class="market-state market-error" role="alert">
-          <p>{{ marketOverviewError }}</p>
-          <button type="button" class="action-btn action-btn-secondary" (click)="loadMarketOverview()">Retry</button>
-        </div>
-      } @else if (marketOverview; as overview) {
         <div class="market-stats">
           <div class="market-stat market-status-stat">
             <span class="market-stat-label">MARKET STATUS</span>
-            <strong class="market-status-badge">{{ overview.liveQuotes > 0 ? 'LIVE' : 'WAITING' }}</strong>
+            <strong class="market-status-badge" [class.market-closed-badge]="overview.marketStatus === 'CLOSED'">{{ overview.marketStatus }}</strong>
             <small>{{ overview.lastUpdated ? formatQuoteTime(overview.lastUpdated) : 'No quote timestamp' }}</small>
           </div>
           <div class="market-stat">
@@ -216,6 +237,11 @@
                   <th scope="col">Instrument</th>
                   <th scope="col">Asset class</th>
                   <th scope="col">Last price</th>
+                  <th scope="col">Chg $</th>
+                  <th scope="col">Chg %</th>
+                  <th scope="col">Day high</th>
+                  <th scope="col">Day low</th>
+                  <th scope="col">Volume</th>
                   <th scope="col">Bid</th>
                   <th scope="col">Ask</th>
                   <th scope="col">As of</th>
@@ -229,16 +255,21 @@
                     <td>{{ row.instrument.name }}</td>
                     <td>{{ row.instrument.assetClass }}</td>
                     @if (row.quote; as quote) {
-                      <td class="mono" [ngClass]="'price-' + row.priceDirection">
-                        <span class="price-direction" aria-hidden="true">{{ getPriceDirectionArrow(row.priceDirection) }}</span>
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.change)">
+                        <span class="price-direction" aria-hidden="true">{{ getQuoteChangeSign(quote.change) }}</span>
                         {{ formatCurrency(quote.lastPrice) }}
                       </td>
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.change)">{{ formatOptionalCurrency(quote.change) }}</td>
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.changePercent)">{{ formatOptionalPercent(quote.changePercent) }}</td>
+                      <td class="mono">{{ formatOptionalCurrency(quote.dayHigh) }}</td>
+                      <td class="mono">{{ formatOptionalCurrency(quote.dayLow) }}</td>
+                      <td class="mono">{{ formatVolume(quote.volume) }}</td>
                       <td class="mono">{{ quote.bid === null ? '—' : formatCurrency(quote.bid) }}</td>
                       <td class="mono">{{ quote.ask === null ? '—' : formatCurrency(quote.ask) }}</td>
                       <td>{{ formatQuoteTime(quote.asOf) }}</td>
                       <td><span class="quote-status quote-status-live">LIVE</span></td>
                     } @else {
-                      <td colspan="4" class="quote-unavailable">Quote unavailable</td>
+                      <td colspan="9" class="quote-unavailable">Quote unavailable</td>
                       <td><span class="quote-status quote-status-waiting">WAITING</span></td>
                     }
                   </tr>
@@ -247,7 +278,38 @@
             </table>
           </div>
         </div>
-      }
-    </section>
+
+      </section>
+
+      <div class="market-movers">
+          <article class="mover-card">
+            <p class="mover-kicker">TOP MOVERS</p>
+            <h3>Gainers</h3>
+            <p class="mover-description">Ranked by daily change % · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Chg %</span></div>
+            @for (row of overview.gainers; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span>{{ formatCurrency(row.quote!.lastPrice) }}</span><span class="mover-up">{{ formatOptionalPercent(row.quote!.changePercent) }}</span></div>
+            }
+          </article>
+          <article class="mover-card">
+            <p class="mover-kicker">TOP MOVERS</p>
+            <h3 class="mover-down-heading">Decliners</h3>
+            <p class="mover-description">Ranked by daily change % · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Chg %</span></div>
+            @for (row of overview.decliners; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span>{{ formatCurrency(row.quote!.lastPrice) }}</span><span class="mover-down">{{ formatOptionalPercent(row.quote!.changePercent) }}</span></div>
+            }
+          </article>
+          <article class="mover-card">
+            <p class="mover-kicker">MOST ACTIVE</p>
+            <h3>By Volume</h3>
+            <p class="mover-description">Ranked by share volume · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Volume</span></div>
+            @for (row of overview.mostActive; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span [ngClass]="row.priceDirection === 'up' ? 'mover-up' : row.priceDirection === 'down' ? 'mover-down' : ''">{{ formatCurrency(row.quote!.lastPrice) }}</span><span>{{ formatVolume(row.quote!.volume) }}</span></div>
+            }
+          </article>
+      </div>
+    }
   </ng-container>
 </div>

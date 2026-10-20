@@ -128,12 +128,18 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(280px, 0.92fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .order-panel,
 .review-panel {
+  box-sizing: border-box;
+  height: 100%;
   padding: 18px 16px;
+}
+
+.review-column {
+  height: 100%;
 }
 
 .panel-heading {
