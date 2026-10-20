@@ -31,6 +31,14 @@ interface MarketOverviewData {
   mostActive: MarketOverviewRow[];
 }
 
+interface AllocationSegment {
+  symbol: string;
+  value: number;
+  percentage: number;
+  color: string;
+  gainLoss?: number;
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -438,6 +446,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return '→';
     }
     return gainLoss > 0 ? '↑' : '↓';
+  }
+
+  getAllocationSegments(data: DashboardData): AllocationSegment[] {
+    const cashValue = data.balance.cashBalance;
+    const totalValue = data.totalEquity;
+    const positions = data.positions
+      .filter((position) => (position.currentMarketValue ?? 0) > 0)
+      .map((position) => ({
+        symbol: position.symbol,
+        value: position.currentMarketValue ?? 0,
+        percentage: totalValue > 0 ? ((position.currentMarketValue ?? 0) / totalValue) * 100 : 0,
+        gainLoss: position.gainLoss ?? 0,
+      }));
+    const maxGain = Math.max(0, ...positions.map((position) => position.gainLoss > 0 ? position.gainLoss : 0));
+    const maxLoss = Math.max(0, ...positions.map((position) => position.gainLoss < 0 ? Math.abs(position.gainLoss) : 0));
+    const segments = positions.map((position) => ({
+      ...position,
+      color: this.getAllocationColor(position.gainLoss, maxGain, maxLoss),
+    }));
+
+    if (cashValue > 0) {
+      segments.push({
+        symbol: 'CASH',
+        value: cashValue,
+        percentage: totalValue > 0 ? (cashValue / totalValue) * 100 : 0,
+        color: '#aeb8c2',
+        gainLoss: 0,
+      });
+    }
+
+    return segments;
+  }
+
+  private getAllocationColor(gainLoss: number, maxGain: number, maxLoss: number): string {
+    if (gainLoss > 0 && maxGain > 0) {
+      return this.getAllocationShade(145, gainLoss / maxGain);
+    }
+    if (gainLoss < 0 && maxLoss > 0) {
+      return this.getAllocationShade(0, Math.abs(gainLoss) / maxLoss);
+    }
+    return '#aeb8c2';
+  }
+
+  private getAllocationShade(hue: number, intensity: number): string {
+    const boundedIntensity = Math.max(0, Math.min(1, intensity));
+    const lightness = 78 - (boundedIntensity * 34);
+    return `hsl(${hue} 58% ${lightness}%)`;
   }
 
   getPriceDirection(previous: QuoteSnapshot | undefined, current: QuoteSnapshot | undefined): 'up' | 'down' | 'unchanged' {

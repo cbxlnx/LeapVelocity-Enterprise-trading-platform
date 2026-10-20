@@ -51,7 +51,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    title: 'Welcome | Enterprise Trading Platform',
+    title: 'Welcome | TradeVelocity',
     loadComponent: () =>
       import('./features/welcome/welcome-page.component').then((m) => m.WelcomePageComponent),
     pathMatch: 'full',

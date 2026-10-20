@@ -12,7 +12,7 @@ export const WELCOME_CONTENT = {
     {
       number: '01',
       title: 'Create your account',
-      description: 'Register for an Enterprise Trading Platform workspace.',
+      description: 'Register for a TradeVelocity workspace.',
     },
     {
       number: '02',
