@@ -1,0 +1,24 @@
+:host { display: block; }
+.risk-card { border: 1px solid #d5dde6; border-radius: 4px; background: #fff; }
+.section-heading { padding: 24px 24px 20px; }
+.section-heading h2 { margin: 0; color: #142337; font-size: 19px; }
+.section-heading p { margin: 6px 0 0; color: #586c7d; font-size: 12px; }
+.split-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.label { color: #536a80; font-size: 9px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.table-head, .scenario-row { display: grid; grid-template-columns: minmax(250px, 2fr) 120px 90px minmax(180px, 2fr) 120px; gap: 14px; align-items: center; }
+.table-head { padding: 11px 24px; background: #eaf1f5; color: #536a80; font-size: 10px; }
+.scenario-row { position: relative; min-height: 78px; padding: 14px 24px; border-top: 1px solid #d5dde6; }
+.scenario-name { display: grid; gap: 5px; }
+.scenario-name strong { color: #20364e; font-size: 12px; }
+.scenario-name span { color: #718296; font-size: 10px; }
+.loss { color: #bb3842; font: 500 13px var(--font-mono); white-space: nowrap; }
+.impact { height: 8px; overflow: hidden; background: #e8eef2; }
+.impact span { display: block; height: 100%; background: #bb3842; }
+.action { text-align: right; }
+.action button { min-width: 108px; height: 34px; padding: 0 10px; border: 1px solid #cbd6df; border-radius: 3px; background: #fff; color: #20364e; font-size: 10px; font-weight: 700; cursor: pointer; }
+.action button.primary { border-color: #c84f13; background: #c84f13; color: #fff; }
+.scenario-detail { grid-column: 1 / -1; display: grid; gap: 4px; padding: 10px 12px; background: #f7f9fa; color: #586c7d; font-size: 10px; }
+.scenario-detail strong { color: #20364e; }
+.fine-print { margin: 0; padding: 14px 24px 18px; color: #718296; font-size: 10px; }
+@media (max-width: 900px) { .table-head { display: none; } .scenario-row { grid-template-columns: 1fr auto; gap: 10px; } .scenario-name { grid-column: 1 / 2; } .loss { grid-column: 2; grid-row: 1; } .scenario-row > .loss:nth-child(3) { grid-column: 2; grid-row: 2; } .impact { grid-column: 1 / -1; grid-row: 3; } .action { grid-column: 1 / -1; grid-row: 4; text-align: left; } .scenario-detail { grid-row: 5; } }
+@media (max-width: 520px) { .section-heading, .scenario-row { padding-left: 16px; padding-right: 16px; } .section-heading { flex-direction: column; } .fine-print { padding-left: 16px; padding-right: 16px; } }

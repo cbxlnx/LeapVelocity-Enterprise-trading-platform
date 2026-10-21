@@ -146,6 +146,19 @@ The application uses lazy-loaded routes for optimized performance:
 | `/` | Root redirect | Redirects to `/dashboard` |
 | `**` | Not Found | NotFoundComponent |
 
+### Risk Dashboard
+
+The `/risk` route is a protected, lazy-loaded Angular feature backed by deterministic mock data. It is intentionally frontend-only in this phase.
+
+- Portfolio value is invested equity plus cash. Holding allocations sum to 100% of invested equity; cash is excluded from the holding sleeve.
+- Historical, parametric, and Monte Carlo 1-day VaR values are scaled to longer horizons with `sqrt(horizon)`. Expected Shortfall is more conservative than 1-day Monte Carlo VaR.
+- Standalone holding VaR is not additive to portfolio VaR. Portfolio volatility contribution is a separate covariance-style metric and sums to 100%.
+- Stress loss is the displayed account loss percentage multiplied by current portfolio value. Custom shocks apply market shock plus one matching sector increment per holding.
+- Waterfall deltas reconcile exactly from starting equity to ending equity. The custom shock waterfall is derived from the same shock calculation used by the impact card.
+- Chart contracts are local option factories: VaR uses horizontal bars, the distribution uses a red left tail and VaR mark line, drawdown uses a max-point mark, contribution uses paired allocation/volatility series, and waterfalls use transparent bases plus signed delta bars.
+
+Known non-goals: no backend risk API, persistence, live market feed, trading action, or dark-theme parity is included in this phase. The mock service clones its seed response so control interactions do not mutate the source data.
+
 ## Routing Configuration
 
 Routes are defined in `src/app/app.routes.ts` with lazy loading:
