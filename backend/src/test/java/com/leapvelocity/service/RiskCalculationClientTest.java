@@ -1,6 +1,8 @@
 package com.leapvelocity.service;
 
 import com.leapvelocity.dto.response.PortfolioRiskDto.VarResult;
+import com.leapvelocity.dto.response.PortfolioRiskDto.*;
+import java.math.BigDecimal;
 import com.leapvelocity.exceptions.RiskCalculationException;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +50,18 @@ class RiskCalculationClientTest {
             var core = new PortfolioRiskCalculator().calculate(input);
             var vars = new ArrayList<>(List.of(core.historicalVar()));
             vars.addAll(new NormalModelVarCalculator().calculate(input).values());
-            var tree = (ObjectNode) json.valueToTree(new RiskCalculationContract.Response("1.0", id, core.metrics(), vars, List.of()));
+            var distribution = new MonteCarloDistribution(ResultStatus.READY, List.of(), 100000, new BigDecimal(".95"), 1,
+                    "USD_LOSS", "EMPIRICAL_INTEGRATED_QUANTILE",
+                    List.of(new HistogramBin(new BigDecimal("-100000"), new BigDecimal("100000"), 100000)),
+                    vars.get(2).lossAmount(), vars.get(2).lossAmount().add(new BigDecimal("100.00")),
+                    vars.get(2).lossPercent().add(new BigDecimal("1.00000000")));
+            var tree = (ObjectNode) json.valueToTree(new RiskCalculationContract.Response("1.0", id, core.metrics(), vars, List.of(), distribution));
+            var simulation = (ObjectNode) tree.path("monteCarlo");
+            simulation.put("confidenceLevel", distribution.confidenceLevel().toString());
+            simulation.put("varAmount", distribution.varAmount().toString());
+            simulation.put("expectedShortfallAmount", distribution.expectedShortfallAmount().toString());
+            simulation.put("expectedShortfallPercent", distribution.expectedShortfallPercent().toString());
+            ((ObjectNode) simulation.at("/bins/0")).put("lowerBound", "-100000").put("upperBound", "100000");
             var scalars = List.of(core.metrics().annualisedVolatility(), core.metrics().maximumDrawdown(), core.metrics().beta());
             var names = List.of("annualisedVolatility", "maximumDrawdown", "beta");
             for (int index = 0; index < names.size(); index++) {
@@ -119,12 +132,16 @@ class RiskCalculationClientTest {
         assertEquals(INVALID_RESPONSE, assertThrows(RiskCalculationException.class, () -> client().calculate(input)).kind());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"version", "request", "method", "duplicates", "nan", "negative", "count", "dates", "unit", "null", "number", "status", "unknown"})
+    @ParameterizedTest @ValueSource(strings = {"version", "request", "method", "duplicates", "nan", "negative", "count", "dates", "unit", "null", "number", "status", "unknown", "bins", "es", "simulationCount", "distributionNumber"})
     void invalidReturnedValuesNeverReachPublicResponse(String corruption) {
         mutate = tree -> {
             var var = (ObjectNode) tree.at("/valueAtRisk/0");
             var scalar = (ObjectNode) tree.at("/metrics/annualisedVolatility");
             switch (corruption) {
+                case "bins" -> ((ObjectNode) tree.at("/monteCarlo/bins/0")).put("count", 1);
+                case "es" -> ((ObjectNode) tree.path("monteCarlo")).put("expectedShortfallAmount", "0.00");
+                case "simulationCount" -> ((ObjectNode) tree.path("monteCarlo")).put("simulations", 99999);
+                case "distributionNumber" -> ((ObjectNode) tree.at("/monteCarlo/bins/0")).put("lowerBound", -100000);
                 case "version" -> tree.put("schemaVersion", "2.0");
                 case "request" -> tree.put("requestId", "different-snapshot");
                 case "method" -> var.put("method", "MONTE_CARLO");

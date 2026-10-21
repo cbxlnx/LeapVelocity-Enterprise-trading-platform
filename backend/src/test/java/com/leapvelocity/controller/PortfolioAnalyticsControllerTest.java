@@ -102,7 +102,7 @@ class PortfolioAnalyticsControllerTest {
     private PortfolioRiskDto core(long accountId, RiskRequestDto options) {
         var empty = new ScalarMetric(ResultStatus.EMPTY, null, Unit.PERCENT, 0, 60, null, null, List.of(IssueCode.EMPTY_PORTFOLIO));
         var beta = new ScalarMetric(ResultStatus.EMPTY, null, Unit.DIMENSIONLESS, 0, 60, null, null, List.of(IssueCode.EMPTY_PORTFOLIO));
-        return new PortfolioRiskDto("1.0", Instant.parse("2026-10-19T12:00:00Z"), LocalDate.parse("2026-10-19"), options, RiskStatus.EMPTY, summary(accountId), new History(null, null, null, null, 0, 0, 0), Assumptions.mvp(), new CoreMetrics(empty, empty, beta), List.of(), List.of(), new ChartSeries(ResultStatus.EMPTY, List.of(), List.of(), List.of(IssueCode.EMPTY_PORTFOLIO)));
+        return new PortfolioRiskDto("1.0", Instant.parse("2026-10-19T12:00:00Z"), LocalDate.parse("2026-10-19"), options, RiskStatus.EMPTY, summary(accountId), new History(null, null, null, null, 0, 0, 0), Assumptions.mvp(), new CoreMetrics(empty, empty, beta), List.of(), List.of(), new ChartSeries(ResultStatus.EMPTY, List.of(), List.of(), List.of(IssueCode.EMPTY_PORTFOLIO)), null, StressCapabilities.current());
     }
 
     @Test

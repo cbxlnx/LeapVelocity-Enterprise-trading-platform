@@ -1,6 +1,8 @@
 package com.leapvelocity.controller;
 
 import com.leapvelocity.dto.request.RiskRequestDto;
+import com.leapvelocity.dto.request.PriceShockRequestDto;
+import com.leapvelocity.dto.response.PortfolioShockDto;
 import com.leapvelocity.dto.response.PortfolioRiskDto;
 import com.leapvelocity.dto.response.PortfolioSummaryDto;
 import com.leapvelocity.security.AccountAccessAuthorizer;
@@ -18,6 +20,14 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletRequest;
+import com.leapvelocity.dto.response.ErrorResponse;
+import com.leapvelocity.entities.enums.api.ErrorCode;
 import org.springframework.web.context.request.WebRequest;
 
 import java.util.Set;
@@ -81,5 +91,21 @@ public class PortfolioAnalyticsController {
                 throw new IllegalArgumentException("Risk option must not be blank: " + name);
             }
         });
+    }
+
+    @Operation(summary = "Calculate a hypothetical uniform holding price shock",
+            description = "Read-only -50% to +50% price sensitivity using a fresh account valuation. "
+                    + "Cash is unchanged; holding P&L rounds to cents before summation. No historical or probability model.")
+    @PostMapping("/risk/shock")
+    public PortfolioShockDto calculateShock(@PathVariable Long id, @Valid @RequestBody PriceShockRequestDto request) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
+        return analytics.calculateShock(id, request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> invalidShockBody(HttpMessageNotReadableException error, HttpServletRequest request) {
+        var response = new ErrorResponse(ErrorCode.INVALID_INPUT, request.getRequestURI());
+        response.setMessage("A JSON priceChangePercent between -50 and 50 is required");
+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getHttpStatus()).body(response);
     }
 }

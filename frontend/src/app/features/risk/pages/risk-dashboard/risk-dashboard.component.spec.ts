@@ -6,14 +6,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
-import { GridComponent, MarkPointComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, MarkLineComponent, MarkPointComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import { RiskDashboardComponent } from './risk-dashboard.component';
 import { AuthService } from '../../../../services/auth.service';
-import { riskFixture, TEST_INSTRUMENTS } from '../../testing/risk-dashboard.fixture';
+import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../../testing/risk-dashboard.fixture';
 import { RiskHorizon } from '../../models/risk-dashboard.model';
 
-echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, MarkPointComponent, SVGRenderer]);
+echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, MarkLineComponent, MarkPointComponent, SVGRenderer]);
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = class { observe(): void {} unobserve(): void {} disconnect(): void {} } as typeof ResizeObserver;
 }
@@ -45,9 +45,10 @@ describe('Risk dashboard with actual API responses', () => {
     expect(text).not.toContain('44,935');
     expect(text).toContain('Historical replay unavailable');
     expect(text).toContain('Volatility contribution unavailable');
-    expect(text).toContain('Expected Shortfall is not implemented');
+    expect(text).toContain('Expected Shortfall');
+    expect(text).toContain('$70.00');
     expect(fixture.nativeElement.querySelector('.drawdown-chart')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.histogram-chart')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.histogram-chart')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.var-card').textContent).not.toContain('30 days');
   });
 
@@ -105,11 +106,72 @@ describe('Risk dashboard with actual API responses', () => {
     input.dispatchEvent(new Event('input'));
     fixture.nativeElement.querySelector('.shock-card button.primary').click();
     fixture.detectChanges();
-    expect(fixture.componentInstance.customResult()?.lossUsd).toBe(100);
-    expect(fixture.componentInstance.customResult()?.postShockEquityUsd).toBe(1000);
+    expect(fixture.nativeElement.textContent).toContain('Calculating price shock');
+    const request = http.expectOne('/api/v1/accounts/7/analytics/risk/shock');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ priceChangePercent: -10 });
+    request.flush(shockFixture());
+    fixture.detectChanges();
+    expect(fixture.componentInstance.customResult()?.totalPnL).toBe(-100);
+    expect(fixture.componentInstance.customResult()?.postShockEquity).toBe(1000);
     expect(fixture.componentInstance.waterfalls()).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('.breakdown-table').textContent).toContain('$540.00');
     fixture.componentInstance.loadDashboard();
     expect(fixture.componentInstance.customResult()).toBeNull();
     http.expectOne(url()).flush(riskFixture());
+  });
+
+  it.each(['unavailable', 'error', 'wrong-account'])('shows %s shock results without stale calculations', state => {
+    http.expectOne(url()).flush(riskFixture());
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('[aria-label="Market shock percentage"]');
+    input.value = '-10'; input.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('.shock-card button.primary').click();
+    const pending = http.expectOne('/api/v1/accounts/7/analytics/risk/shock');
+    if (state === 'error') pending.flush({}, { status: 500, statusText: 'Calculation failed' });
+    else {
+      const response = shockFixture(state === 'wrong-account' ? 8 : 7);
+      if (state === 'unavailable') { response.status = 'UNAVAILABLE'; response.reasons = ['STALE_PRICE']; response.totalPnL = null; }
+      pending.flush(response);
+    }
+    fixture.detectChanges();
+    expect(fixture.componentInstance.customResult()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.breakdown-table')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(state === 'unavailable' ? 'STALE_PRICE'
+      : state === 'error' ? 'calculation failed' : 'does not match');
+  });
+
+  it('reset cancels a pending shock and clears results; invalid input never requests a calculation', () => {
+    http.expectOne(url()).flush(riskFixture()); fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('[aria-label="Market shock percentage"]');
+    input.value = '-51'; input.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('.shock-card button.primary').click();
+    http.expectNone('/api/v1/accounts/7/analytics/risk/shock');
+    input.value = '-10'; input.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('.shock-card button.primary').click();
+    const pending = http.expectOne('/api/v1/accounts/7/analytics/risk/shock');
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.shock-card button').click();
+    expect(pending.cancelled).toBe(true);
+    fixture.detectChanges();
+    expect(input.value).toBe('0');
+    expect(fixture.componentInstance.customResult()).toBeNull();
+  });
+
+  it('keeps unavailable simulation results distinct from a calculated zero', () => {
+    const response = riskFixture();
+    response.monteCarlo = { ...response.monteCarlo!, status: 'UNAVAILABLE', reasons: ['INSUFFICIENT_HISTORY'],
+      bins: [], varAmount: null, expectedShortfallAmount: null, expectedShortfallPercent: null };
+    http.expectOne(url()).flush(response); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.histogram-chart')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Distribution and Expected Shortfall unavailable');
+  });
+
+  it('shows a real zero Expected Shortfall as available', () => {
+    const response = riskFixture();
+    response.monteCarlo = { ...response.monteCarlo!, varAmount: 0, expectedShortfallAmount: 0, expectedShortfallPercent: 0 };
+    http.expectOne(url()).flush(response); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.es-callout').textContent).toContain('$0.00');
+    expect(fixture.nativeElement.querySelector('.histogram-chart')).toBeTruthy();
   });
 });

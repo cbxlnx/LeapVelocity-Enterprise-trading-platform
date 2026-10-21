@@ -1,7 +1,7 @@
 /** Deterministic synthetic API data for tests only. Never imported by production. */
 import { Instrument } from '../../../models/api.models';
 import { PerformancePeriod } from '../../analytics/models/portfolio-performance.model';
-import { PortfolioRisk, RiskScalarMetric } from '../../analytics/models/portfolio-risk.model';
+import { PortfolioRisk, PortfolioShock, RiskScalarMetric } from '../../analytics/models/portfolio-risk.model';
 
 export const TEST_INSTRUMENTS: Instrument[] = [
   { id: 1, symbol: 'AAA', name: 'Synthetic Alpha', assetClass: 'EQUITY', currency: 'USD', tradable: true },
@@ -37,7 +37,25 @@ export function riskFixture(accountId = 7, period: PerformancePeriod = '1Y'): Po
       { method: 'PARAMETRIC', status: 'READY', estimate: true, lossAmount: 60, lossPercent: 6, observations: 110, requiredObservations: 100, from: date(0), to: date(110), reasons: [] },
       { method: 'MONTE_CARLO', status: 'READY', estimate: true, lossAmount: 55, lossPercent: 5.5, observations: 110, requiredObservations: 100, from: date(0), to: date(110), reasons: [] },
     ], issues: [],
+    monteCarlo: { status: 'READY', reasons: [], simulations: 100000, confidenceLevel: .95, holdingPeriodDays: 1,
+      unit: 'USD_LOSS', tailConvention: 'EMPIRICAL_INTEGRATED_QUANTILE', varAmount: 55,
+      expectedShortfallAmount: 70, expectedShortfallPercent: 7,
+      bins: [{ lowerBound: -100, upperBound: 0, count: 50000 }, { lowerBound: 0, upperBound: 100, count: 50000 }] },
+    stressCapabilities: { historical: [{ id: 'CRISIS_2008', title: '2008 financial crisis', status: 'NOT_IMPLEMENTED',
+      reasons: ['Validated event histories and instrument mappings are not supplied.'] }],
+      sectorIncrements: { id: 'SECTOR_INCREMENTS', title: 'Sector increments', status: 'UNAVAILABLE', reasons: ['No sector metadata.'] } },
     series: { status: 'READY', wealth: levels.map((value, index) => ({ date: date(index), value })),
       returns: levels.slice(1).map((value, index) => ({ from: date(index), to: date(index + 1), value: value / levels[index] - 1 })), reasons: [] },
   };
+}
+
+/** Fixed backend result: browser tests must not implement another shock calculator. */
+export function shockFixture(accountId = 7): PortfolioShock {
+  return { schemaVersion: '1.0', calculatedAt: '2026-10-21T12:00:00Z', calculationDate: '2026-10-21',
+    status: 'READY', reasons: [], priceChangePercent: -10, valuation: riskFixture(accountId).valuation,
+    totalPnL: -100, impactPercent: -9.09090909, postShockEquity: 1000, issues: [],
+    holdings: [
+      { symbol: 'AAA', marketValue: 600, priceChangePercent: -10, pnl: -60, postShockValue: 540 },
+      { symbol: 'BBB', marketValue: 400, priceChangePercent: -10, pnl: -40, postShockValue: 360 },
+    ] };
 }

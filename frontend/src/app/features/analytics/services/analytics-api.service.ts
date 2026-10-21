@@ -6,11 +6,16 @@ import { handleApiError } from '../../../services/api-error';
 import { HistoricalPrices } from '../models/historical-prices.model';
 import { PortfolioSummary } from '../models/portfolio-summary.model';
 import { PerformancePeriod, PortfolioPerformance } from '../models/portfolio-performance.model';
-import { PortfolioRisk, RiskVarOptions } from '../models/portfolio-risk.model';
+import { PortfolioRisk, PortfolioShock, RiskVarOptions } from '../models/portfolio-risk.model';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
+
+  calculateShock(accountId: number, priceChangePercent: number): Observable<PortfolioShock> {
+    return this.http.post<PortfolioShock>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/risk/shock`,
+      { priceChangePercent }).pipe(catchError(handleApiError('calculate price shock')));
+  }
 
   getRisk(accountId: number, period: PerformancePeriod,
     options: RiskVarOptions = { confidenceLevel: 0.95, holdingPeriodDays: 1 }): Observable<PortfolioRisk> {

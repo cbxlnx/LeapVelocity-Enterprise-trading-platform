@@ -93,6 +93,13 @@ public class RiskCalculationClient {
                     require(value.path("lossPercent").isNull() || value.path("lossPercent").isString());
                     require(value.path("lossAmount").isNull() || value.path("lossAmount").isString());
                 }
+                for (String name : List.of("confidenceLevel", "varAmount", "expectedShortfallAmount", "expectedShortfallPercent")) {
+                    var value = tree.at("/monteCarlo/" + name);
+                    require(value.isNull() || value.isString());
+                }
+                for (var bin : tree.at("/monteCarlo/bins")) {
+                    require(bin.path("lowerBound").isString() && bin.path("upperBound").isString());
+                }
                 var result = json.readValue(response.body(), RiskCalculationContract.Response.class);
                 validate(result, inputs, id);
                 return result;
@@ -137,13 +144,49 @@ public class RiskCalculationClient {
             number(value.lossAmount(), value.status(), 2, true);
         }
         require(response.issues() != null);
+        distribution(response.monteCarlo(), vars.get(2), input);
         for (var issue : response.issues()) {
             require(issue != null && issue.code() != null && issue.severity() == Severity.WARNING
                     && issue.scope() != null && issue.message() != null && issue.symbol() == null);
             List<String> scopes = List.of("metrics.annualisedVolatility", "metrics.maximumDrawdown", "metrics.beta",
-                    "valueAtRisk.HISTORICAL", "valueAtRisk.PARAMETRIC", "valueAtRisk.MONTE_CARLO");
+                    "valueAtRisk.HISTORICAL", "valueAtRisk.PARAMETRIC", "valueAtRisk.MONTE_CARLO", "monteCarlo");
             require(scopes.contains(issue.scope()));
         }
+    }
+
+    private static void distribution(MonteCarloDistribution value, VarResult var, PreparedInputs input) {
+        require(value != null && value.status() != null && value.reasons() != null && value.bins() != null);
+        require(value.simulations() == 100_000 && value.confidenceLevel() != null
+                && value.confidenceLevel().compareTo(input.parameters().confidenceLevel()) == 0
+                && value.holdingPeriodDays() == input.parameters().holdingPeriodDays()
+                && "USD_LOSS".equals(value.unit()) && "EMPIRICAL_INTEGRATED_QUANTILE".equals(value.tailConvention()));
+        number(value.varAmount(), value.status(), 2, true);
+        number(value.expectedShortfallAmount(), value.status(), 2, true);
+        number(value.expectedShortfallPercent(), value.status(), 8, true);
+        if (value.status() != ResultStatus.READY) {
+            require(value.status() == ResultStatus.EMPTY || value.status() == ResultStatus.UNAVAILABLE);
+            require(value.bins().isEmpty() && !value.reasons().isEmpty());
+            if (var.status() != ResultStatus.READY) {
+                require(value.status() == var.status() && value.reasons().equals(var.reasons()));
+            } else require(value.status() == ResultStatus.UNAVAILABLE && value.reasons().equals(List.of(IssueCode.NUMERICAL_ERROR)));
+            return;
+        }
+        require(var.status() == ResultStatus.READY && value.reasons().isEmpty()
+                && value.varAmount().compareTo(var.lossAmount()) == 0
+                && value.expectedShortfallAmount().compareTo(var.lossAmount()) >= 0
+                && value.expectedShortfallPercent().compareTo(var.lossPercent()) >= 0);
+        require(!value.bins().isEmpty() && value.bins().size() <= 40);
+        long count = 0;
+        BigDecimal previous = null;
+        for (var bin : value.bins()) {
+            require(bin != null && bin.lowerBound() != null && bin.upperBound() != null && bin.count() >= 0);
+            require(Double.isFinite(bin.lowerBound().doubleValue()) && Double.isFinite(bin.upperBound().doubleValue()));
+            require(bin.lowerBound().compareTo(bin.upperBound()) <= (value.bins().size() == 1 ? 0 : -1));
+            require(previous == null || previous.compareTo(bin.lowerBound()) == 0);
+            previous = bin.upperBound();
+            count += bin.count();
+        }
+        require(count == value.simulations());
     }
 
     private static void scalar(ScalarMetric value, Availability eligibility, int count, Unit unit,

@@ -164,7 +164,7 @@ def nearest_loss(losses, confidence):
     return max(0.0, float(np.quantile(losses, probability, method="inverted_cdf")))
 
 
-def simulated_loss(mean, deviation, confidence, simulations, rng):
+def simulation_losses(mean, deviation, simulations, rng):
     if not np.isfinite(mean) or not np.isfinite(deviation) or deviation < 0:
         raise numeric()
     try:
@@ -172,9 +172,54 @@ def simulated_loss(mean, deviation, confidence, simulations, rng):
             outcomes = np.asarray(rng.normal(loc=mean, scale=deviation, size=simulations), dtype=np.float64)
         if outcomes.shape != (simulations,) or not np.all(np.isfinite(outcomes)):
             raise numeric()
-        return nearest_loss(-outcomes, confidence)
+        return -outcomes
     except (FloatingPointError, OverflowError, ValueError) as error:
         raise numeric() from error
+
+
+def simulated_loss(mean, deviation, confidence, simulations, rng):
+    return nearest_loss(simulation_losses(mean, deviation, simulations, rng), confidence)
+
+
+def expected_shortfall(losses, confidence):
+    """Integral of the empirical inverse CDF over (confidence, 1), divided by tail mass.
+
+    Fractional boundary weight keeps exactly (1-c)*N outcomes of mass. Ties do
+    not inflate the tail, and constant/gain-only distributions remain defined.
+    """
+    values = np.sort(np.asarray(losses, dtype=np.float64))
+    if values.ndim != 1 or not values.size or not np.all(np.isfinite(values)):
+        raise numeric()
+    if values[0] == values[-1]:
+        return max(0.0, finite(values[0]))
+    cutoff = Fraction(confidence) * len(values)
+    index = cutoff.numerator // cutoff.denominator
+    if values[index] == values[-1]:
+        return max(0.0, finite(values[index]))
+    weights = np.ones(len(values) - index)
+    weights[0] = float(index + 1 - cutoff)
+    return max(0.0, finite(np.average(values[index:], weights=weights)))
+
+
+def summarize_simulation(losses, confidence, invested, horizon, var_amount):
+    amounts = losses * finite(invested)
+    if not np.all(np.isfinite(amounts)):
+        raise numeric()
+    if np.all(amounts == amounts[0]):
+        edges, counts = [amounts[0], amounts[0]], [len(amounts)]
+    else:
+        counts, edges = np.histogram(amounts, bins=40)
+        if not np.all(np.isfinite(edges)) or np.any(np.diff(edges) <= 0):
+            raise numeric()
+    loss = Decimal(str(expected_shortfall(losses, confidence)))
+    amount, percent = exact_mul(loss, invested), exact_mul(loss, HUNDRED)
+    finite(amount)
+    finite(percent)
+    return dict(status="READY", reasons=[], simulations=len(losses), confidenceLevel=confidence,
+                holdingPeriodDays=horizon, varAmount=var_amount,
+                expectedShortfallAmount=rounded(amount, 2), expectedShortfallPercent=rounded(percent, 8),
+                bins=[dict(lowerBound=Decimal(str(edges[index])), upperBound=Decimal(str(edges[index + 1])), count=int(count))
+                      for index, count in enumerate(counts)])
 
 
 def calculate(request: CalculationRequest, *, rng=None, simulations=SIMULATIONS):
@@ -255,6 +300,7 @@ def _calculate(request, rng, simulations):
         result.update(lossPercent=rounded(percent, 8), lossAmount=rounded(amount, 2))
 
     historical, parametric, monte_carlo = [blocked(method) for method in ("HISTORICAL", "PARAMETRIC", "MONTE_CARLO")]
+    losses = None
     if eligibility.status == "READY":
         try:
             prerequisites()
@@ -276,10 +322,21 @@ def _calculate(request, rng, simulations):
                         loss = deviation * normal_quantile(confidence) - mean
                     elif deviation == 0:
                         loss = -mean
+                        losses = np.full(simulations, -mean)
                     else:
-                        loss = simulated_loss(mean, deviation, confidence, simulations, rng)
+                        losses = simulation_losses(mean, deviation, simulations, rng)
+                        loss = nearest_loss(losses, confidence)
                     success(result, loss, normal=True)
                 except (InvalidInput, *ARITHMETIC_ERRORS) as error:
                     failed(result, error if isinstance(error, InvalidInput) else numeric())
+    distribution = dict(status=monte_carlo["status"], reasons=monte_carlo["reasons"], simulations=simulations,
+                        confidenceLevel=confidence, holdingPeriodDays=horizon, bins=[], varAmount=None,
+                        expectedShortfallAmount=None, expectedShortfallPercent=None)
+    if monte_carlo["status"] == "READY":
+        try:
+            distribution = summarize_simulation(losses, confidence, request.holdingsValue, horizon, monte_carlo["lossAmount"])
+        except (InvalidInput, ValueError, *ARITHMETIC_ERRORS):
+            distribution.update(status="UNAVAILABLE", reasons=["NUMERICAL_ERROR"])
+            issue(numeric(), "monteCarlo", end)
     return CalculationResponse(requestId=request.requestId, metrics=metrics,
-                               valueAtRisk=[historical, parametric, monte_carlo], issues=issues)
+                               valueAtRisk=[historical, parametric, monte_carlo], issues=issues, monteCarlo=distribution)

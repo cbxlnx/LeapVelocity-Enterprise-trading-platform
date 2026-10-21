@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { riskFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
-import { createContributionOptions, createDrawdownOptions, createVarChartOptions, createWaterfallOptions } from './risk-chart-options';
-import { calculateCustomShock, toRiskPortfolio } from './risk-calculations';
+import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
+import { createContributionOptions, createDrawdownOptions, createDistributionOptions, createVarChartOptions, createWaterfallOptions } from './risk-chart-options';
+import { toShockResult, toRiskPortfolio } from './risk-calculations';
 
 describe('real account chart options', () => {
   it('plots backend horizon amounts without square-root scaling or missing-value zeros', () => {
@@ -28,12 +28,16 @@ describe('real account chart options', () => {
     expect(options.series).toMatchObject([{ data: [60, 40] }]);
   });
 
-  it('anchors waterfall loss and gain bars to their actual before/after equity', () => {
-    const portfolio = toRiskPortfolio(riskFixture(), TEST_INSTRUMENTS);
-    const loss = calculateCustomShock(portfolio, { market: -10 })!;
+  it('maps backend holding deltas to their actual waterfall baselines', () => {
+    const loss = toShockResult(shockFixture())!;
     expect(createWaterfallOptions(loss.waterfall).series).toMatchObject([{ data: [0, 1040, 1000, 0] }, {}]);
-    const gain = calculateCustomShock(portfolio, { market: 10 })!;
-    expect(createWaterfallOptions(gain.waterfall).series).toMatchObject([{ data: [0, 1100, 1160, 0] }, {}]);
+  });
+
+  it('uses the supplied histogram and marks backend VaR and ES on the loss axis', () => {
+    const options = createDistributionOptions(riskFixture().monteCarlo);
+    expect(options.series).toMatchObject([{ data: [[-50, 50000], [50, 50000]],
+      markLine: { data: [{ name: 'VaR', xAxis: 55 }, { name: 'ES', xAxis: 70 }] } }]);
+    expect(createDistributionOptions(undefined)).toEqual({ series: [] });
   });
 
   it('keeps fractional-dollar waterfall baselines at the scenario amounts', () => {

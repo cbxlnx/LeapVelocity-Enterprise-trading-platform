@@ -29,6 +29,6 @@ public final class RiskCalculationContract {
         }
     }
     public record Response(String schemaVersion, String requestId, CoreMetrics metrics,
-                           List<VarResult> valueAtRisk, List<Issue> issues) { }
+                           List<VarResult> valueAtRisk, List<Issue> issues, MonteCarloDistribution monteCarlo) { }
     private static String decimal(BigDecimal value) { return value == null ? null : value.toString(); }
 }

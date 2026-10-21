@@ -21,6 +21,31 @@
       "title": "CoreMetrics",
       "type": "object"
     },
+    "HistogramBin": {
+      "additionalProperties": false,
+      "properties": {
+        "lowerBound": {
+          "title": "Lowerbound",
+          "type": "string"
+        },
+        "upperBound": {
+          "title": "Upperbound",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "lowerBound",
+        "upperBound",
+        "count"
+      ],
+      "title": "HistogramBin",
+      "type": "object"
+    },
     "Issue": {
       "additionalProperties": false,
       "properties": {
@@ -85,6 +110,127 @@
         "message"
       ],
       "title": "Issue",
+      "type": "object"
+    },
+    "MonteCarloDistribution": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "enum": [
+              "EMPTY_PORTFOLIO",
+              "UNSUPPORTED_POSITION",
+              "UNSUPPORTED_CURRENCY",
+              "INVALID_POSITION",
+              "MISSING_INSTRUMENT_METADATA",
+              "MISSING_PRICE",
+              "INVALID_PRICE",
+              "NO_COMMON_DATES",
+              "STALE_PRICE",
+              "INCOMPLETE_HISTORY",
+              "INSUFFICIENT_HISTORY",
+              "MISSING_BENCHMARK",
+              "ZERO_BENCHMARK_VARIANCE",
+              "TRADING_CALENDAR_UNAVAILABLE",
+              "METHOD_NOT_IMPLEMENTED",
+              "NUMERICAL_ERROR"
+            ],
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "simulations": {
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Simulations",
+          "type": "integer"
+        },
+        "confidenceLevel": {
+          "title": "Confidencelevel",
+          "type": "string"
+        },
+        "holdingPeriodDays": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Holdingperioddays",
+          "type": "integer"
+        },
+        "unit": {
+          "const": "USD_LOSS",
+          "default": "USD_LOSS",
+          "title": "Unit",
+          "type": "string"
+        },
+        "tailConvention": {
+          "const": "EMPIRICAL_INTEGRATED_QUANTILE",
+          "default": "EMPIRICAL_INTEGRATED_QUANTILE",
+          "title": "Tailconvention",
+          "type": "string"
+        },
+        "bins": {
+          "items": {
+            "$ref": "#/$defs/HistogramBin"
+          },
+          "maxItems": 40,
+          "title": "Bins",
+          "type": "array"
+        },
+        "varAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Varamount"
+        },
+        "expectedShortfallAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expectedshortfallamount"
+        },
+        "expectedShortfallPercent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expectedshortfallpercent"
+        }
+      },
+      "required": [
+        "status",
+        "reasons",
+        "simulations",
+        "confidenceLevel",
+        "holdingPeriodDays",
+        "bins",
+        "varAmount",
+        "expectedShortfallAmount",
+        "expectedShortfallPercent"
+      ],
+      "title": "MonteCarloDistribution",
       "type": "object"
     },
     "ScalarMetric": {
@@ -347,13 +493,17 @@
       },
       "title": "Issues",
       "type": "array"
+    },
+    "monteCarlo": {
+      "$ref": "#/$defs/MonteCarloDistribution"
     }
   },
   "required": [
     "requestId",
     "metrics",
     "valueAtRisk",
-    "issues"
+    "issues",
+    "monteCarlo"
   ],
   "title": "CalculationResponse",
   "type": "object"

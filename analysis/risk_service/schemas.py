@@ -151,6 +151,46 @@ class CoreMetrics(Model):
     beta: ScalarMetric
 
 
+class HistogramBin(Model):
+    lowerBound: Decimal
+    upperBound: Decimal
+    count: Annotated[int, Field(strict=True, ge=0)]
+
+
+class MonteCarloDistribution(Model):
+    status: Status
+    reasons: list[IssueCode]
+    simulations: Annotated[int, Field(strict=True, ge=1, le=100000)]
+    confidenceLevel: Annotated[Decimal, Field(ge=Decimal(".90"), le=Decimal(".99"))]
+    holdingPeriodDays: Annotated[int, Field(strict=True, ge=1, le=10)]
+    unit: Literal["USD_LOSS"] = "USD_LOSS"
+    tailConvention: Literal["EMPIRICAL_INTEGRATED_QUANTILE"] = "EMPIRICAL_INTEGRATED_QUANTILE"
+    bins: Annotated[list[HistogramBin], Field(max_length=40)]
+    varAmount: Decimal | None
+    expectedShortfallAmount: Decimal | None
+    expectedShortfallPercent: Decimal | None
+
+    @model_validator(mode="after")
+    def coherent(self):
+        ready = self.status == "READY"
+        values = (self.varAmount, self.expectedShortfallAmount, self.expectedShortfallPercent)
+        if ready != bool(self.bins) or ready != (not self.reasons):
+            raise ValueError("Only READY distributions have bins and no reasons")
+        if any((value is not None) != ready for value in values):
+            raise ValueError("Only READY distributions have VaR and ES")
+        if ready:
+            if any(value < 0 for value in values) or self.expectedShortfallAmount < self.varAmount:
+                raise ValueError("Non-negative ES must be no smaller than VaR")
+            if sum(item.count for item in self.bins) != self.simulations:
+                raise ValueError("Histogram must account for every simulation")
+            for index, item in enumerate(self.bins):
+                if item.lowerBound > item.upperBound or (len(self.bins) > 1 and item.lowerBound == item.upperBound):
+                    raise ValueError("Histogram bounds must increase")
+                if index and self.bins[index - 1].upperBound != item.lowerBound:
+                    raise ValueError("Histogram bins must be contiguous and ordered")
+        return self
+
+
 class Issue(Model):
     code: IssueCode
     severity: Literal["WARNING"] = "WARNING"
@@ -166,6 +206,7 @@ class CalculationResponse(Model):
     metrics: CoreMetrics
     valueAtRisk: list[VarResult]
     issues: list[Issue]
+    monteCarlo: MonteCarloDistribution
 
     @model_validator(mode="after")
     def methods_and_units(self):
@@ -177,4 +218,9 @@ class CalculationResponse(Model):
         drawdown = self.metrics.maximumDrawdown.value
         if drawdown is not None and drawdown > 100:
             raise ValueError("Long-only maximum drawdown cannot exceed 100 percent")
+        simulated = self.valueAtRisk[2]
+        if self.monteCarlo.status == "READY" and (
+                simulated.status != "READY" or self.monteCarlo.varAmount != simulated.lossAmount
+                or self.monteCarlo.expectedShortfallPercent < simulated.lossPercent):
+            raise ValueError("Distribution must use the corresponding Monte Carlo VaR")
         return self

@@ -16,6 +16,10 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.servlet.Filter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.MediaType;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -59,6 +63,7 @@ import static com.leapvelocity.support.RiskApiTokens.bearer;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** Real MVC, production JWT filters, service transaction proxy, JPA repositories and historical JDBC on H2. */
@@ -170,6 +175,120 @@ class PortfolioRiskApiDatabaseTest {
 
     private String path() { return "/api/v1/accounts/" + accountId + "/analytics/risk"; }
     private String owner() throws Exception { return bearer(accountId, "TRADER"); }
+
+    @ParameterizedTest @CsvSource({"-50,-450,950,450", "0,0,1400,900", "50,450,1850,1350"})
+    void customShockBoundariesUseActualHoldingsAndKeepCash(String change, double pnl, double equity, double postValue) throws Exception {
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"priceChangePercent\":" + change + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("READY"))
+                .andExpect(jsonPath("$.valuation.accountId").value(accountId))
+                .andExpect(jsonPath("$.valuation.cashBalance").value(500))
+                .andExpect(jsonPath("$.totalPnL").value(pnl))
+                .andExpect(jsonPath("$.postShockEquity").value(equity))
+                .andExpect(jsonPath("$.holdings[0].marketValue").value(900))
+                .andExpect(jsonPath("$.holdings[0].postShockValue").value(postValue));
+        assertEquals(0, Config.calculationCalls, "Price sensitivity needs valuation, not a new Monte Carlo request");
+    }
+
+    @ParameterizedTest @CsvSource({"-5,-20.16,-10.08,191.42,882.84", "5,20.16,10.08,211.58,923.16"})
+    void customShockRoundsEachHoldingBeforeSummingAndNeverWritesPricesOrPositions(
+            double change, double total, double perHolding, double postValue, double equity) throws Exception {
+        instruments.saveAndFlush(new Instrument("MSFT", "Other", "EQUITY", "USD", true));
+        positions.saveAndFlush(new Position(accountId, "MSFT", BigDecimal.ONE, BigDecimal.TEN));
+        jdbc.update("UPDATE analytics.daily_prices SET close = 201.50 WHERE symbol = 'AAPL' AND price_date = ?", Date.valueOf(END));
+        jdbc.update("INSERT INTO analytics.daily_prices VALUES (?, ?, ?, ?)", "MSFT", Date.valueOf(END), 201.50, 201.50);
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"priceChangePercent\":" + change + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalPnL").value(total))
+                .andExpect(jsonPath("$.holdings[0].pnl").value(perHolding))
+                .andExpect(jsonPath("$.holdings[1].pnl").value(perHolding))
+                .andExpect(jsonPath("$.holdings[0].postShockValue").value(postValue))
+                .andExpect(jsonPath("$.postShockEquity").value(equity));
+        assertEquals(0, new BigDecimal("201.50").compareTo(jdbc.queryForObject(
+                "SELECT close FROM analytics.daily_prices WHERE symbol='AAPL' AND price_date=?", BigDecimal.class, Date.valueOf(END))));
+        assertEquals(2, positions.findByAccountIdOrderBySymbolAsc(accountId).size());
+        assertEquals(0, new BigDecimal("500").compareTo(accounts.findById(accountId).orElseThrow().getCashBalance()));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"{}", "{", "{\"priceChangePercent\":null}", "{\"priceChangePercent\":-50.01}",
+            "{\"priceChangePercent\":50.01}", "{\"priceChangePercent\":\"NaN\"}", "{\"priceChangePercent\":\"Infinity\"}"})
+    void invalidCustomShocksUseTheExisting422Envelope(String body) throws Exception {
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("VAL-422"));
+    }
+
+    @Test
+    void customShockRequiresAuthenticationAndAccountOwnership() throws Exception {
+        mvc.perform(post(path() + "/shock").contentType(MediaType.APPLICATION_JSON).content("{\"priceChangePercent\":-10}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post(path() + "/shock").header("Authorization", bearer(accountId + 1, "TRADER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"priceChangePercent\":-10}"))
+                .andExpect(status().isForbidden());
+        assertEquals(0, Config.calculationCalls);
+    }
+
+    @Test
+    void separateOwnersReceiveShocksFromOnlyTheirOwnPositions() throws Exception {
+        var other = accounts.saveAndFlush(new Account("SHOCK-OTHER", "Other", new BigDecimal("100"), AccountStatus.ACTIVE));
+        positions.saveAndFlush(new Position(other.getId(), "AAPL", new BigDecimal("2"), BigDecimal.TEN));
+        mvc.perform(post("/api/v1/accounts/" + other.getId() + "/analytics/risk/shock")
+                        .header("Authorization", bearer(other.getId(), "TRADER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"priceChangePercent\":-10}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.valuation.accountId").value(other.getId()))
+                .andExpect(jsonPath("$.totalPnL").value(-180)).andExpect(jsonPath("$.valuation.cashBalance").value(100));
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"priceChangePercent\":-10}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalPnL").value(-90));
+    }
+
+    @Test
+    void emptyCustomShockIsExplicitlyEmptyRatherThanZeroImpact() throws Exception {
+        positions.deleteAllInBatch();
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"priceChangePercent\":0}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("EMPTY"))
+                .andExpect(jsonPath("$.totalPnL").value(nullValue()))
+                .andExpect(jsonPath("$.reasons", hasItem("EMPTY_PORTFOLIO")))
+                .andExpect(jsonPath("$.valuation.cashBalance").value(500));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"MISSING_PRICE", "STALE_PRICE", "INVALID_PRICE", "UNSUPPORTED_POSITION"})
+    void customShockUnavailableValuationsNeverProduceInventedResults(String reason) throws Exception {
+        switch (reason) {
+            case "MISSING_PRICE" -> jdbc.update("DELETE FROM analytics.daily_prices WHERE symbol='AAPL'");
+            case "STALE_PRICE" -> jdbc.update("DELETE FROM analytics.daily_prices WHERE price_date > ?", Date.valueOf(END.minusDays(14)));
+            case "INVALID_PRICE" -> jdbc.update("UPDATE analytics.daily_prices SET close=0 WHERE symbol='AAPL'");
+            case "UNSUPPORTED_POSITION" -> {
+                var instrument = instruments.findBySymbol("AAPL").orElseThrow();
+                instrument.setAssetClass("OPTION"); instruments.saveAndFlush(instrument);
+            }
+        }
+        mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"priceChangePercent\":-10}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.reasons", hasItem(reason)))
+                .andExpect(jsonPath("$.totalPnL").value(nullValue()))
+                .andExpect(jsonPath("$.holdings").isEmpty());
+    }
+
+    @Test
+    void simulationResponseKeepsVaRHistogramEsAndUnavailableReplayMetadata() throws Exception {
+        loadMvpFixture();
+        var result = mvc.perform(get(path()).header("Authorization", owner()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.monteCarlo.status").value("READY"))
+                .andExpect(jsonPath("$.monteCarlo.simulations").value(100000))
+                .andExpect(jsonPath("$.monteCarlo.bins.length()").value(40))
+                .andExpect(jsonPath("$.stressCapabilities.historical[0].status").value("NOT_IMPLEMENTED"))
+                .andExpect(jsonPath("$.stressCapabilities.sectorIncrements.status").value("UNAVAILABLE"))
+                .andReturn();
+        var tree = JsonMapper.builder().build().readTree(result.getResponse().getContentAsString());
+        var simulation = tree.path("monteCarlo");
+        assertEquals(tree.at("/valueAtRisk/2/lossAmount").asDouble(), simulation.path("varAmount").asDouble());
+        assertTrue(simulation.path("expectedShortfallAmount").asDouble() >= simulation.path("varAmount").asDouble());
+        int count = 0;
+        for (var bin : simulation.path("bins")) count += bin.path("count").asInt();
+        assertEquals(100000, count);
+    }
 
     @Test
     void existingSummaryStillParticipatesInItsCallersTransaction() {

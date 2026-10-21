@@ -35,9 +35,13 @@ test.describe('Deployed account risk dashboard', () => {
     for (const holding of risk.valuation.holdings) await expect(page.locator('.concentration-card tbody')).toContainText(holding.symbol);
     await expect(page.locator('.contribution-card')).toContainText('Volatility contribution unavailable');
     await expect(page.locator('.stress-card')).toContainText('Historical replay unavailable');
-    await expect(page.getByText('Expected Shortfall is not implemented', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Monte Carlo distribution', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '30 days', exact: true })).toHaveCount(0);
-    await expect(page.locator('.histogram-chart')).toHaveCount(0);
+    if (risk.monteCarlo?.status === 'READY') {
+      await expect(page.locator('.histogram-chart canvas')).toBeVisible();
+      await expect(page.locator('.es-callout')).toContainText(amount(risk.monteCarlo.expectedShortfallAmount, '$'));
+      expect(risk.monteCarlo.bins.reduce((total, bin) => total + bin.count, 0)).toBe(risk.monteCarlo.simulations);
+    } else await expect(page.locator('.histogram-chart')).toHaveCount(0);
     if (risk.series.status === 'READY') {
       await expect(page.locator('.drawdown-chart canvas')).toBeVisible();
       expect(risk.series.wealth.length).toBe(risk.series.returns.length + 1);
@@ -75,9 +79,14 @@ test.describe('Deployed account risk dashboard', () => {
     test.skip(!risk.valuation.holdings.length || risk.valuation.valuationStatus !== 'READY', 'No invested holdings in this account.');
     await expect(page.locator('.kpi-grid')).toBeVisible();
     await page.getByLabel('Market shock percentage', { exact: true }).fill('-10');
+    const shockResponse = page.waitForResponse(response => response.url().endsWith('/analytics/risk/shock') && response.request().method() === 'POST');
     await page.locator('.shock-card').getByRole('button', { name: 'Run', exact: true }).click();
-    const expectedLoss = risk.valuation.holdings.reduce((sum, h) => sum + Math.round(h.marketValue! * 10) / 100, 0);
-    await expect(page.locator('.impact-panel')).toContainText(amount(-expectedLoss, '$'));
+    const response = await shockResponse;
+    expect(response.status()).toBe(200);
+    const shock = await response.json();
+    expect(shock.status).toBe('READY');
+    await expect(page.locator('.impact-panel')).toContainText(amount(shock.totalPnL, '$'));
+    for (const holding of shock.holdings) await expect(page.locator('.breakdown-table')).toContainText(amount(holding.pnl, '$'));
     await expect(page.locator('.impact-panel')).toContainText(amount(risk.valuation.cashBalance, '$'));
     await expect(page.locator('.waterfall-chart canvas')).toBeVisible();
     await page.locator('.concentration-card').getByRole('button', { name: 'By sector' }).click();

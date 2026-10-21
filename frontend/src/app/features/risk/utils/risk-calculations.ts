@@ -1,7 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { Instrument } from '../../../models/api.models';
-import { PortfolioRisk } from '../../analytics/models/portfolio-risk.model';
-import { DrawdownPoint, RiskPortfolio, ShockResult, ShockValues } from '../models/risk-dashboard.model';
+import { PortfolioRisk, PortfolioShock } from '../../analytics/models/portfolio-risk.model';
+import { DrawdownPoint, RiskPortfolio, ShockResult } from '../models/risk-dashboard.model';
 import { RiskDecimal } from './risk-decimal';
 
 export function formatAmount(value: number | null | undefined, prefix = '', suffix = ''): string {
@@ -62,25 +62,15 @@ export function toRiskPortfolio(assessment: PortfolioRisk, instruments: Instrume
   };
 }
 
-export function roundCurrency(value: Decimal.Value): number {
-  return new RiskDecimal(value).toDecimalPlaces(2).toNumber();
-}
-
-/** Existing uniform price shock: apply the user's percentage once per holding; cash unchanged. */
-export function calculateCustomShock(portfolio: RiskPortfolio, shocks: ShockValues): ShockResult | null {
-  if (!portfolio.valuationReady || portfolio.portfolioValueUsd == null || portfolio.cashReserveUsd == null
-      || !Number.isFinite(portfolio.portfolioValueUsd) || !Number.isFinite(portfolio.cashReserveUsd)
-      || !portfolio.holdings.length || !Number.isFinite(shocks.market) || Math.abs(shocks.market) > 50
-      || portfolio.holdings.some(holding => holding.marketValue == null || !Number.isFinite(holding.marketValue))) return null;
-  const deltas = portfolio.holdings.map(holding => ({ label: holding.symbol,
-    deltaUsd: roundCurrency(new RiskDecimal(holding.marketValue!).times(shocks.market).div(100)) }));
-  const pnl = RiskDecimal.sum(...deltas.map(delta => delta.deltaUsd));
-  const lossUsd = pnl.negated().toNumber();
-  const postShockEquityUsd = roundCurrency(new RiskDecimal(portfolio.portfolioValueUsd).plus(pnl));
-  return { lossUsd, postShockEquityUsd,
-    impactPercent: portfolio.portfolioValueUsd > 0 ? new RiskDecimal(lossUsd).div(portfolio.portfolioValueUsd).times(100).toNumber() : null,
-    waterfall: { title: 'Custom uniform price shock', period: `Valuation ${portfolio.asOf} · Price change ${shocks.market}%`,
-      startingEquityUsd: portfolio.portfolioValueUsd, endingEquityUsd: postShockEquityUsd,
-      cashReserveUsd: portfolio.cashReserveUsd, deltas },
+/** Map the authoritative server result to a chart without recalculating P&L. */
+export function toShockResult(response: PortfolioShock): ShockResult | null {
+  if (response.status !== 'READY' || response.totalPnL == null || response.postShockEquity == null
+      || response.valuation.totalEquity == null || response.valuation.cashBalance == null) return null;
+  return { ...response,
+    waterfall: { title: 'Custom uniform price shock',
+      period: `Valuation ${response.valuation.asOf} · Price change ${response.priceChangePercent}%`,
+      startingEquityUsd: response.valuation.totalEquity, endingEquityUsd: response.postShockEquity,
+      cashReserveUsd: response.valuation.cashBalance,
+      deltas: response.holdings.map(holding => ({ label: holding.symbol, deltaUsd: holding.pnl })) },
   };
 }

@@ -1,8 +1,14 @@
 <div class="chart-pair">
   <section class="risk-card" aria-labelledby="distribution-heading"><header class="section-heading"><h2 id="distribution-heading">Monte Carlo distribution</h2><p>Simulated outcomes</p></header>
-    <p role="status">Unavailable: the risk service returns the simulated loss quantile, but does not expose simulation outcomes or histogram bins.</p>
-    <div class="es-callout"><div><strong>Expected Shortfall</strong><span>Unavailable: Expected Shortfall is not implemented by the risk service.</span></div></div>
-    <p class="fine-print">Monte Carlo VaR above uses the actual service calculation. A distribution cannot be reconstructed from a single quantile.</p>
+    @if (distribution(); as simulation) {
+      <p>{{ simulation.confidenceLevel * 100 }}% confidence · {{ simulation.holdingPeriodDays }} trading day(s) · {{ simulation.simulations.toLocaleString() }} outcomes</p>
+      @if (simulation.status === 'READY') {
+        <div class="chart histogram-chart" echarts [options]="distributionOptions()" aria-label="Monte Carlo USD loss distribution with VaR and Expected Shortfall markers"></div>
+        <div class="es-callout"><div><strong>Expected Shortfall</strong><span>Average loss in the worst {{ (100 - simulation.confidenceLevel * 100).toFixed(2) }}% tail</span></div><div class="callout-value">{{ format(simulation.expectedShortfallAmount, '$') }}<small>{{ format(simulation.expectedShortfallPercent, '', '%') }} of invested holdings</small></div></div>
+        <p>Monte Carlo VaR: {{ format(simulation.varAmount, '$') }}</p>
+      } @else { <p role="status">Distribution and Expected Shortfall unavailable · {{ simulation.reasons.join(' · ') }}</p> }
+    } @else { <p role="status">Distribution and Expected Shortfall unavailable: the backend did not supply a simulation result.</p> }
+    <p class="fine-print">Actual simulated losses; negative values are gains. The histogram, VaR and ES share one simulation batch. ES uses exactly the selected tail probability with fractional weight at its boundary; reported loss magnitudes are floored at zero.</p>
   </section>
   <section class="risk-card" aria-labelledby="drawdown-heading"><header class="section-heading"><h2 id="drawdown-heading">Historical drawdown</h2><p>{{ portfolio().assessment.history.from || 'Unavailable' }} – {{ portfolio().assessment.history.to || 'Unavailable' }}</p></header>
     @if (portfolio().drawdownSeries.length) { <div class="chart drawdown-chart" echarts [options]="drawdownOptions()" aria-label="Current-allocation historical drawdown chart"></div> }

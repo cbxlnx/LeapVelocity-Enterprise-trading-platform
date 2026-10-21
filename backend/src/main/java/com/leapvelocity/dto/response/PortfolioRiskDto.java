@@ -24,13 +24,33 @@ public record PortfolioRiskDto(
         CoreMetrics metrics,
         List<VarResult> valueAtRisk,
         List<Issue> issues,
-        ChartSeries series
+        ChartSeries series,
+        MonteCarloDistribution monteCarlo,
+        StressCapabilities stressCapabilities
 ) {
     public enum RiskStatus { READY, PARTIAL, EMPTY, UNAVAILABLE }
     public enum ResultStatus { READY, EMPTY, UNAVAILABLE, NOT_IMPLEMENTED }
     public enum Unit { PERCENT, DIMENSIONLESS }
     public enum VarMethod { HISTORICAL, PARAMETRIC, MONTE_CARLO }
     public enum Severity { INFO, WARNING, ERROR }
+
+    public record HistogramBin(BigDecimal lowerBound, BigDecimal upperBound, int count) { }
+    public record MonteCarloDistribution(ResultStatus status, List<IssueCode> reasons, int simulations,
+                                         BigDecimal confidenceLevel, int holdingPeriodDays, String unit,
+                                         String tailConvention, List<HistogramBin> bins, BigDecimal varAmount,
+                                         BigDecimal expectedShortfallAmount, BigDecimal expectedShortfallPercent) { }
+    public record ScenarioAvailability(String id, String title, ResultStatus status, List<String> reasons) { }
+    public record StressCapabilities(List<ScenarioAvailability> historical, ScenarioAvailability sectorIncrements) {
+        public static StressCapabilities current() {
+            var reasons = List.of("Validated adjusted event-period prices and issuer/ticker continuity mappings are not supplied.",
+                    "The bundled trading calendar covers 2024–2028, outside these event periods; no proxy shocks are assumed.");
+            return new StressCapabilities(List.of(
+                    new ScenarioAvailability("CRISIS_2008", "2008 financial crisis", ResultStatus.NOT_IMPLEMENTED, reasons),
+                    new ScenarioAvailability("MARCH_2020", "March 2020", ResultStatus.NOT_IMPLEMENTED, reasons)),
+                    new ScenarioAvailability("SECTOR_INCREMENTS", "Sector increments", ResultStatus.UNAVAILABLE,
+                            List.of("Instrument metadata has no validated sector classification; the existing importer stores prices only.")));
+        }
+    }
 
     public enum IssueCode {
         EMPTY_PORTFOLIO, UNSUPPORTED_POSITION, UNSUPPORTED_CURRENCY, INVALID_POSITION,

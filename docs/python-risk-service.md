@@ -1,5 +1,10 @@
 # Python risk service implementation report
 
+This report records the initial service integration. The subsequent
+[risk analytics extension](risk-analytics-extension.md) adds the Monte Carlo
+histogram, Expected Shortfall and authoritative custom-shock API and contains the
+current verification results.
+
 Implemented on `feat/py-lib-serv` after comparing it with `feat/py-serv` at
 `684c08c`. No branch switch, commit, merge or rebase was performed.
 
@@ -17,6 +22,7 @@ running-peak expression are adapted as follows:
 | Historical VaR | `numpy.quantile(..., method="inverted_cdf")` over signed losses; clipped to a non-negative loss |
 | Parametric VaR | `scipy.stats.norm.ppf`, NumPy mean and sample deviation fitted to compounded horizon returns |
 | Monte Carlo VaR | Request-local `numpy.random.Generator(PCG64(20261020))`, 100,000 normal draws, same nearest-rank quantile |
+| Monte Carlo histogram / ES | Same draws; NumPy histogram and empirical integrated-quantile tail average |
 | Annualised volatility | `numpy.std(..., ddof=1) * sqrt(252) * 100` |
 | Beta | `numpy.cov(..., ddof=1)` divided by benchmark sample variance |
 | Maximum drawdown | Dated Pandas `Series`, `cummax(skipna=False)` and maximum peak-to-trough percentage loss |
@@ -80,11 +86,12 @@ Uvicorn 0.54.0, NumPy 2.5.4 and SciPy 1.18.1 from the reference, plus explicit
 Pandas 3.0.6 (already installed through the importer environment). Development
 dependencies are pytest 9.1.1 and httpx 0.28.1. Frontend `decimal.js` 10.6.0 moves
 from a transitive development dependency to an explicit runtime dependency for
-existing exposure/shock money arithmetic. No Java dependency is added.
+existing exposure presentation and waterfall offsets. Shock money arithmetic now
+runs in Java. No Java dependency is added.
 The importer remains separate; Python has no portfolio/market-data access.
 No `.env` or real credentials were changed.
 
-## Verification on 21 October 2026
+## Initial integration verification on 21 October 2026
 
 | Check | Actual result |
 | --- | --- |
@@ -124,8 +131,8 @@ Python requests were also confirmed as HTTP 200 in the running calculator's logs
 
 All six core metrics, valuation, drawdown history, holding allocation, cash and
 coverage use supported inputs. Unsupported dashboard panels now state their
-missing inputs/models explicitly. Expected Shortfall, per-asset risk metrics,
-covariance-based risk attribution, simulation histogram export, trusted sector
+missing inputs/models explicitly. Per-asset risk metrics,
+covariance-based risk attribution, trusted sector
 classification and historical event replay remain unimplemented. Historical
 holdings/cash flows, FX and non-long-only models are also absent. These gaps
 and each panel's source are listed in the [frontend guide](risk-frontend-guide.md).

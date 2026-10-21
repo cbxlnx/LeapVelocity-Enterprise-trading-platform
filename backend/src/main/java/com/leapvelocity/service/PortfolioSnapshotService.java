@@ -43,6 +43,27 @@ public class PortfolioSnapshotService {
         return summarize(accountId, date, null);
     }
 
+    public record ShockSnapshot(PortfolioSummaryDto valuation, List<Issue> issues) {
+        public ShockSnapshot { issues = List.copyOf(issues); }
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public ShockSnapshot prepareShockInputs(Long accountId, LocalDate date) {
+        List<Issue> issues = new ArrayList<>();
+        var summary = summarize(accountId, date, issues);
+        PortfolioReturnPreparation.validateValuation(summary, summary.holdings(), date, RiskRequestDto.defaults(), issues);
+        // The price sensitivity model supports the project's stored cash equities/funds.
+        for (var holding : positions.findByAccountIdOrderBySymbolAsc(accountId)) {
+            if (holding.getQuantity() != null && holding.getQuantity().signum() == 0) continue;
+            var instrument = holding.getInstrument();
+            if (instrument != null && (instrument.getAssetClass() == null || !List.of("EQUITY", "FUND").contains(instrument.getAssetClass()))) {
+                issues.add(PortfolioReturnPreparation.issue(IssueCode.UNSUPPORTED_POSITION, Severity.ERROR, "valuation",
+                        holding.getSymbol(), null, "Uniform price shocks support long-only USD EQUITY and FUND holdings."));
+            }
+        }
+        return new ShockSnapshot(summary, issues.stream().distinct().toList());
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ, propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public PortfolioReturnPreparation.PreparedInputs prepareRiskInputs(Long accountId, RiskRequestDto options,
                                                                         LocalDate calculationDate) {

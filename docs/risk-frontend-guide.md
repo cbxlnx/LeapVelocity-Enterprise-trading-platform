@@ -28,7 +28,8 @@ The public response type is `PortfolioRisk` in
 `frontend/src/app/features/analytics/models/portfolio-risk.model.ts`. Its shape
 matches the reference branch: `schemaVersion`, calculation dates, `parameters`,
 `riskStatus`, `valuation`, `history`, `assumptions`, `metrics`, `valueAtRisk`,
-`issues`, and `series`. Public decimals remain JSON numbers. Internal Java/Python
+`issues`, and `series`, with additive `monteCarlo` and `stressCapabilities` fields.
+Public decimals remain JSON numbers. Internal Java/Python
 decimals are strings to retain validation and monetary rounding precision.
 
 ## Existing panels
@@ -42,17 +43,30 @@ decimals are strings to retain validation and monetary rounding precision.
 | Largest holding, cash, coverage insights | Existing valuation and validated history metadata |
 | Holding allocation / concentration | Existing Java holdings, excluding cash from the weight denominator |
 | Instrument-type exposure | Existing instrument `assetClass`; never presented as sector classification |
-| Custom shock and waterfall | Explicit user-entered uniform price change, applied once per holding; cash unchanged |
+| Custom shock, holding table and waterfall | Authenticated Java POST result; price change applied once per holding, cents rounded before summing, cash unchanged |
 | Historical stress replay / stress alert | Unavailable: no validated event histories and replay model |
 | Sector exposure / sector shocks | Unavailable: no trusted sector classification |
 | Per-holding beta/volatility/VaR and volatility contribution | Unavailable: no per-asset result contract or attribution model |
-| Monte Carlo histogram | Unavailable: simulation outcomes/bins are not part of the contract |
-| Expected Shortfall | Unavailable: no defined implementation/response field; cannot derive it from VaR alone |
+| Monte Carlo histogram | Python's same simulation batch as VaR, aggregated into at most 40 USD loss bins; VaR and ES markers |
+| Expected Shortfall | Python empirical tail integral from those losses, at the same confidence and session horizon |
 
-The custom uniform shock retains the existing user scenario feature using
-`decimal.js` 10.6.0 with an isolated 34-digit, half-up decimal context. Rounded
-holding deltas reconcile to the ending-equity waterfall. It does not claim to be
-a historical or statistical stress model.
+The custom shock calls `POST /api/v1/accounts/{id}/analytics/risk/shock` with
+`{"priceChangePercent": -10}` for a hypothetical 10% price decline. Java obtains a
+fresh snapshot using existing repositories, applies the shared seven-calendar-day
+freshness rule, and calculates signed P&L with `BigDecimal` half-up rounding. It
+supports the project's long-only USD `EQUITY` and `FUND` holdings. Backend
+`totalPnL`, `impactPercent`, `postShockEquity`, `valuation` and per-holding results
+populate the impact panel, scenario row, holding table and waterfall. No frontend
+price sensitivity calculator remains. `decimal.js` is still used for exposure
+presentation and waterfall offsets. The shock is not a historical, beta or
+probabilistic model. Input edits, Reset and refresh cancel or clear stale results.
+
+`monteCarlo` includes its own status/reasons, simulation count, confidence, horizon,
+USD loss unit, bins, VaR amount and ES amount/percentage. Negative histogram values
+are gains; reported VaR/ES are floored at zero. ES integrates the empirical inverse
+CDF over `(confidence, 1)` and divides by the tail probability, using fractional
+weight at the boundary. Ties therefore cannot inflate the selected tail mass.
+See the [analytics extension report](risk-analytics-extension.md) for examples.
 
 ## Presentation rules
 

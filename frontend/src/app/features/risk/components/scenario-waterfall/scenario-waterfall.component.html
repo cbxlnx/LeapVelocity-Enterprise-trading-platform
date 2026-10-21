@@ -1,8 +1,15 @@
 <section class="waterfall-section" aria-labelledby="waterfall-heading">
   <header class="section-title"><h2 id="waterfall-heading">Scenario breakdown</h2></header>
+  @if (result(); as shock) {
+    <div class="breakdown-table"><table><thead><tr><th>Holding</th><th>Market value</th><th>Price change</th><th>P&amp;L</th><th>Post-shock value</th></tr></thead>
+      <tbody>@for (holding of shock.holdings; track holding.symbol) { <tr><th>{{ holding.symbol }}</th><td>{{ format(holding.marketValue, '$') }}</td><td>{{ format(holding.priceChangePercent, '', '%') }}</td><td>{{ format(holding.pnl, '$') }}</td><td>{{ format(holding.postShockValue, '$') }}</td></tr> }
+      <tr><th>Cash (unchanged)</th><td>{{ format(shock.valuation.cashBalance, '$') }}</td><td>0%</td><td>$0.00</td><td>{{ format(shock.valuation.cashBalance, '$') }}</td></tr></tbody>
+      <tfoot><tr><th>Account total</th><td>{{ format(shock.valuation.totalEquity, '$') }}</td><td></td><td>{{ format(shock.totalPnL, '$') }}</td><td>{{ format(shock.postShockEquity, '$') }}</td></tr></tfoot>
+    </table></div>
+  }
   @if (!waterfalls().length) { <p role="status">Historical scenario breakdown unavailable: no historical replay engine. Run a custom price shock to view its actual-holding breakdown here.</p> }
   <div class="waterfall-grid">@for (waterfall of waterfalls(); track waterfall.title; let index = $index) {
-    <article class="waterfall-card"><h3>{{ waterfall.title }}</h3><p>{{ waterfall.period }}</p><div class="chart waterfall-chart" echarts [options]="options()[index]" aria-label="Actual-holding custom price shock waterfall"></div><footer><strong>Holding P&amp;L {{ format(waterfall.endingEquityUsd - waterfall.startingEquityUsd, '$') }}</strong><span>{{ format(waterfall.cashReserveUsd, '$') }} cash unchanged</span></footer></article>
+    <article class="waterfall-card"><h3>{{ waterfall.title }}</h3><p>{{ waterfall.period }}</p><div class="chart waterfall-chart" echarts [options]="options()[index]" aria-label="Actual-holding custom price shock waterfall"></div><footer><strong>Holding P&amp;L {{ format(result()?.totalPnL, '$') }}</strong><span>{{ format(waterfall.cashReserveUsd, '$') }} cash unchanged</span></footer></article>
   }</div>
   <p class="fine-print">Starting equity → user-assumed holding price changes → ending equity. Historical event replays are not implemented.</p>
 </section>

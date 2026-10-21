@@ -34,9 +34,9 @@
     <app-risk-contribution [portfolio]="current" />
 
     <div class="stress-alert" role="status"><span>Historical stress replay is unavailable. No validated event-loss calculation is currently supplied.</span></div>
-    <app-stress-scenarios [customResult]="customResult()" />
+    <app-stress-scenarios [customResult]="customResult()" [capabilities]="risk()?.stressCapabilities" />
     <app-custom-shock [portfolio]="current" (shockRun)="customResult.set($event)" />
-    <app-scenario-waterfall [waterfalls]="waterfalls()" />
+    <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="customResult()" />
     <app-concentration [portfolio]="current" />
   }
 </main>

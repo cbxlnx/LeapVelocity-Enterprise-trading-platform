@@ -57,6 +57,38 @@ export interface RiskIssue {
   message: string;
 }
 
+export interface MonteCarloDistribution {
+  status: RiskResultStatus;
+  reasons: RiskIssueCode[];
+  simulations: number;
+  confidenceLevel: number;
+  holdingPeriodDays: number;
+  unit: 'USD_LOSS';
+  tailConvention: 'EMPIRICAL_INTEGRATED_QUANTILE';
+  bins: Array<{ lowerBound: number; upperBound: number; count: number }>;
+  varAmount: number | null;
+  expectedShortfallAmount: number | null;
+  expectedShortfallPercent: number | null;
+}
+
+export interface ScenarioAvailability { id: string; title: string; status: RiskResultStatus; reasons: string[]; }
+export interface StressCapabilities { historical: ScenarioAvailability[]; sectorIncrements: ScenarioAvailability; }
+
+export interface PortfolioShock {
+  schemaVersion: string;
+  calculatedAt: string;
+  calculationDate: string;
+  status: RiskResultStatus;
+  reasons: RiskIssueCode[];
+  priceChangePercent: number;
+  valuation: PortfolioSummary;
+  totalPnL: number | null;
+  impactPercent: number | null;
+  postShockEquity: number | null;
+  holdings: Array<{ symbol: string; marketValue: number; priceChangePercent: number; pnl: number; postShockValue: number }>;
+  issues: RiskIssue[];
+}
+
 /** KPI response with independent availability per method. Dates remain calendar-date strings. */
 export interface PortfolioRisk {
   schemaVersion: string;
@@ -78,6 +110,8 @@ export interface PortfolioRisk {
   };
   metrics: { annualisedVolatility: RiskScalarMetric; maximumDrawdown: RiskScalarMetric; beta: RiskScalarMetric; };
   valueAtRisk: RiskVarResult[];
+  monteCarlo?: MonteCarloDistribution;
+  stressCapabilities?: StressCapabilities;
   issues: RiskIssue[];
   /** Validated observations from the same snapshot as the metrics; cash excluded. */
   series: {

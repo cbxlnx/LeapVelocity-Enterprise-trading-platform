@@ -1,7 +1,10 @@
 <section class="risk-card stress-card" aria-labelledby="stress-heading">
   <header class="section-heading"><h2 id="stress-heading">Stress test scenarios</h2><p>Availability of historical and user-defined calculations</p></header>
-  <p role="status"><strong>Historical replay unavailable.</strong> Historical stress testing is not implemented. The application does not supply validated event returns for the 2008 financial crisis or March 2020. No event loss estimate is shown.</p>
-  @if (customResult(); as result) { <div class="scenario-row"><div class="scenario-name"><strong>Custom uniform price shock</strong><span>{{ result.waterfall.period }}</span></div><div>P&amp;L {{ format(-result.lossUsd, '$') }}</div><div>{{ format(result.impactPercent == null ? null : -result.impactPercent, '', '%') }} of account equity</div></div> }
+  <p role="status"><strong>Historical replay unavailable.</strong> No event loss estimate is shown.</p>
+  @if (capabilities(); as availability) { @for (scenario of availability.historical; track scenario.id) {
+    <p role="status"><strong>{{ scenario.title }} · {{ scenario.status }}</strong> {{ scenario.reasons.join(' ') }}</p>
+  } } @else { <p>Validated event returns and instrument mappings for 2008 and March 2020 are not supplied.</p> }
+  @if (customResult(); as result) { <div class="scenario-row"><div class="scenario-name"><strong>Custom uniform price shock</strong><span>{{ result.waterfall.period }}</span></div><div>P&amp;L {{ format(result.totalPnL, '$') }}</div><div>{{ format(result.impactPercent, '', '%') }} of account equity</div></div> }
   @else { <p>Custom scenario: no result yet. Run the custom shock builder using this account's holdings.</p> }
   <p class="fine-print">No assumed historical shocks, forecasts or sample loss amounts are used.</p>
 </section>

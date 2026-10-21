@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { riskFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
-import { calculateCustomShock, drawdownPoints, roundCurrency, toRiskPortfolio } from './risk-calculations';
+import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
+import { toShockResult, drawdownPoints, toRiskPortfolio } from './risk-calculations';
 
 describe('account-specific risk presentation', () => {
   it('uses actual market values and excludes cash from concentration denominators', () => {
@@ -36,45 +36,27 @@ describe('account-specific risk presentation', () => {
     expect(drawdownPoints(response)).toEqual([]);
   });
 
-  it.each(['STALE_PRICE', 'MISSING_PRICE'] as const)('blocks valued exposures and shocks for %s', code => {
+  it.each(['STALE_PRICE', 'MISSING_PRICE'] as const)('blocks valued exposures for %s', code => {
     const response = riskFixture();
     response.issues.push({ code, scope: 'valuation', severity: 'ERROR', date: null, symbol: 'AAA', message: 'Test data issue' });
     const portfolio = toRiskPortfolio(response, TEST_INSTRUMENTS);
     expect(portfolio.holdings[0].marketValue).toBeNull();
     expect(portfolio.holdings[0].allocationPercent).toBeNull();
-    expect(calculateCustomShock(portfolio, { market: -10 })).toBeNull();
   });
 
-  it.each([-10, 10, 0])('applies a user price change of %s once, preserving cash and reconciling cents', market => {
-    const portfolio = toRiskPortfolio(riskFixture(), TEST_INSTRUMENTS);
-    const result = calculateCustomShock(portfolio, { market })!;
-    expect(result.lossUsd).toBe(-1000 * market / 100);
-    expect(result.postShockEquityUsd).toBe(1100 + 1000 * market / 100);
+  it('uses the backend result verbatim for holding breakdown and waterfall', () => {
+    const response = shockFixture();
+    const result = toShockResult(response)!;
+    expect(result.totalPnL).toBe(response.totalPnL);
+    expect(result.holdings).toEqual(response.holdings);
+    expect(result.waterfall.deltas).toEqual([{ label: 'AAA', deltaUsd: -60 }, { label: 'BBB', deltaUsd: -40 }]);
+    expect(result.waterfall.endingEquityUsd).toBe(1000);
     expect(result.waterfall.cashReserveUsd).toBe(100);
-    expect(result.waterfall.startingEquityUsd + result.waterfall.deltas.reduce((sum, d) => sum + d.deltaUsd, 0)).toBe(result.waterfall.endingEquityUsd);
-    expect(result.impactPercent).toBeCloseTo(result.lossUsd / 1100 * 100);
+    response.status = 'UNAVAILABLE'; response.totalPnL = null;
+    expect(toShockResult(response)).toBeNull();
   });
 
-  it.each([NaN, Infinity, -Infinity, -51, 51])('rejects invalid user price changes: %s', market => {
-    expect(calculateCustomShock(toRiskPortfolio(riskFixture(), null), { market })).toBeNull();
-  });
-
-  it.each([[10.075, 10.08], [-10.075, -10.08], [1.005, 1.01], [-1.005, -1.01]])(
-    'rounds decimal half cents away from zero: %s → %s', (value, expected) => {
-      expect(roundCurrency(value)).toBe(expected);
-    });
-
-  it.each([-5, 5])('keeps half-cent holding shocks symmetric at %s%%', market => {
-    const portfolio = toRiskPortfolio(riskFixture(), null);
-    portfolio.holdings = [{ ...portfolio.holdings[0], marketValue: 201.50 }];
-    portfolio.portfolioValueUsd = 301.50;
-    const result = calculateCustomShock(portfolio, { market })!;
-    expect(result.waterfall.deltas[0].deltaUsd).toBe(market > 0 ? 10.08 : -10.08);
-    expect(result.lossUsd).toBe(market > 0 ? -10.08 : 10.08);
-    expect(result.postShockEquityUsd).toBe(market > 0 ? 311.58 : 291.42);
-  });
-
-  it('sums fractional-dollar exposures and scenario deltas without binary rounding drift', () => {
+  it('sums fractional-dollar exposures without binary rounding drift', () => {
     const response = riskFixture();
     response.valuation.holdings[0].marketValue = .1;
     response.valuation.holdings[1].marketValue = .2;
@@ -84,15 +66,5 @@ describe('account-specific risk presentation', () => {
     const metadata = TEST_INSTRUMENTS.map(instrument => ({ ...instrument, assetClass: 'EQUITY' }));
     const portfolio = toRiskPortfolio(response, metadata);
     expect(portfolio.instrumentExposure).toEqual([{ name: 'EQUITY', marketValue: .3, allocationPercent: 100 }]);
-    const result = calculateCustomShock(portfolio, { market: 10 })!;
-    expect(result.lossUsd).toBe(-.03);
-    expect(result.postShockEquityUsd).toBe(.43);
-    expect(result.impactPercent).toBe(-7.5);
-  });
-
-  it.each([NaN, Infinity, -Infinity])('blocks non-finite holding values: %s', marketValue => {
-    const portfolio = toRiskPortfolio(riskFixture(), null);
-    portfolio.holdings[0].marketValue = marketValue;
-    expect(calculateCustomShock(portfolio, { market: -10 })).toBeNull();
   });
 });

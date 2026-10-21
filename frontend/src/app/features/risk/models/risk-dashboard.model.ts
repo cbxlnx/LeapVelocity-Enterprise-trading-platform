@@ -1,4 +1,4 @@
-import { PortfolioRisk } from '../../analytics/models/portfolio-risk.model';
+import { PortfolioRisk, PortfolioShock } from '../../analytics/models/portfolio-risk.model';
 
 export type RiskHorizon = 1 | 10;
 export type ConcentrationView = 'stock' | 'sector';
@@ -38,9 +38,6 @@ export interface ScenarioWaterfall {
   endingEquityUsd: number;
   cashReserveUsd: number;
 }
-export interface ShockResult {
-  lossUsd: number;
-  impactPercent: number | null;
-  postShockEquityUsd: number;
+export interface ShockResult extends PortfolioShock {
   waterfall: ScenarioWaterfall;
 }

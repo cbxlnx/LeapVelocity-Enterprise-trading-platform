@@ -1,11 +1,41 @@
 import { EChartsOption } from 'echarts';
-import { PortfolioRisk } from '../../analytics/models/portfolio-risk.model';
+import { PortfolioRisk, MonteCarloDistribution } from '../../analytics/models/portfolio-risk.model';
 import { DrawdownPoint, RiskPortfolio, ScenarioWaterfall } from '../models/risk-dashboard.model';
 import { formatAmount } from './risk-calculations';
 import { RiskDecimal } from './risk-decimal';
 
 const axisColor = '#586c7d';
 const gridColor = '#e5ebef';
+
+/** Histogram counts and markers come from the same backend simulation. */
+export function createDistributionOptions(distribution: MonteCarloDistribution | undefined): EChartsOption {
+  if (!distribution || distribution.status !== 'READY') return { series: [] };
+  const bins = distribution.bins;
+  const low = Math.min(...bins.map(bin => bin.lowerBound), distribution.varAmount ?? 0);
+  const high = Math.max(...bins.map(bin => bin.upperBound), distribution.expectedShortfallAmount ?? 0);
+  const padding = Math.max((high - low) * .06, .01);
+  return {
+    animation: false,
+    grid: { left: 55, right: 24, top: 35, bottom: 48 },
+    xAxis: { type: 'value', name: 'USD loss (negative = gain)', nameLocation: 'middle', nameGap: 32,
+      min: low - padding, max: high + padding,
+      axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => formatAmount(value, '$') } },
+    yAxis: { type: 'value', min: 0, name: 'Outcomes', splitLine: { lineStyle: { color: gridColor } } },
+    tooltip: { trigger: 'item', formatter: params => {
+      const entry = Array.isArray(params) ? params[0] : params;
+      const bin = bins[entry.dataIndex];
+      return bin ? `${formatAmount(bin.lowerBound, '$')} to ${formatAmount(bin.upperBound, '$')}: ${bin.count.toLocaleString()} outcomes` : '';
+    } },
+    series: [{ type: 'bar', barWidth: bins.length === 1 ? 16 : '90%',
+      data: bins.map(bin => [bin.lowerBound + (bin.upperBound - bin.lowerBound) / 2, bin.count]),
+      itemStyle: { color: '#3679b3' },
+      markLine: { symbol: 'none', label: { formatter: '{b}', fontSize: 10 }, data: [
+        { name: 'VaR', xAxis: distribution.varAmount!, lineStyle: { color: '#bb3842' } },
+        { name: 'ES', xAxis: distribution.expectedShortfallAmount!, lineStyle: { color: '#a86413', type: 'dashed' } },
+      ] },
+    }],
+  };
+}
 
 export function createVarChartOptions(assessment: PortfolioRisk): EChartsOption {
   const methods = ['HISTORICAL', 'PARAMETRIC', 'MONTE_CARLO'];
