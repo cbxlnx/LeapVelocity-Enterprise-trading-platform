@@ -1,0 +1,30 @@
+# Isolated Java MVC/JWT/H2 -> Python HTTP integration. No production database or host ports.
+services:
+  risk-api:
+    build:
+      context: ../../analysis
+    command: ["python", "-m", "uvicorn", "risk_service.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      RISK_SERVICE_TOKEN: risk-integration-test-token
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  java-tests:
+    image: maven:3.9-eclipse-temurin-21
+    working_dir: /workspace/backend
+    environment:
+      RISK_TEST_URL: http://risk-api:8000
+    volumes:
+      - ../../backend/pom.xml:/workspace/backend/pom.xml:ro
+      - ../../backend/src:/workspace/backend/src:ro
+      - smoke-target:/workspace/backend/target
+      - smoke-maven:/root/.m2
+    command: ["mvn", "-B", "-Dtest=PortfolioRiskApiDatabaseTest,PythonRiskParityTest", "test"]
+    depends_on:
+      risk-api:
+        condition: service_healthy
+volumes:
+  smoke-target:
+  smoke-maven:

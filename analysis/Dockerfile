@@ -8,6 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY scripts/import_data.py scripts/import_data.py
+COPY risk_service risk_service
 
 USER 10001:10001
-ENTRYPOINT ["python", "scripts/import_data.py"]
+CMD ["python", "scripts/import_data.py"]

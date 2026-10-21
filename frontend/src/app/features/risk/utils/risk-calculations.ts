@@ -1,89 +1,86 @@
-import {
-  HoldingRisk,
-  RiskHorizon,
-  SectorExposure,
-  ShockResult,
-  ShockValues,
-  VaRModels,
-  WaterfallDelta,
-} from '../models/risk-dashboard.model';
+import { Decimal } from 'decimal.js';
+import { Instrument } from '../../../models/api.models';
+import { PortfolioRisk } from '../../analytics/models/portfolio-risk.model';
+import { DrawdownPoint, RiskPortfolio, ShockResult, ShockValues } from '../models/risk-dashboard.model';
+import { RiskDecimal } from './risk-decimal';
 
-export function calculatePortfolioValue(investedEquityUsd: number, cashReserveUsd: number): number {
-  return roundCurrency(investedEquityUsd + cashReserveUsd);
+export function formatAmount(value: number | null | undefined, prefix = '', suffix = ''): string {
+  return value == null || !Number.isFinite(value) ? 'Unavailable'
+    : `${prefix}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${suffix}`;
 }
 
-export function calculateAllocations(values: number[]): number[] {
-  const investedEquityUsd = values.reduce((total, value) => total + value, 0);
-  if (investedEquityUsd === 0) return values.map(() => 0);
-  return values.map((value) => (value / investedEquityUsd) * 100);
+/** Draw supplied wealth relative to its running peak; no new return model. */
+export function drawdownPoints(assessment: PortfolioRisk): DrawdownPoint[] {
+  if (assessment.series.status !== 'READY') return [];
+  const wealth = assessment.series.wealth;
+  if (!wealth.length || wealth[0].value <= 0 || wealth.some(p => !Number.isFinite(p.value) || p.value < 0)) return [];
+  let peak = wealth[0].value;
+  return wealth.map(point => {
+    peak = Math.max(peak, point.value);
+    return { date: point.date, percent: (point.value / peak - 1) * 100 };
+  });
 }
 
-export function scaleVaR(oneDayLossUsd: number, horizon: RiskHorizon): number {
-  return roundCurrency(oneDayLossUsd * Math.sqrt(horizon));
-}
-
-export function getVaRForHorizon(oneDayVaR: VaRModels, horizon: RiskHorizon): VaRModels {
+export function toRiskPortfolio(assessment: PortfolioRisk, instruments: Instrument[] | null): RiskPortfolio {
+  const valuation = assessment.valuation;
+  const ready = valuation.valuationStatus === 'READY'
+    && !assessment.issues.some(issue => issue.scope === 'valuation' && issue.severity === 'ERROR');
+  const invested = ready ? valuation.holdingsValue : valuation.valuationStatus === 'EMPTY' ? 0 : null;
+  const total = ready || valuation.valuationStatus === 'EMPTY' ? valuation.totalEquity : null;
+  const metadata = new Map(instruments?.map(instrument => [instrument.symbol, instrument]));
+  const holdings = valuation.holdings.map(holding => {
+    const instrument = metadata.get(holding.symbol);
+    return {
+      symbol: holding.symbol, company: instrument?.name ?? null, instrumentType: instrument?.assetClass ?? null,
+      quantity: holding.quantity, marketValue: ready ? holding.marketValue : null,
+      allocationPercent: ready && invested != null && invested > 0 && holding.marketValue != null
+        ? new RiskDecimal(holding.marketValue).div(invested).times(100).toNumber() : null,
+    };
+  }).sort((a, b) => (b.marketValue ?? -Infinity) - (a.marketValue ?? -Infinity) || a.symbol.localeCompare(b.symbol));
+  const largest = holdings[0];
+  const groups = new Map<string, Decimal>();
+  const grouped = ready && holdings.every(holding => holding.instrumentType && holding.marketValue != null);
+  if (grouped) holdings.forEach(holding => groups.set(holding.instrumentType!,
+    new RiskDecimal(groups.get(holding.instrumentType!) ?? 0).plus(holding.marketValue!)));
   return {
-    historicalUsd: scaleVaR(oneDayVaR.historicalUsd, horizon),
-    parametricUsd: scaleVaR(oneDayVaR.parametricUsd, horizon),
-    monteCarloUsd: scaleVaR(oneDayVaR.monteCarloUsd, horizon),
+    accountId: valuation.accountId, asOf: valuation.asOf, valuationReady: ready,
+    cashReserveUsd: valuation.cashBalance, investedEquityUsd: invested, portfolioValueUsd: total, holdings,
+    drawdownSeries: drawdownPoints(assessment),
+    instrumentExposure: grouped && invested != null && invested > 0
+      ? [...groups].map(([name, marketValue]) => ({ name, marketValue: marketValue.toNumber(),
+        allocationPercent: marketValue.div(invested).times(100).toNumber() })) : null,
+    insights: [
+      { label: 'Largest holding exposure', value: largest?.allocationPercent != null ? `${largest.symbol} · ${formatAmount(largest.allocationPercent, '', '%')}` : 'Unavailable',
+        detail: valuation.valuationStatus === 'EMPTY' ? 'No invested holdings' : 'Percentage of invested holdings, excluding cash' },
+      { label: 'Sector exposure', value: 'Unavailable', detail: 'Instrument metadata has no sector classification' },
+      { label: 'Cash reserve', value: formatAmount(valuation.cashBalance, '$'),
+        detail: total != null && total > 0 ? `${formatAmount(new RiskDecimal(valuation.cashBalance).div(total).times(100).toNumber(), '', '%')} of total account equity` : 'Account cash; equity percentage unavailable' },
+      { label: 'Historical data coverage', value: `${assessment.history.returnObservations} daily returns`,
+        detail: assessment.series.status === 'READY' ? `${assessment.history.from} – ${assessment.history.to} · Validated common sessions` : assessment.series.reasons.join(' · ') },
+    ],
+    assessment,
   };
 }
 
-export function lossPercent(lossUsd: number, portfolioValueUsd: number): number {
-  return portfolioValueUsd === 0 ? 0 : (lossUsd / portfolioValueUsd) * 100;
+export function roundCurrency(value: Decimal.Value): number {
+  return new RiskDecimal(value).toDecimalPlaces(2).toNumber();
 }
 
-export function calculateMaximumDrawdown(drawdownPercentages: number[]): number {
-  return drawdownPercentages.length === 0 ? 0 : Math.min(...drawdownPercentages);
-}
-
-export function calculateRiskContributionTotal(contributions: number[]): number {
-  return contributions.reduce((total, contribution) => total + contribution, 0);
-}
-
-export function calculateSectorExposure(holdings: HoldingRisk[]): SectorExposure[] {
-  const grouped = new Map<string, { marketValue: number; symbols: string[] }>();
-  for (const holding of holdings) {
-    const current = grouped.get(holding.sector) ?? { marketValue: 0, symbols: [] };
-    current.marketValue += holding.marketValue;
-    current.symbols.push(holding.symbol);
-    grouped.set(holding.sector, current);
-  }
-  const investedEquityUsd = holdings.reduce((total, holding) => total + holding.marketValue, 0);
-  return [...grouped.entries()].map(([sector, value]) => ({
-    sector: sector as SectorExposure['sector'],
-    marketValue: roundCurrency(value.marketValue),
-    allocationPercent: investedEquityUsd === 0 ? 0 : (value.marketValue / investedEquityUsd) * 100,
-    symbols: value.symbols,
-  }));
-}
-
-export function calculateCustomShock(
-  holdings: HoldingRisk[],
-  portfolioValueUsd: number,
-  shocks: ShockValues,
-): ShockResult {
-  const lossUsd = holdings.reduce((total, holding) => {
-    const combinedShockPercent = shocks.market + shocks[holding.sector];
-    return total - holding.marketValue * (combinedShockPercent / 100);
-  }, 0);
-  const roundedLoss = roundCurrency(lossUsd);
-  return {
-    lossUsd: roundedLoss,
-    impactPercent: lossPercent(roundedLoss, portfolioValueUsd),
-    postShockEquityUsd: roundCurrency(portfolioValueUsd - roundedLoss),
+/** Existing uniform price shock: apply the user's percentage once per holding; cash unchanged. */
+export function calculateCustomShock(portfolio: RiskPortfolio, shocks: ShockValues): ShockResult | null {
+  if (!portfolio.valuationReady || portfolio.portfolioValueUsd == null || portfolio.cashReserveUsd == null
+      || !Number.isFinite(portfolio.portfolioValueUsd) || !Number.isFinite(portfolio.cashReserveUsd)
+      || !portfolio.holdings.length || !Number.isFinite(shocks.market) || Math.abs(shocks.market) > 50
+      || portfolio.holdings.some(holding => holding.marketValue == null || !Number.isFinite(holding.marketValue))) return null;
+  const deltas = portfolio.holdings.map(holding => ({ label: holding.symbol,
+    deltaUsd: roundCurrency(new RiskDecimal(holding.marketValue!).times(shocks.market).div(100)) }));
+  const pnl = RiskDecimal.sum(...deltas.map(delta => delta.deltaUsd));
+  const lossUsd = pnl.negated().toNumber();
+  const postShockEquityUsd = roundCurrency(new RiskDecimal(portfolio.portfolioValueUsd).plus(pnl));
+  return { lossUsd, postShockEquityUsd,
+    impactPercent: portfolio.portfolioValueUsd > 0 ? new RiskDecimal(lossUsd).div(portfolio.portfolioValueUsd).times(100).toNumber() : null,
+    waterfall: { title: 'Custom uniform price shock', period: `Valuation ${portfolio.asOf} · Price change ${shocks.market}%`,
+      startingEquityUsd: portfolio.portfolioValueUsd, endingEquityUsd: postShockEquityUsd,
+      cashReserveUsd: portfolio.cashReserveUsd, deltas },
   };
-}
-
-export function reconcileWaterfall(startingEquityUsd: number, deltas: WaterfallDelta[]): number {
-  return roundCurrency(startingEquityUsd + deltas.reduce((total, item) => total + item.deltaUsd, 0));
-}
-
-export function stressLossFromPercent(portfolioValueUsd: number, lossPercentValue: number): number {
-  return roundCurrency(portfolioValueUsd * (lossPercentValue / 100));
-}
-
-export function roundCurrency(value: number): number {
-  return Math.round(value * 100) / 100;
 }

@@ -29,6 +29,12 @@ into the persistent database and exits. See
 [container startup](docs/analytics-mvp.md#container-startup-and-historical-prices)
 for progress checks, repeat imports and frontend routing configuration.
 
+The Risk Dashboard is connected through Java to the Python risk service. Open
+`http://localhost:8085/risk` after signing in. It uses your account's current
+holdings and stored prices; an account without holdings shows an empty assessment.
+See the [Risk Dashboard guide](docs/risk-frontend-guide.md) for supported panels
+and the [Python runtime guide](analysis/README.md) for setup and verification.
+
 ## Architecture Overview
 
 The local Docker-based environment currently defines these runtime services:
@@ -36,6 +42,7 @@ The local Docker-based environment currently defines these runtime services:
 - `auth-stub`: authentication service running on port `4000`
 - `frontend`: production Angular served by Nginx on host port `8085`
 - `analytics-import`: finite historical-price loading job after database health
+- `risk-api`: internal Python risk calculator called by the Java API
 - `trade-api`: Spring Boot trading API running on port `8081`
 - `execution-engine`: asynchronous execution processor consuming Kafka events
 - `trade-db`: PostgreSQL database running on port `5432`
@@ -70,12 +77,15 @@ JWT_SECRET=your-secure-secret
 JWT_ISSUER=leapvelocity-auth
 JWT_EXPIRES_IN=1h
 REFRESH_TOKEN_EXPIRES_IN=7d
+RISK_SERVICE_TOKEN=replace-with-a-random-secret
 ```
 
 ### Important Notes
 
 - JWT_SECRET is required. The authentication and API services will not start without it.
 - DB_PASSWORD must be set for PostgreSQL to initialize correctly.
+- RISK_SERVICE_TOKEN is required by Java and Python. Generate a value with
+  `openssl rand -hex 32` and set it in `.env`; Compose passes the same value to both.
 
 ### Local Build and Startup
 
@@ -83,6 +93,13 @@ From the project root, build and start the full local platform with:
 
 ```
 docker compose up -d --build
+```
+
+If the database, Kafka and authentication service are already running, rebuild
+and start only the Risk Dashboard services with:
+
+```sh
+docker compose up -d --build --no-deps risk-api trade-api frontend
 ```
 
 To verify that the services are running:

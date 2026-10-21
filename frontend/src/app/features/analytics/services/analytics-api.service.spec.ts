@@ -15,6 +15,14 @@ describe('AnalyticsApiService', () => {
   });
   afterEach(() => http.verify());
 
+  it('passes risk confidence and holding period to the account backend', async () => {
+    const result = firstValueFrom(api.getRisk(7, '2Y', { confidenceLevel: .99, holdingPeriodDays: 10 }));
+    const request = http.expectOne('/api/v1/accounts/7/analytics/risk?period=2Y&confidenceLevel=0.99&holdingPeriodDays=10');
+    expect(request.request.method).toBe('GET');
+    request.flush({ schemaVersion: '1.0', riskStatus: 'UNAVAILABLE' });
+    await expect(result).resolves.toEqual({ schemaVersion: '1.0', riskStatus: 'UNAVAILABLE' });
+  });
+
   it.each(['3M', '1Y', '2Y'] as const)('requests simulation for %s without using the price date filter', async (period) => {
     const result = firstValueFrom(api.getPerformance(7, period));
     const request = http.expectOne(`/api/v1/accounts/7/analytics/performance?period=${period}`);

@@ -34,6 +34,11 @@ server:
   shutdown: graceful
 
 app:
+  risk-service:
+    url: ${RISK_SERVICE_URL:http://localhost:8000}
+    token: ${RISK_SERVICE_TOKEN:}
+    connect-timeout-ms: ${RISK_SERVICE_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${RISK_SERVICE_READ_TIMEOUT_MS:5000}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET}

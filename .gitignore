@@ -6,6 +6,8 @@ target/
 .vscode/
 .env
 .venv
+__pycache__/
+.pytest_cache/
 analysis/data/
 analysis/scripts/pycache/
 analysis/scripts/__pycache__/

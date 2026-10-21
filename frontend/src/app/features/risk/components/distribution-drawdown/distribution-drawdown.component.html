@@ -1,22 +1,13 @@
 <div class="chart-pair">
-  <section class="risk-card" aria-labelledby="distribution-heading">
-    <header class="section-heading">
-      <h2 id="distribution-heading">Monte Carlo distribution <span class="info" title="Simulated account outcomes">i</span></h2>
-      <p>1-day account P&amp;L · 95% confidence · {{ portfolio().monteCarloPathCount.toLocaleString() }} paths</p>
-    </header>
-    <div class="chart-label">Paths</div>
-    <div class="chart histogram-chart" echarts [options]="histogramOptions()" aria-label="Monte Carlo distribution histogram"></div>
-    <div class="es-callout"><div><strong>Expected Shortfall · 95% · 1 day</strong><span>Average loss in the worst 5% of simulated outcomes</span></div><div class="callout-value">−${{ portfolio().expectedShortfallUsd.toLocaleString('en-US') }}<small>{{ (portfolio().expectedShortfallUsd / portfolio().portfolioValueUsd * 100).toFixed(2) }}% of account</small></div></div>
-    <p class="fine-print">Illustrative simulated outcomes, not predicted returns. Losses can exceed VaR.</p>
+  <section class="risk-card" aria-labelledby="distribution-heading"><header class="section-heading"><h2 id="distribution-heading">Monte Carlo distribution</h2><p>Simulated outcomes</p></header>
+    <p role="status">Unavailable: the risk service returns the simulated loss quantile, but does not expose simulation outcomes or histogram bins.</p>
+    <div class="es-callout"><div><strong>Expected Shortfall</strong><span>Unavailable: Expected Shortfall is not implemented by the risk service.</span></div></div>
+    <p class="fine-print">Monte Carlo VaR above uses the actual service calculation. A distribution cannot be reconstructed from a single quantile.</p>
   </section>
-
-  <section class="risk-card" aria-labelledby="drawdown-heading">
-    <header class="section-heading">
-      <h2 id="drawdown-heading">Historical drawdown <span class="info" title="Account equity below prior peak">i</span></h2>
-      <p>{{ portfolio().historicalFrom }} – {{ portfolio().historicalTo }} · Account equity below prior peak</p>
-    </header>
-    <div class="chart drawdown-chart" echarts [options]="drawdownOptions()" aria-label="Historical drawdown chart"></div>
-    <div class="drawdown-callout"><div><strong>Largest peak-to-trough decline</strong><span>Trough on {{ portfolio().maximumDrawdownDate }} · Historical window only</span></div><strong>−{{ portfolio().maximumDrawdownPercent.toFixed(2) }}%</strong></div>
-    <p class="fine-print">Illustrative historical series · Includes cash · Not a forecast of future drawdowns.</p>
+  <section class="risk-card" aria-labelledby="drawdown-heading"><header class="section-heading"><h2 id="drawdown-heading">Historical drawdown</h2><p>{{ portfolio().assessment.history.from || 'Unavailable' }} – {{ portfolio().assessment.history.to || 'Unavailable' }}</p></header>
+    @if (portfolio().drawdownSeries.length) { <div class="chart drawdown-chart" echarts [options]="drawdownOptions()" aria-label="Current-allocation historical drawdown chart"></div> }
+    @else { <p role="status">Unavailable · {{ portfolio().assessment.series.reasons.join(' · ') }}</p> }
+    <div class="drawdown-callout"><div><strong>Largest peak-to-trough decline</strong><span>{{ maximum().status === 'READY' ? 'Python risk calculation' : maximum().reasons.join(' · ') }}</span></div><strong>{{ format(maximum().value, maximum().value ? '−' : '', '%') }}</strong></div>
+    <p class="fine-print">Current-allocation buy-and-hold reconstruction from adjusted prices. Cash excluded. This is not actual historical account performance; historical trades and cash flows are not reconstructed.</p>
   </section>
 </div>

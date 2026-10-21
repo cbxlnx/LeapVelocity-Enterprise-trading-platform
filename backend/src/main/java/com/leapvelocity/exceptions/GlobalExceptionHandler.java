@@ -267,6 +267,14 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(ErrorCode.FORBIDDEN.getHttpStatus()).body(response);
         }
 
+    @ExceptionHandler(RiskCalculationException.class)
+    public ResponseEntity<ErrorResponse> handleRiskCalculationException(
+            RiskCalculationException ex, HttpServletRequest request) {
+        logger.error("Risk calculation service failed: {}", ex.kind());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(
+                ErrorCode.INTERNAL_SERVER_ERROR, request.getRequestURI(), "An unexpected error occurred"));
+    }
+
     /**
      * Generic exception handler for any unexpected RuntimeExceptions.
      * Maps to HTTP 500 Internal Server Error.

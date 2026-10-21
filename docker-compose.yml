@@ -18,9 +18,11 @@ services:
 
   # Runs a finite batch and exits; this is not a web service or a scheduler.
   analytics-import:
+    image: leapvelocity-analysis:local
     build:
       context: ./analysis
       dockerfile: Dockerfile
+    command: ["python", "scripts/import_data.py"]
     environment:
       DB_HOST: trade-db
       DB_PORT: 5432
@@ -31,6 +33,25 @@ services:
     depends_on:
       trade-db:
         condition: service_healthy
+    networks:
+      - trade-net
+
+  # Snapshot-only calculator; no host port, database credentials or importer process.
+  risk-api:
+    image: leapvelocity-analysis:local
+    build:
+      context: ./analysis
+      dockerfile: Dockerfile
+    command: ["python", "-m", "uvicorn", "risk_service.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      RISK_SERVICE_TOKEN: ${RISK_SERVICE_TOKEN:?RISK_SERVICE_TOKEN is required}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
     networks:
       - trade-net
 
@@ -71,12 +92,18 @@ services:
       APP_SECURITY_JWT_ISSUER: ${JWT_ISSUER:-leapvelocity-auth}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:8085,http://127.0.0.1:4200,http://127.0.0.1:8085}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      RISK_SERVICE_URL: http://risk-api:8000
+      RISK_SERVICE_TOKEN: ${RISK_SERVICE_TOKEN:?RISK_SERVICE_TOKEN is required}
+      RISK_SERVICE_CONNECT_TIMEOUT_MS: ${RISK_SERVICE_CONNECT_TIMEOUT_MS:-1000}
+      RISK_SERVICE_READ_TIMEOUT_MS: ${RISK_SERVICE_READ_TIMEOUT_MS:-5000}
     ports:
       - "${APP_PORT:-8081}:8081"
     depends_on:
       trade-db:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      risk-api:
         condition: service_healthy
     networks:
       - trade-net

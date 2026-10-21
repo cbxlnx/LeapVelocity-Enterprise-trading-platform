@@ -1,20 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
-import { RiskPortfolio } from '../../models/risk-dashboard.model';
-
-@Component({
-  selector: 'app-stress-scenarios',
-  standalone: true,
-  templateUrl: './stress-scenarios.component.html',
-  styleUrl: './stress-scenarios.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ShockResult } from '../../models/risk-dashboard.model';
+import { formatAmount } from '../../utils/risk-calculations';
+@Component({ selector: 'app-stress-scenarios', standalone: true, templateUrl: './stress-scenarios.component.html',
+  styleUrl: './stress-scenarios.component.css', changeDetection: ChangeDetectionStrategy.OnPush })
 export class StressScenariosComponent {
-  readonly math = Math;
-  readonly portfolio = input.required<RiskPortfolio>();
-  readonly editShock = output<void>();
-  readonly expandedScenario = signal<string | null>(null);
-
-  toggleDetails(id: string): void {
-    this.expandedScenario.update((current) => current === id ? null : id);
-  }
+  readonly customResult = input<ShockResult | null>(null);
+  readonly format = formatAmount;
 }

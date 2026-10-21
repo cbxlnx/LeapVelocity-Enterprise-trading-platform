@@ -1,25 +1,7 @@
 <section class="risk-card stress-card" aria-labelledby="stress-heading">
-  <header class="section-heading split-heading">
-    <div>
-      <h2 id="stress-heading">Stress test scenarios</h2>
-      <p>Current positions under historical and user-defined shocks · Replays, not forecasts</p>
-    </div>
-    <span class="label">Illustrative estimates</span>
-  </header>
-  <div class="table-head"><span>Scenario / shock</span><span>Estimated loss</span><span>% of account</span><span>Impact · 0–20% loss</span><span>Action</span></div>
-  <div class="scenario-list">
-    @for (scenario of portfolio().scenarios; track scenario.id) {
-      <div class="scenario-row">
-        <div class="scenario-name"><strong>{{ scenario.title }}</strong><span>{{ scenario.period }} · {{ scenario.description }}</span></div>
-        <div class="loss">−${{ scenario.lossUsd.toLocaleString('en-US') }}</div>
-        <div class="loss">−{{ scenario.lossPercent.toFixed(2) }}%</div>
-        <div class="impact"><span [style.width.%]="math.min(scenario.lossPercent / 20 * 100, 100)"></span></div>
-        <div class="action"><button type="button" [class.primary]="scenario.kind === 'custom'" (click)="scenario.kind === 'custom' ? editShock.emit() : toggleDetails(scenario.id)">{{ scenario.kind === 'custom' ? 'Edit shock' : 'View details' }}</button></div>
-        @if (expandedScenario() === scenario.id) {
-          <div class="scenario-detail"><strong>{{ scenario.title }} breakdown</strong><span>Estimated account impact uses current holdings and leaves the {{ portfolio().cashReserveUsd.toLocaleString('en-US') }} cash reserve unchanged.</span></div>
-        }
-      </div>
-    }
-  </div>
-  <p class="fine-print">Historical shocks applied to current holdings across each event; cash remains unchanged. No trading, fees or liquidity effects. Losses can exceed these estimates.</p>
+  <header class="section-heading"><h2 id="stress-heading">Stress test scenarios</h2><p>Availability of historical and user-defined calculations</p></header>
+  <p role="status"><strong>Historical replay unavailable.</strong> Historical stress testing is not implemented. The application does not supply validated event returns for the 2008 financial crisis or March 2020. No event loss estimate is shown.</p>
+  @if (customResult(); as result) { <div class="scenario-row"><div class="scenario-name"><strong>Custom uniform price shock</strong><span>{{ result.waterfall.period }}</span></div><div>P&amp;L {{ format(-result.lossUsd, '$') }}</div><div>{{ format(result.impactPercent == null ? null : -result.impactPercent, '', '%') }} of account equity</div></div> }
+  @else { <p>Custom scenario: no result yet. Run the custom shock builder using this account's holdings.</p> }
+  <p class="fine-print">No assumed historical shocks, forecasts or sample loss amounts are used.</p>
 </section>

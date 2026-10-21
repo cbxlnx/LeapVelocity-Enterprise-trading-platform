@@ -4,7 +4,7 @@
     "types": ["node", "@playwright/test"]
   },
   "include": [
-    "playwright.config.ts",
+    "playwright*.config.ts",
     "e2e/**/*.ts"
   ]
 }

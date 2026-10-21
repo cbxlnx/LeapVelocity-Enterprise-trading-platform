@@ -1,0 +1,360 @@
+{
+  "$defs": {
+    "CoreMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "annualisedVolatility": {
+          "$ref": "#/$defs/ScalarMetric"
+        },
+        "maximumDrawdown": {
+          "$ref": "#/$defs/ScalarMetric"
+        },
+        "beta": {
+          "$ref": "#/$defs/ScalarMetric"
+        }
+      },
+      "required": [
+        "annualisedVolatility",
+        "maximumDrawdown",
+        "beta"
+      ],
+      "title": "CoreMetrics",
+      "type": "object"
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "EMPTY_PORTFOLIO",
+            "UNSUPPORTED_POSITION",
+            "UNSUPPORTED_CURRENCY",
+            "INVALID_POSITION",
+            "MISSING_INSTRUMENT_METADATA",
+            "MISSING_PRICE",
+            "INVALID_PRICE",
+            "NO_COMMON_DATES",
+            "STALE_PRICE",
+            "INCOMPLETE_HISTORY",
+            "INSUFFICIENT_HISTORY",
+            "MISSING_BENCHMARK",
+            "ZERO_BENCHMARK_VARIANCE",
+            "TRADING_CALENDAR_UNAVAILABLE",
+            "METHOD_NOT_IMPLEMENTED",
+            "NUMERICAL_ERROR"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "severity": {
+          "const": "WARNING",
+          "default": "WARNING",
+          "title": "Severity",
+          "type": "string"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "symbol": {
+          "default": null,
+          "title": "Symbol",
+          "type": "null"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Date"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "scope",
+        "date",
+        "message"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "ScalarMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "enum": [
+            "PERCENT",
+            "DIMENSIONLESS"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "observations": {
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Observations",
+          "type": "integer"
+        },
+        "requiredObservations": {
+          "maximum": 2000,
+          "minimum": 60,
+          "title": "Requiredobservations",
+          "type": "integer"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "To"
+        },
+        "reasons": {
+          "items": {
+            "enum": [
+              "EMPTY_PORTFOLIO",
+              "UNSUPPORTED_POSITION",
+              "UNSUPPORTED_CURRENCY",
+              "INVALID_POSITION",
+              "MISSING_INSTRUMENT_METADATA",
+              "MISSING_PRICE",
+              "INVALID_PRICE",
+              "NO_COMMON_DATES",
+              "STALE_PRICE",
+              "INCOMPLETE_HISTORY",
+              "INSUFFICIENT_HISTORY",
+              "MISSING_BENCHMARK",
+              "ZERO_BENCHMARK_VARIANCE",
+              "TRADING_CALENDAR_UNAVAILABLE",
+              "METHOD_NOT_IMPLEMENTED",
+              "NUMERICAL_ERROR"
+            ],
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "unit",
+        "observations",
+        "requiredObservations",
+        "from",
+        "to",
+        "reasons"
+      ],
+      "title": "ScalarMetric",
+      "type": "object"
+    },
+    "VarResult": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "HISTORICAL",
+            "PARAMETRIC",
+            "MONTE_CARLO"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "estimate": {
+          "const": true,
+          "default": true,
+          "title": "Estimate",
+          "type": "boolean"
+        },
+        "lossPercent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Losspercent"
+        },
+        "lossAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lossamount"
+        },
+        "observations": {
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Observations",
+          "type": "integer"
+        },
+        "requiredObservations": {
+          "maximum": 2000,
+          "minimum": 100,
+          "title": "Requiredobservations",
+          "type": "integer"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "From"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "To"
+        },
+        "reasons": {
+          "items": {
+            "enum": [
+              "EMPTY_PORTFOLIO",
+              "UNSUPPORTED_POSITION",
+              "UNSUPPORTED_CURRENCY",
+              "INVALID_POSITION",
+              "MISSING_INSTRUMENT_METADATA",
+              "MISSING_PRICE",
+              "INVALID_PRICE",
+              "NO_COMMON_DATES",
+              "STALE_PRICE",
+              "INCOMPLETE_HISTORY",
+              "INSUFFICIENT_HISTORY",
+              "MISSING_BENCHMARK",
+              "ZERO_BENCHMARK_VARIANCE",
+              "TRADING_CALENDAR_UNAVAILABLE",
+              "METHOD_NOT_IMPLEMENTED",
+              "NUMERICAL_ERROR"
+            ],
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "method",
+        "status",
+        "lossPercent",
+        "lossAmount",
+        "observations",
+        "requiredObservations",
+        "from",
+        "to",
+        "reasons"
+      ],
+      "title": "VarResult",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "requestId": {
+      "title": "Requestid",
+      "type": "string"
+    },
+    "metrics": {
+      "$ref": "#/$defs/CoreMetrics"
+    },
+    "valueAtRisk": {
+      "items": {
+        "$ref": "#/$defs/VarResult"
+      },
+      "title": "Valueatrisk",
+      "type": "array"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/Issue"
+      },
+      "title": "Issues",
+      "type": "array"
+    }
+  },
+  "required": [
+    "requestId",
+    "metrics",
+    "valueAtRisk",
+    "issues"
+  ],
+  "title": "CalculationResponse",
+  "type": "object"
+}

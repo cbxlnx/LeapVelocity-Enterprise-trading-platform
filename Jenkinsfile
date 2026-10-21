@@ -18,6 +18,16 @@ pipeline {
             }
         }
         
+        stage('Python Risk Tests') {
+            steps {
+                sh '''
+                    python3 -m venv .venv
+                    .venv/bin/python -m pip install -r analysis/requirements-dev.txt
+                    .venv/bin/python -m pytest analysis/tests -q
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 sh 'mvn -B clean package -pl backend,execution-engine'

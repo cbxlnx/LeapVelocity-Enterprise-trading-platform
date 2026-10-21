@@ -1,17 +1,10 @@
 <section class="risk-card var-card" aria-labelledby="var-heading">
-  <header class="section-heading split-heading">
-    <div>
-      <h2 id="var-heading">Value at Risk <span class="info" title="Estimated loss threshold">i</span></h2>
-      <p>95% confidence · {{ horizon() }}-day loss threshold</p>
-    </div>
-    <div class="segmented" aria-label="VaR horizon">
-      @for (option of horizons; track option.value) {
-        <button type="button" [class.active]="horizon() === option.value" [attr.aria-pressed]="horizon() === option.value" (click)="selectHorizon(option.value)">{{ option.label }}</button>
-      }
-    </div>
+  <header class="section-heading split-heading"><div><h2 id="var-heading">Value at Risk</h2><p>{{ assessment().parameters.confidenceLevel * 100 }}% confidence · {{ horizon() }} trading-day loss threshold</p></div>
+    <div class="segmented" aria-label="VaR horizon">@for (option of horizons; track option.value) { <button type="button" [class.active]="horizon() === option.value" [attr.aria-pressed]="horizon() === option.value" (click)="selectHorizon(option.value)">{{ option.label }}</button> }</div>
   </header>
-  <div class="chart-label">Estimated loss (USD) <span>USD / % of account</span></div>
-  <div class="chart var-chart" echarts [options]="options()" [attr.aria-label]="'Value at Risk comparison for ' + horizon() + ' day horizon'"></div>
-  <p class="card-note">VaR is a loss threshold, not a maximum loss. Under each model, losses may exceed this level on 5% of trading days.</p>
-  <p class="fine-print">{{ portfolio().dailyReturnCount }} daily returns · Current weights held constant · Monte Carlo: {{ portfolio().monteCarloPathCount.toLocaleString() }} paths</p>
+  <div class="chart-label">Estimated loss (USD) <span>USD / % of invested holdings</span></div>
+  @if (available()) { <div class="chart var-chart" echarts [options]="options()" [attr.aria-label]="'Account VaR comparison for ' + horizon() + ' trading days'"></div> }
+  @else { <p role="status">Value at Risk unavailable for this account and historical window.</p> }
+  @for (result of assessment().valueAtRisk; track result.method) { <p class="card-note">{{ result.method }}: @if (result.status === 'READY') { {{ format(result.lossAmount, '$') }} · {{ format(result.lossPercent, '', '%') }} } @else { Unavailable · {{ result.reasons.join(' · ') }} · {{ result.observations }} / {{ result.requiredObservations }} required windows }</p> }
+  <p class="fine-print">Compounded holding-period returns · Cash excluded · Monte Carlo: {{ assessment().assumptions.monteCarloSimulations.toLocaleString() }} simulated horizon outcomes, seed {{ assessment().assumptions.monteCarloSeed }}. Losses can exceed VaR.</p>
 </section>

@@ -1,0 +1,14 @@
+{
+  "from": "2025-10-16",
+  "asOf": "2026-10-16",
+  "calculationDate": "2026-10-19",
+  "priceObservations": 252,
+  "returnObservations": 251,
+  "holdingsValue": 1000,
+  "cashBalance": 500,
+  "volatility": "92.73555808",
+  "drawdown": "5.66037736",
+  "beta": "0.61078167",
+  "varPercent": "5.66037736",
+  "varAmount": "56.60"
+}

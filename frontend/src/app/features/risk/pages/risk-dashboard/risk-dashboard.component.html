@@ -1,40 +1,41 @@
 <main class="risk-dashboard">
   <header class="page-header">
     <div><p class="eyebrow">Risk analytics</p><h1>Risk dashboard</h1><p class="intro">Understand portfolio exposure, downside risk, and stress scenarios.</p></div>
-    <span class="as-of">As of {{ portfolio()?.asOf || '12 Oct 2026 · 14:32 UTC' }}</span>
+    <span class="as-of">Account valuation: {{ risk()?.valuation?.asOf || 'Unavailable' }}</span>
   </header>
 
   <div class="toolbar" [attr.aria-busy]="loading()">
-    <label><span>Account / portfolio</span><select [value]="selectedAccountId()" (change)="selectAccount($any($event.target).value)" [disabled]="loading()">@for (account of accounts(); track account.accountId) { <option [value]="account.accountId">{{ account.accountId }} · {{ account.accountLabel }}</option> }</select></label>
-    <label><span>Historical window</span><select [value]="historicalWindow()" (change)="historicalWindow.set($any($event.target).value)" [disabled]="loading()"><option value="1Y">13 Oct 2025 – 12 Oct 2026</option><option value="6M">13 Apr 2026 – 12 Oct 2026</option><option value="3M">12 Jul 2026 – 12 Oct 2026</option></select></label>
+    <label><span>Account / portfolio</span><select disabled><option>{{ accountId || 'Unavailable' }} · Signed-in account</option></select></label>
+    <label><span>Historical window</span><select [value]="historicalWindow()" (change)="updateWindow($any($event.target).value)" [disabled]="loading()"><option value="2Y">2 years</option><option value="1Y">1 year</option><option value="6M">6 months</option><option value="3M">3 months</option></select></label>
     <button type="button" class="refresh" (click)="loadDashboard()" [disabled]="loading()"><span aria-hidden="true">↻</span> Refresh</button>
-    <div class="metadata"><strong>95% confidence · {{ horizon() }}-day VaR</strong><span>{{ portfolio()?.dailyReturnCount || 0 }} daily returns · {{ portfolio()?.holdings?.length || 0 }} of {{ portfolio()?.holdings?.length || 0 }} holdings covered</span></div>
+    <div class="metadata"><strong>95% confidence · {{ horizon() }}-day VaR</strong><span>{{ risk()?.history?.returnObservations ?? 'Unavailable' }} daily returns · {{ risk()?.valuation?.holdings?.length ?? 'Unavailable' }} holdings</span></div>
   </div>
 
-  <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Simulated illustrative data · Not a live feed</strong><span>Hypothetical risk estimates for UI demonstration only. Not investment advice. All values in USD; cash is included in account-level risk.</span></div></div>
+  <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Account data from stored prices · Explicit calculation availability</strong><span>All values in USD. Portfolio value includes cash; the six risk estimates cover invested holdings and exclude cash. Historical charts reconstruct the current allocation; unsupported calculations are labeled unavailable.</span></div></div>
 
   @if (loading()) {
     <section class="state-panel" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><strong>Loading risk estimates…</strong><span>Preparing deterministic portfolio analytics.</span></section>
   } @else if (error(); as message) {
     <section class="state-panel error-panel" role="alert"><strong>Risk dashboard unavailable</strong><span>{{ message }}</span><button type="button" (click)="loadDashboard()">Retry</button></section>
   } @else if (portfolio(); as current) {
+    @if (risk(); as assessment) { @for (issue of assessment.issues; track $index) { <p role="status">{{ issue.code }} · {{ issue.message }}</p> } }
     <section class="kpi-grid" aria-label="Risk summary">
-      <article class="kpi"><span>Portfolio value</span><strong>${{ current.portfolioValueUsd.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</strong><small>Cash + stocks</small><em>+$3,800 unrealized</em></article>
-      <article class="kpi"><span>Historical VaR</span><strong>${{ selectedVaR()!.historicalUsd.toLocaleString('en-US') }}</strong><small>{{ (selectedVaR()!.historicalUsd / current.portfolioValueUsd * 100).toFixed(2) }}% · {{ horizon() }} day · 95%</small><em>Loss threshold</em></article>
-      <article class="kpi"><span>Parametric VaR</span><strong>${{ selectedVaR()!.parametricUsd.toLocaleString('en-US') }}</strong><small>{{ (selectedVaR()!.parametricUsd / current.portfolioValueUsd * 100).toFixed(2) }}% · {{ horizon() }} day · 95%</small><em>Loss threshold</em></article>
-      <article class="kpi"><span>Monte Carlo VaR</span><strong>${{ selectedVaR()!.monteCarloUsd.toLocaleString('en-US') }}</strong><small>{{ (selectedVaR()!.monteCarloUsd / current.portfolioValueUsd * 100).toFixed(2) }}% · {{ horizon() }} day · 95%</small><em>Loss threshold</em></article>
-      <article class="kpi"><span>Volatility <b title="Annualized portfolio volatility">i</b></span><strong>{{ current.volatilityPercent.toFixed(2) }}%</strong><small>Annualized · {{ current.dailyReturnCount }} days</small><em>Account-level risk</em></article>
-      <article class="kpi"><span>Beta <b title="Sensitivity versus S&amp;P 500">i</b></span><strong>{{ current.beta.toFixed(2) }}</strong><small>vs. S&amp;P 500 · 1 year</small><em>Below market sensitivity</em></article>
-      <article class="kpi loss-kpi"><span>Maximum drawdown <b title="Peak-to-trough decline">i</b></span><strong>−{{ current.maximumDrawdownPercent.toFixed(2) }}%</strong><small>Peak to trough · {{ historicalWindow() }}</small><em>Observed decline</em></article>
+      <article class="kpi"><span>Portfolio value</span><strong>{{ formatRisk(risk()?.valuation?.totalEquity, '$') }}</strong><small>Cash + holdings</small><em>{{ formatRisk(risk()?.valuation?.unrealizedPnL, '$') }} unrealized</em></article>
+      <article class="kpi"><span>Historical VaR</span><strong>{{ formatRisk(riskVars().historical?.lossAmount, '$') }}</strong><small>{{ formatRisk(riskVars().historical?.lossPercent, '', '%') }} of invested holdings · {{ horizon() }} day · 95%</small><em>{{ riskReason(riskVars().historical) || 'Loss threshold' }}</em></article>
+      <article class="kpi"><span>Parametric VaR</span><strong>{{ formatRisk(riskVars().parametric?.lossAmount, '$') }}</strong><small>{{ formatRisk(riskVars().parametric?.lossPercent, '', '%') }} of invested holdings · {{ horizon() }} day · 95%</small><em>{{ riskReason(riskVars().parametric) || 'Loss threshold' }}</em></article>
+      <article class="kpi"><span>Monte Carlo VaR</span><strong>{{ formatRisk(riskVars().monteCarlo?.lossAmount, '$') }}</strong><small>{{ formatRisk(riskVars().monteCarlo?.lossPercent, '', '%') }} of invested holdings · {{ horizon() }} day · 95%</small><em>{{ riskReason(riskVars().monteCarlo) || 'Loss threshold' }}</em></article>
+      <article class="kpi"><span>Volatility <b title="Annualized invested holdings volatility">i</b></span><strong>{{ formatRisk(risk()?.metrics?.annualisedVolatility?.value, '', '%') }}</strong><small>Annualized · {{ risk()?.history?.returnObservations ?? 'Unavailable' }} days</small><em>{{ riskReason(risk()?.metrics?.annualisedVolatility) || 'Invested holdings' }}</em></article>
+      <article class="kpi"><span>Beta <b title="Sensitivity versus benchmark">i</b></span><strong>{{ formatRisk(risk()?.metrics?.beta?.value) }}</strong><small>vs. {{ risk()?.parameters?.benchmark || 'SPY' }} · {{ historicalWindow() }}</small><em>{{ riskReason(risk()?.metrics?.beta) || 'Invested holdings' }}</em></article>
+      <article class="kpi loss-kpi"><span>Maximum drawdown <b title="Peak-to-trough decline">i</b></span><strong>{{ formatRisk(risk()?.metrics?.maximumDrawdown?.value, risk()?.metrics?.maximumDrawdown?.value ? '−' : '', '%') }}</strong><small>Peak to trough · {{ historicalWindow() }}</small><em>{{ riskReason(risk()?.metrics?.maximumDrawdown) || 'Observed decline' }}</em></article>
     </section>
 
-    <section class="var-insights-grid"><app-var-models [portfolio]="current" [horizon]="horizon()" (horizonChange)="updateHorizon($event)" /><aside class="risk-card insights-card"><h2>Risk insights</h2><p>Concentration, liquidity and coverage</p>@for (insight of current.insights; track insight.label) { <div class="insight-row"><span>{{ insight.label }}</span><strong>{{ insight.value }}</strong><small>{{ insight.detail }}</small></div> }<small class="insight-note">Stock and sector weights exclude cash. Cash reduces account-level exposure, not invested concentration.</small></aside></section>
+    <section class="var-insights-grid"><app-var-models [assessment]="current.assessment" [horizon]="horizon()" (horizonChange)="updateHorizon($event)" /><aside class="risk-card insights-card"><h2>Risk insights</h2><p>Exposure, cash and history coverage</p>@for (insight of current.insights; track insight.label) { <div class="insight-row"><span>{{ insight.label }}</span><strong>{{ insight.value }}</strong><small>{{ insight.detail }}</small></div> }<small class="insight-note">Holding weights exclude cash. Total account equity includes cash once.</small></aside></section>
     <app-distribution-drawdown [portfolio]="current" />
     <app-risk-contribution [portfolio]="current" />
 
-    <div class="stress-alert" role="alert"><strong aria-hidden="true">△</strong><span>If March 2020 happened tomorrow, this account would lose approximately <b>$44,935.</b><small>11.00% of ${{ current.portfolioValueUsd.toLocaleString('en-US') }} account equity · Hypothetical event replay, not a forecast or a 1-day VaR estimate.</small></span></div>
-    <app-stress-scenarios [portfolio]="scenarioPortfolio()!" (editShock)="editShock()" />
-    <app-custom-shock [portfolio]="current" [preset]="customShocks()" (shockRun)="runCustomShock($event)" />
+    <div class="stress-alert" role="status"><span>Historical stress replay is unavailable. No validated event-loss calculation is currently supplied.</span></div>
+    <app-stress-scenarios [customResult]="customResult()" />
+    <app-custom-shock [portfolio]="current" (shockRun)="customResult.set($event)" />
     <app-scenario-waterfall [waterfalls]="waterfalls()" />
     <app-concentration [portfolio]="current" />
   }

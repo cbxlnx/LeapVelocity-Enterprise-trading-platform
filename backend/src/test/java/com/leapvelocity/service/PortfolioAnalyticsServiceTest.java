@@ -35,7 +35,8 @@ class PortfolioAnalyticsServiceTest {
         accounts = mock(AccountRepository.class);
         positions = mock(PositionRepository.class);
         prices = mock(HistoricalPriceRepository.class);
-        service = new PortfolioAnalyticsService(accounts, positions, prices);
+        service = new PortfolioAnalyticsService(new PortfolioSnapshotService(accounts, positions, prices,
+                mock(com.leapvelocity.repository.InstrumentRepository.class)), mock(RiskCalculationClient.class));
         when(accounts.findById(1L)).thenReturn(Optional.of(new Account("ACC-001", "Demo", new BigDecimal("5.00"), AccountStatus.ACTIVE)));
         when(positions.findByAccountIdOrderBySymbolAsc(1L)).thenReturn(List.of(holding("AAPL", "2", "10.00", "USD")));
         when(prices.findLatestCommonDate(anyList(), any(LocalDate.class))).thenReturn(day);
@@ -123,6 +124,15 @@ class PortfolioAnalyticsServiceTest {
         when(prices.findLatestCommonDate(anyList(), any(LocalDate.class))).thenReturn(null);
         when(prices.findSymbolsWithHistoryBefore(anyList(), any(LocalDate.class))).thenReturn(Set.of("AAPL"));
         assertTrue(service.getSummary(1L).issues().get(0).startsWith("No common completed trading date"));
+    }
+
+    @Test
+    void missingMultipleSymbolsKeepsTheExistingSummaryMessage() {
+        when(positions.findByAccountIdOrderBySymbolAsc(1L)).thenReturn(List.of(
+                holding("AAPL", "2", "10", "USD"), holding("MSFT", "3", "20", "USD")));
+        when(prices.findLatestCommonDate(anyList(), any(LocalDate.class))).thenReturn(null);
+        when(prices.findSymbolsWithHistoryBefore(anyList(), any(LocalDate.class))).thenReturn(Set.of());
+        assertEquals(List.of("Missing completed price history for: AAPL, MSFT"), service.getSummary(1L).issues());
     }
 
     @Test

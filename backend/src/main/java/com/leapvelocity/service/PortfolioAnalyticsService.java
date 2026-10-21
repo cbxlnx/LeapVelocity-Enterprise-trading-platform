@@ -1,105 +1,76 @@
 package com.leapvelocity.service;
 
-import com.leapvelocity.dto.response.PortfolioHoldingDto;
+import com.leapvelocity.dto.request.RiskRequestDto;
+import com.leapvelocity.dto.response.PortfolioRiskDto;
+import com.leapvelocity.dto.response.PortfolioRiskDto.*;
 import com.leapvelocity.dto.response.PortfolioSummaryDto;
-import com.leapvelocity.dto.response.PortfolioSummaryDto.ValuationStatus;
-import com.leapvelocity.entities.Position;
-import com.leapvelocity.exceptions.AccountNotFoundException;
-import com.leapvelocity.repository.AccountRepository;
-import com.leapvelocity.repository.PositionRepository;
-import com.leapvelocity.repository.HistoricalPriceRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+/** Orchestrates an immutable database snapshot followed by a transaction-free calculation request. */
 @Service
 public class PortfolioAnalyticsService {
-    private final AccountRepository accounts;
-    private final PositionRepository positions;
-    private final HistoricalPriceRepository prices;
+    private final PortfolioSnapshotService snapshots;
+    private final RiskCalculationClient calculator;
+    private final Clock clock;
 
-    public PortfolioAnalyticsService(AccountRepository accounts, PositionRepository positions,
-                                     HistoricalPriceRepository prices) {
-        this.accounts = accounts;
-        this.positions = positions;
-        this.prices = prices;
+    @Autowired
+    public PortfolioAnalyticsService(PortfolioSnapshotService snapshots, RiskCalculationClient calculator) {
+        this(snapshots, calculator, Clock.systemUTC());
     }
 
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    PortfolioAnalyticsService(PortfolioSnapshotService snapshots, RiskCalculationClient calculator, Clock clock) {
+        this.snapshots = snapshots;
+        this.calculator = calculator;
+        this.clock = clock;
+    }
+
     public PortfolioSummaryDto getSummary(Long accountId) {
-        if (accountId == null || accountId <= 0) throw new IllegalArgumentException("A positive account id is required");
-        var account = accounts.findById(accountId).orElseThrow(() -> new AccountNotFoundException(accountId));
-        List<Position> held = positions.findByAccountIdOrderBySymbolAsc(accountId).stream()
-                .filter(position -> position.getQuantity().signum() != 0).toList();
-        BigDecimal cash = account.getCashBalance();
-        if (held.isEmpty()) {
-            return new PortfolioSummaryDto(accountId, "USD", null, ValuationStatus.EMPTY,
-                    BigDecimal.ZERO, cash, cash, BigDecimal.ZERO, BigDecimal.ZERO, List.of(), List.of());
-        }
-
-        List<String> issues = new ArrayList<>();
-        for (Position holding : held) {
-            if (holding.getQuantity().signum() < 0) issues.add("Short position is not supported: " + holding.getSymbol());
-            if (holding.getAverageCost().signum() < 0) issues.add("Negative average cost for " + holding.getSymbol());
-            if (holding.getInstrument() == null || !"USD".equals(holding.getInstrument().getCurrency())) {
-                issues.add("USD instrument metadata is required for " + holding.getSymbol());
-            }
-        }
-        if (!issues.isEmpty()) return unavailable(accountId, cash, held, null, issues);
-
-        BigDecimal costBasis = held.stream().map(this::costBasis).reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<String> symbols = held.stream().map(Position::getSymbol).distinct().toList();
-        LocalDate before = LocalDate.now(ZoneId.of("America/New_York"));
-        LocalDate asOf = prices.findLatestCommonDate(symbols, before);
-        if (asOf == null) {
-            var available = prices.findSymbolsWithHistoryBefore(symbols, before);
-            var missing = symbols.stream().filter(symbol -> !available.contains(symbol)).toList();
-            issues.add(missing.isEmpty()
-                    ? "No common completed trading date for all holdings: " + String.join(", ", symbols)
-                    : "Missing completed price history for: " + String.join(", ", missing));
-            return unavailable(accountId, cash, held, costBasis, issues);
-        }
-
-        Map<String, BigDecimal> closes = prices.findClosesOnDate(symbols, asOf);
-        for (String symbol : symbols) {
-            if (closes.get(symbol) == null || closes.get(symbol).signum() <= 0) {
-                issues.add("Missing or invalid closing price for " + symbol + " on " + asOf);
-            }
-        }
-        if (!issues.isEmpty()) return unavailable(accountId, cash, held, costBasis, issues);
-
-        BigDecimal holdingsValue = held.stream().map(holding -> holding.getQuantity().multiply(closes.get(holding.getSymbol())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<PortfolioHoldingDto> valued = held.stream().map(holding -> {
-            BigDecimal price = closes.get(holding.getSymbol());
-            BigDecimal value = holding.getQuantity().multiply(price);
-            BigDecimal basis = costBasis(holding);
-            return new PortfolioHoldingDto(holding.getSymbol(), "USD", holding.getQuantity(), holding.getAverageCost(),
-                    price, value, basis, value.subtract(basis), value.divide(holdingsValue, 12, RoundingMode.HALF_UP));
-        }).toList();
-        return new PortfolioSummaryDto(accountId, "USD", asOf, ValuationStatus.READY, holdingsValue,
-                cash, cash.add(holdingsValue), costBasis, holdingsValue.subtract(costBasis), valued, List.of());
+        return snapshots.getSummary(accountId, LocalDate.now(clock.withZone(ZoneId.of("America/New_York"))));
     }
 
-    private BigDecimal costBasis(Position holding) {
-        return holding.getQuantity().multiply(holding.getAverageCost());
+    public PortfolioReturnPreparation.PreparedInputs prepareRiskInputs(Long accountId, RiskRequestDto options) {
+        return snapshots.prepareRiskInputs(accountId, options, LocalDate.now(clock.withZone(ZoneId.of("America/New_York"))));
     }
 
-    private PortfolioSummaryDto unavailable(Long accountId, BigDecimal cash, List<Position> held,
-                                             BigDecimal costBasis, List<String> issues) {
-        List<PortfolioHoldingDto> unpriced = held.stream().map(holding -> new PortfolioHoldingDto(
-                holding.getSymbol(), holding.getInstrument() == null ? null : holding.getInstrument().getCurrency(),
-                holding.getQuantity(), holding.getAverageCost(), null, null,
-                costBasis == null ? null : costBasis(holding), null, null)).toList();
-        return new PortfolioSummaryDto(accountId, "USD", null, ValuationStatus.UNAVAILABLE,
-                null, cash, null, costBasis, null, unpriced, List.copyOf(issues));
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public CoreAssessment calculateCoreRisk(Long accountId, RiskRequestDto options) {
+        var risk = getRisk(accountId, options);
+        return new CoreAssessment(risk.schemaVersion(), risk.calculatedAt(), risk.calculationDate(),
+                UsEquityTradingCalendar.VERSION, risk.parameters(), risk.valuation(), risk.history(),
+                risk.assumptions(), risk.metrics(), risk.issues());
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public PortfolioRiskDto getRisk(Long accountId, RiskRequestDto options) {
+        var at = clock.instant();
+        var date = at.atZone(ZoneId.of("America/New_York")).toLocalDate();
+        // A separate Spring proxy completes REQUIRES_NEW before HTTP. NOT_SUPPORTED
+        // also suspends an ambient caller transaction for the whole orchestration.
+        var prepared = snapshots.prepareRiskInputs(accountId, options, date);
+        var result = calculator.calculate(prepared);
+        var metrics = result.metrics();
+        var states = new ArrayList<>(List.of(metrics.annualisedVolatility().status(),
+                metrics.maximumDrawdown().status(), metrics.beta().status()));
+        states.addAll(result.valueAtRisk().stream().map(VarResult::status).toList());
+        var status = metrics.annualisedVolatility().status() == ResultStatus.EMPTY ? RiskStatus.EMPTY
+                : states.stream().allMatch(value -> value == ResultStatus.READY) ? RiskStatus.READY
+                : states.contains(ResultStatus.READY) ? RiskStatus.PARTIAL : RiskStatus.UNAVAILABLE;
+        var issues = new ArrayList<>(prepared.issues());
+        issues.addAll(result.issues());
+        return new PortfolioRiskDto("1.0", at, date, prepared.parameters(), status, prepared.valuation(),
+                prepared.history(), Assumptions.mvp(), metrics, result.valueAtRisk(), issues.stream().distinct().toList(),
+                new ChartSeries(prepared.portfolio().status(),
+                        prepared.portfolio().wealth().stream().map(p -> new WealthObservation(p.date(), p.value())).toList(),
+                        prepared.portfolio().returns().stream().map(p -> new ReturnObservation(p.from(), p.to(), p.value())).toList(),
+                        prepared.portfolio().reasons()));
     }
 }

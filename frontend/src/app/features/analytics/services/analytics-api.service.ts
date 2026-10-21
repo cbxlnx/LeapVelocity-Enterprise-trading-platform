@@ -6,10 +6,17 @@ import { handleApiError } from '../../../services/api-error';
 import { HistoricalPrices } from '../models/historical-prices.model';
 import { PortfolioSummary } from '../models/portfolio-summary.model';
 import { PerformancePeriod, PortfolioPerformance } from '../models/portfolio-performance.model';
+import { PortfolioRisk, RiskVarOptions } from '../models/portfolio-risk.model';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly http = inject(HttpClient);
+
+  getRisk(accountId: number, period: PerformancePeriod,
+    options: RiskVarOptions = { confidenceLevel: 0.95, holdingPeriodDays: 1 }): Observable<PortfolioRisk> {
+    return this.http.get<PortfolioRisk>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/risk`,
+      { params: { period, ...options } }).pipe(catchError(handleApiError('load portfolio risk')));
+  }
 
   getPerformance(accountId: number, period: PerformancePeriod): Observable<PortfolioPerformance> {
     return this.http.get<PortfolioPerformance>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/performance`,

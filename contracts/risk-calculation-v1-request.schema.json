@@ -1,0 +1,289 @@
+{
+  "$defs": {
+    "Availability": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "observations": {
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Observations",
+          "type": "integer"
+        },
+        "requiredObservations": {
+          "maximum": 2000,
+          "minimum": 1,
+          "title": "Requiredobservations",
+          "type": "integer"
+        },
+        "reasons": {
+          "items": {
+            "enum": [
+              "EMPTY_PORTFOLIO",
+              "UNSUPPORTED_POSITION",
+              "UNSUPPORTED_CURRENCY",
+              "INVALID_POSITION",
+              "MISSING_INSTRUMENT_METADATA",
+              "MISSING_PRICE",
+              "INVALID_PRICE",
+              "NO_COMMON_DATES",
+              "STALE_PRICE",
+              "INCOMPLETE_HISTORY",
+              "INSUFFICIENT_HISTORY",
+              "MISSING_BENCHMARK",
+              "ZERO_BENCHMARK_VARIANCE",
+              "TRADING_CALENDAR_UNAVAILABLE",
+              "METHOD_NOT_IMPLEMENTED",
+              "NUMERICAL_ERROR"
+            ],
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "observations",
+        "requiredObservations",
+        "reasons"
+      ],
+      "title": "Availability",
+      "type": "object"
+    },
+    "PairedReturn": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        },
+        "portfolio": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Portfolio"
+        },
+        "benchmark": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Benchmark"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "portfolio",
+        "benchmark"
+      ],
+      "title": "PairedReturn",
+      "type": "object"
+    },
+    "Parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "confidenceLevel": {
+          "maxLength": 4096,
+          "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+          "title": "Confidencelevel",
+          "type": "string"
+        },
+        "holdingPeriodDays": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Holdingperioddays",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidenceLevel",
+        "holdingPeriodDays"
+      ],
+      "title": "Parameters",
+      "type": "object"
+    },
+    "ReturnPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "value"
+      ],
+      "title": "ReturnPoint",
+      "type": "object"
+    },
+    "Series": {
+      "additionalProperties": false,
+      "properties": {
+        "returns": {
+          "items": {
+            "$ref": "#/$defs/ReturnPoint"
+          },
+          "maxItems": 2000,
+          "title": "Returns",
+          "type": "array"
+        },
+        "wealth": {
+          "items": {
+            "$ref": "#/$defs/WealthPoint"
+          },
+          "maxItems": 2001,
+          "title": "Wealth",
+          "type": "array"
+        }
+      },
+      "required": [
+        "returns",
+        "wealth"
+      ],
+      "title": "Series",
+      "type": "object"
+    },
+    "WealthPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "format": "date",
+          "title": "Date",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "date",
+        "value"
+      ],
+      "title": "WealthPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "requestId": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Requestid",
+      "type": "string"
+    },
+    "holdingsValue": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "pattern": "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Holdingsvalue"
+    },
+    "parameters": {
+      "$ref": "#/$defs/Parameters"
+    },
+    "portfolio": {
+      "$ref": "#/$defs/Series"
+    },
+    "pairedReturns": {
+      "items": {
+        "$ref": "#/$defs/PairedReturn"
+      },
+      "maxItems": 2000,
+      "title": "Pairedreturns",
+      "type": "array"
+    },
+    "core": {
+      "$ref": "#/$defs/Availability"
+    },
+    "beta": {
+      "$ref": "#/$defs/Availability"
+    },
+    "historicalVar": {
+      "$ref": "#/$defs/Availability"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "holdingsValue",
+    "parameters",
+    "portfolio",
+    "pairedReturns",
+    "core",
+    "beta",
+    "historicalVar"
+  ],
+  "title": "CalculationRequest",
+  "type": "object"
+}

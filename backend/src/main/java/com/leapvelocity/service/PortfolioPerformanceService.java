@@ -16,12 +16,10 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 @Service
 public class PortfolioPerformanceService {
@@ -46,14 +44,7 @@ public class PortfolioPerformanceService {
         if (!PERIODS.contains(selected)) throw new IllegalArgumentException("period must be 1M, 3M, 6M, 1Y or 2Y");
         var summary = analytics.getSummary(accountId);
         LocalDate end = summary.asOf();
-        LocalDate start = end == null ? null : switch (selected) {
-            case "1M" -> end.minusMonths(1);
-            case "3M" -> end.minusMonths(3);
-            case "6M" -> end.minusMonths(6);
-            case "1Y" -> end.minusYears(1);
-            case "2Y" -> end.minusYears(2);
-            default -> throw new IllegalStateException("Unsupported validated period: " + selected);
-        };
+        LocalDate start = PortfolioReturnPreparation.lookbackStart(end, selected);
         if (summary.valuationStatus() != ValuationStatus.READY) {
             return unavailable(accountId, selected,
                     summary.valuationStatus() == ValuationStatus.EMPTY ? SimulationStatus.EMPTY : SimulationStatus.UNAVAILABLE,
@@ -68,14 +59,14 @@ public class PortfolioPerformanceService {
         List<String> symbols = new ArrayList<>(summary.holdings().stream().map(holding -> holding.symbol()).toList());
         if (!symbols.contains(BENCHMARK)) symbols.add(BENCHMARK);
 
-        Map<LocalDate, Map<String, BigDecimal>> byDate = new TreeMap<>();
-        for (var row : prices.findAdjustedPrices(symbols, start, end)) {
+        var rows = prices.findAdjustedPrices(symbols, start, end);
+        for (var row : rows) {
             if (row.adjustedClose() == null || row.adjustedClose().signum() <= 0) {
                 return unavailable(accountId, selected, SimulationStatus.UNAVAILABLE, end, start, weights,
                         List.of("Invalid adjusted price for " + row.symbol() + " on " + row.date()));
             }
-            byDate.computeIfAbsent(row.date(), ignored -> new HashMap<>()).put(row.symbol(), row.adjustedClose());
         }
+        var byDate = PortfolioReturnPreparation.indexPrices(rows);
         Set<String> available = new java.util.HashSet<>();
         byDate.values().forEach(values -> available.addAll(values.keySet()));
         var missing = symbols.stream().filter(symbol -> !available.contains(symbol)).toList();
@@ -83,23 +74,19 @@ public class PortfolioPerformanceService {
             return unavailable(accountId, selected, SimulationStatus.UNAVAILABLE, end, start, weights,
                     List.of("Missing adjusted-price history for: " + String.join(", ", missing)));
         }
-        var common = byDate.entrySet().stream().filter(entry -> entry.getValue().keySet().containsAll(symbols)).toList();
+        var common = PortfolioReturnPreparation.commonDates(byDate, symbols);
         if (common.size() < 2) {
             return unavailable(accountId, selected, SimulationStatus.UNAVAILABLE, end, start, weights,
                     List.of("At least two common valid trading dates are required for holdings and SPY"));
         }
 
-        Map<String, BigDecimal> initialPrices = common.get(0).getValue();
+        Map<String, BigDecimal> initialPrices = common.firstEntry().getValue();
         List<Point> points = new ArrayList<>();
-        for (var day : common) {
-            BigDecimal grownValue = BigDecimal.ZERO;
-            for (var holding : summary.holdings()) {
-                BigDecimal growth = day.getValue().get(holding.symbol()).divide(initialPrices.get(holding.symbol()), PRECISION);
-                grownValue = grownValue.add(holding.marketValue().multiply(growth, PRECISION), PRECISION);
-            }
+        for (var day : common.entrySet()) {
             // Use unrounded market values rather than the summary's serialized
             // weight fractions, so the common starting observation is exactly 100.
-            BigDecimal portfolioIndex = grownValue.divide(summary.holdingsValue(), PRECISION).multiply(HUNDRED, PRECISION);
+            BigDecimal portfolioIndex = PortfolioReturnPreparation.buyAndHoldWealth(summary.holdings(),
+                    summary.holdingsValue(), initialPrices, day.getValue()).multiply(HUNDRED, PRECISION);
             BigDecimal benchmarkIndex = day.getValue().get(BENCHMARK).divide(initialPrices.get(BENCHMARK), PRECISION)
                     .multiply(HUNDRED, PRECISION);
             points.add(new Point(day.getKey(), rounded(portfolioIndex), rounded(benchmarkIndex)));
