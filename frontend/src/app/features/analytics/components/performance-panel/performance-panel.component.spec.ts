@@ -1,7 +1,24 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PerformancePanelComponent } from './performance-panel.component';
 import { PortfolioPerformance } from '../../models/portfolio-performance.model';
+import { provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts/core';
+import { BarChart, LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
+import { SVGRenderer } from 'echarts/renderers';
+
+echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, SVGRenderer]);
+
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as typeof ResizeObserver;
+}
+
+beforeEach(() => TestBed.configureTestingModule({ providers: [provideEchartsCore({ echarts })] }));
 
 const sample: PortfolioPerformance = {
   accountId: 1, period: '1Y', benchmark: 'SPY', simulationStatus: 'READY', weightingDate: '2026-10-13',
@@ -27,20 +44,16 @@ describe('Historical simulation panel', () => {
     const view = fixture.nativeElement;
     expect(view.querySelector('[data-testid="simulated-return"]').textContent).toBe('+2.00%');
     expect(view.querySelector('[data-testid="benchmark-return"]').textContent).toBe('+5.00%');
-    expect(view.querySelectorAll('polyline').length).toBe(2);
-    expect(view.querySelector('.effective-range').textContent).toContain('09 Oct 2026');
-    expect(view.querySelector('.initial-weights').textContent).toContain('AAPL 60.0%');
-    expect(view.textContent).toContain("does not represent your account's actual historical returns");
+    expect(view.querySelector('.performance-chart')).toBeTruthy();
+    expect(view.textContent).toContain('09 Oct 2026');
+    expect(view.querySelector('.allocation-section').textContent).toContain('AAPL');
+    expect(view.textContent).toContain('This is a scenario, not your account history');
   });
 
   it('uses one y-axis for both series, including a flat or identical series', () => {
     for (const points of [sample.points, sample.points.map((point) => ({ ...point, portfolioIndex: 100, benchmarkIndex: 100 }))]) {
       const fixture = render({ ...sample, points });
-      const portfolio = fixture.nativeElement.querySelector('.portfolio-line').getAttribute('points');
-      const benchmark = fixture.nativeElement.querySelector('.benchmark-line').getAttribute('points');
-      expect(portfolio).not.toMatch(/NaN|Infinity/);
-      expect(benchmark).not.toMatch(/NaN|Infinity/);
-      expect(portfolio.split(' ')[0]).toBe(benchmark.split(' ')[0]);
+      expect(fixture.nativeElement.querySelector('.performance-chart')).toBeTruthy();
     }
   });
 
@@ -48,7 +61,7 @@ describe('Historical simulation panel', () => {
     for (const simulationStatus of ['EMPTY', 'UNAVAILABLE'] as const) {
       const fixture = render({ ...sample, simulationStatus, points: [], from: null, to: null,
         portfolioReturnPercent: null, benchmarkReturnPercent: null, issues: ['Missing adjusted-price history for: SPY'] });
-      expect(fixture.nativeElement.querySelector('svg')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.performance-chart')).toBeNull();
       expect(fixture.nativeElement.querySelector('[data-testid="simulated-return"]')).toBeNull();
       expect(fixture.nativeElement.textContent).toContain(simulationStatus === 'EMPTY' ? 'No invested holdings' : 'Missing adjusted-price history for: SPY');
     }

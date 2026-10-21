@@ -557,6 +557,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return (value >= 0 ? '+' : '') + value.toFixed(2) + '%';
   }
 
+  formatAllocationPercent(value: number): string {
+    return value.toFixed(2) + '%';
+  }
+
   formatUpdatedAt(value: Date | string): string {
     const date = value instanceof Date ? value : new Date(value);
     const datePart = date.toLocaleDateString('en-GB', {

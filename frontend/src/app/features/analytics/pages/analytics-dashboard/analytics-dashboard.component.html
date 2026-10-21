@@ -1,64 +1,79 @@
 <main class="analytics-container">
-  <header class="page-heading">
-    <p class="eyebrow">Portfolio analytics</p>
-    <h1>Portfolio overview</h1>
-    <p class="subtitle">Current account valuation, allocation, historical simulation and instrument history.</p>
+  <header class="research-header">
+    <p class="research-eyebrow">Market research / historical data</p>
+    <h1>Historical Analytics</h1>
+    <p>Review historical prices, traded volume and relative performance.</p>
   </header>
-
-  <app-portfolio-summary [summary]="summary()" [loading]="summaryLoading()" [error]="summaryError()" (refresh)="refreshPortfolio()" />
-
-  <app-performance-panel [performance]="performance()" [period]="performancePeriod()" [loading]="performanceLoading()" [error]="performanceError()" (periodChange)="changePerformancePeriod($event)" (refresh)="loadPerformance()" />
-
-  <h2>{{ selectedInstrument() ? selectedInstrument()?.symbol + ' · ' : '' }}Historical prices</h2>
-  @if (selectedInstrument(); as instrument) {
-    <p class="subtitle">{{ instrument.name }} daily closing prices in {{ instrument.currency }}. The instrument and date filters apply only to this chart.</p>
-  }
-  @if (instrumentsLoading()) {
-    <p role="status">Loading instruments…</p>
-  } @else if (instrumentsError(); as message) {
-    <div class="instrument-error" role="alert"><p>{{ message }}</p><button type="button" (click)="loadInstruments()">Retry instruments</button></div>
-  } @else if (instruments().length === 0) {
-    <p role="status">No eligible USD instruments are available for historical prices.</p>
-  } @else {
-  <form class="date-filter" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical price date range">
-    <label for="price-symbol">Instrument<select id="price-symbol" formControlName="symbol">
-      @for (instrument of instruments(); track instrument.symbol) {
-        <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option>
-      }
-    </select></label>
-    <label for="price-from">From <input id="price-from" type="date" formControlName="from" required /></label>
-    <label for="price-to">To <input id="price-to" type="date" formControlName="to" required /></label>
-    <button type="submit" [disabled]="loading() || dateForm.invalid">{{ loading() ? 'Loading…' : 'Load prices' }}</button>
-    @if (dateForm.hasError('dateOrder')) {
-      <p class="validation-message" role="alert">From must be on or before To.</p>
-    }
+  <form class="range-controls" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical analytics range">
+    <label><span>Symbol</span><select id="price-symbol" formControlName="symbol">@for (instrument of instruments(); track instrument.symbol) { <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option> }</select><small>{{ selectedInstrument()?.name || 'Instrument' }} · {{ selectedInstrument()?.currency || 'USD' }}</small></label>
+    <label><span>Start date</span><input type="date" formControlName="from" required /><small>Inclusive · UTC</small></label>
+    <label><span>End date</span><input type="date" formControlName="to" required /><small>Last session is partial</small></label>
+    <label><span>Time period</span><select [value]="historicalPeriod()" (change)="applyHistoricalPeriod($any($event.target).value)">@for (period of historicalPeriods; track period) { <option [value]="period">{{ period }}</option> }</select><small>{{ history()?.prices?.length || 0 }} session observations</small></label>
+    <button type="submit" [disabled]="dateForm.invalid || loading()">{{ loading() ? 'Loading…' : 'Apply range' }}</button>
   </form>
-  }
-
-  @if (selectedInstrument(); as instrument) {
-  <section class="chart-card" aria-label="Historical closing price chart" [attr.aria-busy]="loading()">
-    @if (loading()) {
-      <div class="state" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading {{ instrument.symbol }} price history…</p></div>
-    } @else if (error(); as message) {
-      <div class="state error-state" role="alert">
-        <h2>{{ instrument.symbol }} price history could not be loaded</h2><p>{{ message }}</p>
-        <button type="button" (click)="loadPrices()" [disabled]="dateForm.invalid">Retry</button>
-      </div>
-    } @else if (history(); as data) {
-      @if (data.prices.length === 0) {
-        <div class="state" role="status">
-          <h2>No historical prices found</h2>
-          <p>No {{ data.symbol }} prices are stored for {{ formatDate(data.from) }}–{{ formatDate(data.to) }}. Try another instrument or date range.</p>
+  @if (summaryError(); as message) { <p class="instrument-error" role="alert">{{ message }}</p> }
+  <section class="instrument-view" aria-labelledby="historical-price-heading">
+    <div class="instrument-main">
+      <header class="instrument-heading">
+        <div>
+          <h1 id="historical-price-heading">{{ selectedInstrument()?.symbol || 'Instrument' }} · Historical price</h1>
+          @if (selectedInstrument(); as instrument) { <p>{{ instrument.name }} · {{ instrument.currency }}</p> }
         </div>
-      } @else {
-        <div class="chart-heading">
-          <div><h2>Daily close</h2><p>{{ formatDate(data.prices[0].date) }}–{{ formatDate(data.prices[data.prices.length - 1].date) }} · {{ data.prices.length }} trading days</p></div>
-          <div class="latest-price"><span>Last available close</span><strong>{{ data.prices[data.prices.length - 1].close | currency:data.currency:'symbol':'1.2-2' }}</strong></div>
-        </div>
-        <app-price-chart [prices]="data.prices" [currency]="data.currency" [symbol]="data.symbol" />
-        <p class="chart-note">Daily closing price · {{ data.currency }} · Source: {{ data.prices[0].source }} · Gaps between trading days are expected.</p>
+        @if (priceStats(); as stats) {
+          <div class="headline-price"><strong>{{ stats.latest | currency:history()?.currency:'symbol':'1.2-2' }}</strong><span [class.loss]="stats.change < 0" [class.gain]="stats.change >= 0">{{ stats.change >= 0 ? '+' : '' }}{{ stats.change | currency:history()?.currency:'symbol':'1.2-2' }}&nbsp; / &nbsp;{{ stats.returnPercent >= 0 ? '+' : '' }}{{ stats.returnPercent | number:'1.2-2' }}%&nbsp; in range</span></div>
+        }
+      </header>
+      @if (instrumentsLoading()) { <p role="status">Loading instruments…</p> }
+      @else if (instrumentsError(); as message) { <div class="instrument-error" role="alert"><p>{{ message }}</p><button type="button" (click)="loadInstruments()">Retry instruments</button></div> }
+      @else if (instruments().length === 0) { <p role="status">No eligible USD instruments are available for historical prices.</p> }
+      @else {
+        @if (dateForm.hasError('dateOrder')) { <p class="validation-message" role="alert">Start date must be on or before end date.</p> }
       }
+
+      @if (selectedInstrument(); as instrument) {
+      <section class="chart-panel" aria-label="Historical closing price chart" [attr.aria-busy]="loading()">
+        <div class="chart-labels"><span>PRICE ({{ instrument.currency }}) · DAILY LAST OBSERVATION</span><span>VOLUME (SHARES)</span></div>
+        @if (loading()) { <div class="state" role="status"><span class="spinner" aria-hidden="true"></span><p>Loading {{ instrument.symbol }} price history…</p></div> }
+        @else if (error(); as message) { <div class="state error-state" role="alert"><h2>{{ instrument.symbol }} price history could not be loaded</h2><p>{{ message }}</p><button type="button" (click)="loadPrices()" [disabled]="dateForm.invalid">Retry</button></div> }
+        @else if (history(); as data) {
+          @if (data.prices.length === 0) { <div class="state" role="status"><h2>No historical prices found</h2><p>No {{ data.symbol }} prices are stored for {{ formatDate(data.from) }}–{{ formatDate(data.to) }}.</p></div> }
+          @else { <app-price-chart [prices]="data.prices" [currency]="data.currency" [symbol]="data.symbol" /> }
+        }
+      </section>
+      }
+    </div>
+    @if (priceStats(); as stats) {
+      <aside class="range-statistics" aria-labelledby="range-statistics-heading">
+        <h2 id="range-statistics-heading">Range statistics</h2>
+        <p class="stats-context">{{ history()?.symbol }} · {{ history()?.from }}–{{ history()?.to }} · {{ history()?.currency }}</p>
+        <dl>
+          <div><dt>Price change</dt><dd class="gain">{{ stats.change >= 0 ? '+' : '' }}{{ stats.change | currency:history()?.currency:'symbol':'1.2-2' }}</dd><small>{{ stats.low | currency:history()?.currency:'symbol':'1.2-2' }} → {{ stats.latest | currency:history()?.currency:'symbol':'1.2-2' }}</small></div>
+          <div><dt>Percentage return</dt><dd class="gain">{{ stats.returnPercent >= 0 ? '+' : '' }}{{ stats.returnPercent | number:'1.2-2' }}%</dd><small>Last / first − 1</small></div>
+          <div><dt>Range high</dt><dd>{{ stats.high | currency:history()?.currency:'symbol':'1.2-2' }}</dd><small>Highest closing price</small></div>
+          <div><dt>Range low</dt><dd>{{ stats.low | currency:history()?.currency:'symbol':'1.2-2' }}</dd><small>Lowest closing price</small></div>
+          <div><dt>Average price</dt><dd>{{ stats.average | currency:history()?.currency:'symbol':'1.2-2' }}</dd><small>Mean of {{ stats.observations }} last prices</small></div>
+          <div><dt>Volatility · annualized</dt><dd>{{ stats.volatility | number:'1.2-2' }}%</dd><small>{{ stats.returnObservations }} log-return observations</small></div>
+        </dl>
+        <p class="stats-note"><span class="info-icon" aria-hidden="true">i</span><span>Historical range only. Not cash balance, account P&amp;L or current market value.</span></p>
+      </aside>
     }
   </section>
-  }
+  <section class="comparison-panel" aria-labelledby="comparison-heading">
+    <header><div><h2 id="comparison-heading">Multi-symbol comparison</h2><p>Normalized price return · <strong>{{ history()?.from || dateForm.controls.from.value }}–{{ history()?.to || dateForm.controls.to.value }}</strong></p></div></header>
+    <div class="comparison-selector" aria-label="Comparison instruments">
+      <span>Compare instruments</span>
+      <div class="comparison-picker"><select [value]="comparisonPickerSymbol()" (change)="comparisonPickerSymbol.set($any($event.target).value)">@for (instrument of instruments(); track instrument.symbol) { <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option> }</select><button type="button" (click)="addComparisonSymbol()">Add instrument</button></div>
+      <div class="selected-comparisons">@for (symbol of comparisonSymbols(); track symbol) { <button type="button" (click)="removeComparisonSymbol(symbol)" [attr.aria-label]="'Remove ' + symbol">{{ symbol }} ×</button> }</div>
+    </div>
+    @if (comparisonLoading()) { <p class="comparison-state" role="status">Loading comparison data…</p> }
+    @else if (comparisonError(); as message) { <p class="comparison-state error-state" role="alert">{{ message }}</p> }
+    @else if (comparison().length > 0) {
+      <p class="comparison-note"><span class="info-icon" role="img" aria-label="About normalized comparison" title="Each instrument starts at 100 so percentage performance can be compared">i</span><span>Each instrument is rebased to 100 at the start of the selected period. Shows price performance only; dividends, fees, and FX are excluded. Data comes from stored daily closing prices.</span></p>
+      <app-comparison-chart [histories]="comparison()" />
+      <table><thead><tr><th>Instrument</th><th>First price (USD)</th><th>Last price (USD)</th><th>Change (USD)</th><th>Return (%)</th><th>Coverage</th></tr></thead><tbody>@for (row of comparisonRows(); track row.symbol) { <tr><th>{{ row.symbol }}</th><td>{{ row.first | currency:'USD':'symbol':'1.2-2' }}</td><td>{{ row.latest | currency:'USD':'symbol':'1.2-2' }}</td><td [class.gain]="row.change >= 0" [class.loss]="row.change < 0">{{ row.change >= 0 ? '+' : '' }}{{ row.change | currency:'USD':'symbol':'1.2-2' }}</td><td [class.gain]="row.returnPercent >= 0" [class.loss]="row.returnPercent < 0">{{ row.returnPercent >= 0 ? '+' : '' }}{{ row.returnPercent | number:'1.2-2' }}%</td><td>{{ row.observations }} samples</td></tr> }</tbody></table>
+    } @else { <p class="comparison-state">No comparison symbols have historical data for this range.</p> }
+  </section>
+  <section class="simulation-panel" aria-label="Portfolio historical simulation">
+    <app-performance-panel [performance]="performance()" [period]="performancePeriod()" [loading]="performanceLoading()" [error]="performanceError()" (periodChange)="changePerformancePeriod($event)" (refresh)="loadPerformance()" />
+  </section>
 </main>
