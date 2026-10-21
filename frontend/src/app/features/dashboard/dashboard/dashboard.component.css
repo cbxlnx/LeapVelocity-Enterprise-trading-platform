@@ -600,9 +600,9 @@
 .mover-head,
 .mover-row {
   display: grid;
-  grid-template-columns: 20px minmax(55px, 1fr) auto auto;
+  grid-template-columns: 20px minmax(55px, 1fr) minmax(84px, auto) minmax(62px, auto);
   align-items: center;
-  gap: 8px;
+  column-gap: 14px;
 }
 
 .mover-head {
