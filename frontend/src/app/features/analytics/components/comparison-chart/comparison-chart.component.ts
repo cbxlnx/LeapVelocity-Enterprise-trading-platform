@@ -7,12 +7,13 @@ import { HistoricalPrices } from '../../models/historical-prices.model';
   selector: 'app-comparison-chart',
   standalone: true,
   imports: [NgxEchartsDirective],
-  template: '<div echarts [options]="options()" class="comparison-chart"></div>',
+  template: '<div echarts [options]="options()" [initOpts]="initOpts" class="comparison-chart"></div>',
   styleUrl: './comparison-chart.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ComparisonChartComponent {
   readonly histories = input.required<HistoricalPrices[]>();
+  readonly initOpts = { renderer: 'svg' as const };
   private readonly seriesColors = ['#075985', '#c2410c', '#047857', '#7e22ce', '#be123c', '#0f766e', '#a16207', '#4338ca'];
 
   readonly options = computed<EChartsOption>(() => {

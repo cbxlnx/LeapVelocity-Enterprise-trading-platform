@@ -15,6 +15,7 @@ export class PriceChartComponent {
   readonly prices = input.required<HistoricalPricePoint[]>();
   readonly currency = input('USD');
   readonly symbol = input.required<string>();
+  readonly initOpts = { renderer: 'svg' as const };
   readonly chartOptions = computed<EChartsOption>(() => {
     const prices = this.prices();
     const labels = prices.map(point => point.date);

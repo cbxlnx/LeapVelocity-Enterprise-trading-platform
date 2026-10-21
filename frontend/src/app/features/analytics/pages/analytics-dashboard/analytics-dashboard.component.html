@@ -5,12 +5,13 @@
     <p>Review historical prices, traded volume and relative performance.</p>
   </header>
   <form class="range-controls" [formGroup]="dateForm" (ngSubmit)="loadPrices()" aria-label="Historical analytics range">
-    <label><span>Symbol</span><select formControlName="symbol">@for (instrument of instruments(); track instrument.symbol) { <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option> }</select><small>{{ selectedInstrument()?.name || 'Instrument' }} · {{ selectedInstrument()?.currency || 'USD' }}</small></label>
+    <label><span>Symbol</span><select id="price-symbol" formControlName="symbol">@for (instrument of instruments(); track instrument.symbol) { <option [value]="instrument.symbol">{{ instrument.symbol }} · {{ instrument.name }}</option> }</select><small>{{ selectedInstrument()?.name || 'Instrument' }} · {{ selectedInstrument()?.currency || 'USD' }}</small></label>
     <label><span>Start date</span><input type="date" formControlName="from" required /><small>Inclusive · UTC</small></label>
     <label><span>End date</span><input type="date" formControlName="to" required /><small>Last session is partial</small></label>
     <label><span>Time period</span><select [value]="historicalPeriod()" (change)="applyHistoricalPeriod($any($event.target).value)">@for (period of historicalPeriods; track period) { <option [value]="period">{{ period }}</option> }</select><small>{{ history()?.prices?.length || 0 }} session observations</small></label>
     <button type="submit" [disabled]="dateForm.invalid || loading()">{{ loading() ? 'Loading…' : 'Apply range' }}</button>
   </form>
+  @if (summaryError(); as message) { <p class="instrument-error" role="alert">{{ message }}</p> }
   <section class="instrument-view" aria-labelledby="historical-price-heading">
     <div class="instrument-main">
       <header class="instrument-heading">

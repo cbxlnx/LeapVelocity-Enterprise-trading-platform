@@ -10,6 +10,7 @@ import { PerformancePoint } from '../../models/portfolio-performance.model';
 })
 export class PerformanceChartComponent {
   readonly points = input.required<PerformancePoint[]>();
+  readonly initOpts = { renderer: 'svg' as const };
   readonly chartOptions = computed<EChartsOption>(() => {
     const points = this.points();
     const labels = points.map(point => point.date);
