@@ -89,6 +89,32 @@ export interface PortfolioShock {
   issues: RiskIssue[];
 }
 
+export interface HistoricalReplay {
+  schemaVersion: string;
+  calculatedAt: string;
+  calculationDate: string;
+  status: RiskResultStatus;
+  reasons: string[];
+  scenario: { id: string; title: string; from: string; to: string };
+  methodology: string;
+  priceSource: string;
+  priceField: string;
+  identityReviewVersion: string;
+  identityReviewedOn: string;
+  valuation: PortfolioSummary;
+  expectedHoldings: number;
+  validatedHoldings: number;
+  totalPnL: number | null;
+  impactPercent: number | null;
+  postShockEquity: number | null;
+  holdings: Array<{ symbol: string; historicalTicker: string; providerSymbol: string;
+    securityIdentity: string | null; identitySources: string[]; identityNotes: string | null;
+    status: RiskResultStatus; reasons: string[]; marketValue: number;
+    fromAdjustedClose: number | null; toAdjustedClose: number | null; loadedAt: string | null;
+    priceChangePercent: number | null; pnl: number | null; postShockValue: number | null }>;
+  limitations: string[];
+}
+
 /** KPI response with independent availability per method. Dates remain calendar-date strings. */
 export interface PortfolioRisk {
   schemaVersion: string;

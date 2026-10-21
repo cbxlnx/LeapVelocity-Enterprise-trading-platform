@@ -162,12 +162,12 @@ class PortfolioRiskApiDatabaseTest {
         positions.saveAndFlush(new Position(accountId, "AAPL", BigDecimal.ONE, BigDecimal.TEN));
         jdbc.execute("CREATE SCHEMA IF NOT EXISTS analytics");
         jdbc.execute("CREATE TABLE IF NOT EXISTS analytics.daily_prices (symbol VARCHAR(20), price_date DATE, "
-                + "close NUMERIC(20,6), adjusted_close NUMERIC(20,6), PRIMARY KEY(symbol, price_date))");
+                + "close NUMERIC(20,6), adjusted_close NUMERIC(20,6), source VARCHAR(20) DEFAULT 'yfinance', loaded_at TIMESTAMP DEFAULT TIMESTAMP '2026-10-18 00:00:00', PRIMARY KEY(symbol, price_date))");
         jdbc.update("DELETE FROM analytics.daily_prices");
         var days = UsEquityTradingCalendar.sessions(END.minusYears(1), END).orElseThrow();
         for (int i = 0; i < days.size(); i++) {
-            jdbc.update("INSERT INTO analytics.daily_prices VALUES (?, ?, ?, ?)", "AAPL", Date.valueOf(days.get(i)), 900, 100 + i);
-            jdbc.update("INSERT INTO analytics.daily_prices VALUES (?, ?, ?, ?)", "SPY", Date.valueOf(days.get(i)), 800, 500 + i);
+            jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)", "AAPL", Date.valueOf(days.get(i)), 900, 100 + i);
+            jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)", "SPY", Date.valueOf(days.get(i)), 800, 500 + i);
         }
         mvc = MockMvcBuilders.webAppContextSetup(context)
                 .addFilters(context.getBean("springSecurityFilterChain", Filter.class)).build();
@@ -175,6 +175,47 @@ class PortfolioRiskApiDatabaseTest {
 
     private String path() { return "/api/v1/accounts/" + accountId + "/analytics/risk"; }
     private String owner() throws Exception { return bearer(accountId, "TRADER"); }
+
+    private void loadSyntheticEvent(String eventId) {
+        var instrument = instruments.findBySymbol("AAPL").orElseThrow();
+        instrument.setName("Apple Inc."); instruments.saveAndFlush(instrument);
+        var event = HistoricalReplayCatalog.event(eventId);
+        // Deliberately different raw closes; replay must read adjusted closes only.
+        jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)", "AAPL", Date.valueOf(event.from()), 100, 50);
+        jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)", "AAPL", Date.valueOf(event.to()), 50, 40);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"CRISIS_2008", "MARCH_2020"})
+    void authenticatedHistoricalReplayReadsValidatedEndpointsAndReconcilesCurrentHoldings(String eventId) throws Exception {
+        loadSyntheticEvent(eventId);
+        mvc.perform(post(path() + "/replay/" + eventId).header("Authorization", owner()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("READY"))
+                .andExpect(jsonPath("$.scenario.id").value(eventId))
+                .andExpect(jsonPath("$.totalPnL").value(-180))
+                .andExpect(jsonPath("$.holdings[0].priceChangePercent").value(-20))
+                .andExpect(jsonPath("$.postShockEquity").value(1220))
+                .andExpect(jsonPath("$.valuation.cashBalance").value(500))
+                .andExpect(jsonPath("$.validatedHoldings").value(1))
+                .andExpect(jsonPath("$.holdings[0].identitySources").isNotEmpty());
+        assertEquals(0, Config.calculationCalls, "Endpoint historical returns do not require another VaR simulation");
+    }
+
+    @Test void historicalReplayReportsMissingPricesAndUnresolvedIdentityWithoutInventingLosses() throws Exception {
+        mvc.perform(post(path() + "/replay/MARCH_2020").header("Authorization", owner()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.totalPnL").value(nullValue()))
+                .andExpect(jsonPath("$.holdings[0].reasons", hasItem(containsString("CURRENT_METADATA_MISMATCH"))))
+                .andExpect(jsonPath("$.holdings[0].reasons", hasItem(containsString("MISSING_EVENT_PRICE"))));
+    }
+
+    @Test void historicalReplayUsesExistingAuthenticationAndAccountScope() throws Exception {
+        loadSyntheticEvent("MARCH_2020");
+        mvc.perform(post(path() + "/replay/MARCH_2020")).andExpect(status().isUnauthorized());
+        mvc.perform(post(path() + "/replay/MARCH_2020").header("Authorization", bearer(accountId + 1, "TRADER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(path() + "/replay/unknown").header("Authorization", owner()))
+                .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("VAL-422"));
+    }
 
     @ParameterizedTest @CsvSource({"-50,-450,950,450", "0,0,1400,900", "50,450,1850,1350"})
     void customShockBoundariesUseActualHoldingsAndKeepCash(String change, double pnl, double equity, double postValue) throws Exception {
@@ -196,7 +237,7 @@ class PortfolioRiskApiDatabaseTest {
         instruments.saveAndFlush(new Instrument("MSFT", "Other", "EQUITY", "USD", true));
         positions.saveAndFlush(new Position(accountId, "MSFT", BigDecimal.ONE, BigDecimal.TEN));
         jdbc.update("UPDATE analytics.daily_prices SET close = 201.50 WHERE symbol = 'AAPL' AND price_date = ?", Date.valueOf(END));
-        jdbc.update("INSERT INTO analytics.daily_prices VALUES (?, ?, ?, ?)", "MSFT", Date.valueOf(END), 201.50, 201.50);
+        jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)", "MSFT", Date.valueOf(END), 201.50, 201.50);
         mvc.perform(post(path() + "/shock").header("Authorization", owner()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"priceChangePercent\":" + change + "}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalPnL").value(total))
@@ -278,7 +319,7 @@ class PortfolioRiskApiDatabaseTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.monteCarlo.status").value("READY"))
                 .andExpect(jsonPath("$.monteCarlo.simulations").value(100000))
                 .andExpect(jsonPath("$.monteCarlo.bins.length()").value(40))
-                .andExpect(jsonPath("$.stressCapabilities.historical[0].status").value("NOT_IMPLEMENTED"))
+                .andExpect(jsonPath("$.stressCapabilities.historical[0].status").value("UNAVAILABLE"))
                 .andExpect(jsonPath("$.stressCapabilities.sectorIncrements.status").value("UNAVAILABLE"))
                 .andReturn();
         var tree = JsonMapper.builder().build().readTree(result.getResponse().getContentAsString());
@@ -413,7 +454,7 @@ class PortfolioRiskApiDatabaseTest {
                     rows.stream().map(row -> LocalDate.parse(row[0])).toList());
             for (var row : rows) {
                 for (int index = 0; index < 3; index++) {
-                    jdbc.update("INSERT INTO analytics.daily_prices VALUES (?, ?, ?, ?)",
+                    jdbc.update("INSERT INTO analytics.daily_prices (symbol, price_date, close, adjusted_close) VALUES (?, ?, ?, ?)",
                             List.of("AAPL", "MSFT", "SPY").get(index), Date.valueOf(row[0]),
                             List.of(100, 200, 500).get(index), new BigDecimal(row[index + 1]));
                 }

@@ -34,7 +34,7 @@ test.describe('Deployed account risk dashboard', () => {
     await expect(summary).toContainText(amount(risk.metrics.beta.value));
     for (const holding of risk.valuation.holdings) await expect(page.locator('.concentration-card tbody')).toContainText(holding.symbol);
     await expect(page.locator('.contribution-card')).toContainText('Volatility contribution unavailable');
-    await expect(page.locator('.stress-card')).toContainText('Historical replay unavailable');
+    await expect(page.locator('.stress-card')).toContainText('Not yet assessed');
     await expect(page.getByRole('heading', { name: 'Monte Carlo distribution', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '30 days', exact: true })).toHaveCount(0);
     if (risk.monteCarlo?.status === 'READY') {
@@ -111,5 +111,29 @@ test.describe('Deployed account risk dashboard', () => {
     }
     expect((await request.get(`${path}/summary`, { headers })).status()).toBe(200);
     expect((await request.get(`${path}/performance?period=1Y`, { headers })).status()).toBe(200);
+  });
+
+  test('historical scenarios return validated results or precise data and identity gaps', async ({ page }) => {
+    await page.goto('/risk');
+    await expect(page.locator('.kpi-grid')).toBeVisible();
+    for (const id of ['CRISIS_2008', 'MARCH_2020']) {
+      const pending = page.waitForResponse(response => response.url().endsWith(`/analytics/risk/replay/${id}`));
+      await page.getByRole('button', { name: `Run replay ${id}`, exact: true }).click();
+      const response = await pending;
+      expect(response.status()).toBe(200);
+      const result = await response.json();
+      expect(result.scenario.id).toBe(id);
+      expect(result.status).not.toBe('NOT_IMPLEMENTED');
+      if (result.status === 'READY') {
+        expect(result.validatedHoldings).toBe(result.expectedHoldings);
+        await expect(page.locator('.stress-card')).toContainText(amount(result.totalPnL, '$'));
+        await expect(page.locator('.breakdown-table')).toContainText(amount(result.totalPnL, '$'));
+        await expect(page.locator('.waterfall-chart canvas')).toBeVisible();
+      } else {
+        expect(result.totalPnL).toBeNull();
+        expect(result.reasons.length).toBeGreaterThan(0);
+        await expect(page.locator('.stress-card')).toContainText(result.reasons[0]);
+      }
+    }
   });
 });

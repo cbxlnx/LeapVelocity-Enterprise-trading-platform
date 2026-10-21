@@ -1,10 +1,27 @@
 <section class="risk-card stress-card" aria-labelledby="stress-heading">
   <header class="section-heading"><h2 id="stress-heading">Stress test scenarios</h2><p>Availability of historical and user-defined calculations</p></header>
-  <p role="status"><strong>Historical replay unavailable.</strong> No event loss estimate is shown.</p>
-  @if (capabilities(); as availability) { @for (scenario of availability.historical; track scenario.id) {
-    <p role="status"><strong>{{ scenario.title }} · {{ scenario.status }}</strong> {{ scenario.reasons.join(' ') }}</p>
-  } } @else { <p>Validated event returns and instrument mappings for 2008 and March 2020 are not supplied.</p> }
+  @for (scenario of scenarios(); track scenario.id) {
+    <article class="historical-scenario">
+      <header><strong>{{ scenario.title }}</strong><button type="button" (click)="run(scenario.id)" [disabled]="!!loadingId() || scenario.status === 'NOT_IMPLEMENTED'" [attr.aria-label]="'Run replay ' + scenario.id">Run replay</button></header>
+      @if (loadingId() === scenario.id) { <p role="status">Validating historical data and calculating replay…</p> }
+      @else if (errors()[scenario.id]; as error) { <p role="alert">{{ error }}</p> }
+      @else if (results()[scenario.id]; as result) {
+        <p role="status"><strong>{{ result.status }}</strong> · {{ result.scenario.from }} – {{ result.scenario.to }} · {{ result.priceSource }} adjusted closes · {{ result.validatedHoldings }} / {{ result.expectedHoldings }} holdings validated</p>
+        @if (result.status === 'READY') { <div class="scenario-row"><strong>P&amp;L {{ format(result.totalPnL, '$') }}</strong><span>{{ format(result.impactPercent, '', '%') }} of current equity</span><span>Post-replay equity {{ format(result.postShockEquity, '$') }}</span></div> }
+        @else { @for (reason of result.reasons; track $index) { <p>{{ reason }}</p> } }
+        @for (holding of result.holdings; track holding.symbol) {
+          <details><summary>{{ holding.symbol }} · {{ holding.status }} · Historical ticker {{ holding.historicalTicker }}</summary>
+            <p>{{ holding.securityIdentity || 'Identity unresolved' }} · {{ holding.identityNotes }}</p>
+            <p>Adjusted close: {{ format(holding.fromAdjustedClose, '$') }} → {{ format(holding.toAdjustedClose, '$') }} · Loaded {{ holding.loadedAt || 'Unavailable' }}</p>
+            @for (reason of holding.reasons; track $index) { <p>{{ reason }}</p> }
+            @for (source of holding.identitySources; track source) { <p><a [href]="source" target="_blank" rel="noopener noreferrer">Identity reference</a></p> }
+          </details>
+        }
+        @for (limitation of result.limitations; track $index) { <p class="fine-print">{{ limitation }}</p> }
+      } @else { <p role="status">Not yet assessed · {{ scenario.reasons.join(' ') }}</p> }
+    </article>
+  }
   @if (customResult(); as result) { <div class="scenario-row"><div class="scenario-name"><strong>Custom uniform price shock</strong><span>{{ result.waterfall.period }}</span></div><div>P&amp;L {{ format(result.totalPnL, '$') }}</div><div>{{ format(result.impactPercent, '', '%') }} of account equity</div></div> }
   @else { <p>Custom scenario: no result yet. Run the custom shock builder using this account's holdings.</p> }
-  <p class="fine-print">No assumed historical shocks, forecasts or sample loss amounts are used.</p>
+  <p class="fine-print">Historical scenarios apply observed cumulative event returns once to today's exposures. They are not actual historical account performance, single-day shocks, or daily exposure paths. No proxy shocks are used.</p>
 </section>

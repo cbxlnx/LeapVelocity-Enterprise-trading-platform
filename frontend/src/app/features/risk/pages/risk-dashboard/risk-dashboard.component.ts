@@ -14,7 +14,7 @@ import { DistributionDrawdownComponent } from '../../components/distribution-dra
 import { ScenarioWaterfallComponent } from '../../components/scenario-waterfall/scenario-waterfall.component';
 import { StressScenariosComponent } from '../../components/stress-scenarios/stress-scenarios.component';
 import { VarModelsComponent } from '../../components/var-models/var-models.component';
-import { RiskHorizon, ShockResult } from '../../models/risk-dashboard.model';
+import { RiskHorizon, ScenarioBreakdown, ShockResult } from '../../models/risk-dashboard.model';
 import { formatAmount, toRiskPortfolio } from '../../utils/risk-calculations';
 
 @Component({
@@ -38,6 +38,7 @@ export class RiskDashboardComponent implements OnInit {
   readonly historicalWindow = signal<PerformancePeriod>('1Y');
   readonly horizon = signal<RiskHorizon>(1);
   readonly customResult = signal<ShockResult | null>(null);
+  readonly selectedScenario = signal<ScenarioBreakdown | null>(null);
   readonly riskVars = computed(() => ({
     historical: this.risk()?.valueAtRisk.find(value => value.method === 'HISTORICAL'),
     parametric: this.risk()?.valueAtRisk.find(value => value.method === 'PARAMETRIC'),
@@ -48,7 +49,7 @@ export class RiskDashboardComponent implements OnInit {
     return risk ? toRiskPortfolio(risk, this.metadata()) : null;
   });
   readonly waterfalls = computed(() => {
-    const result = this.customResult();
+    const result = this.selectedScenario();
     return result ? [result.waterfall] : [];
   });
 
@@ -58,6 +59,7 @@ export class RiskDashboardComponent implements OnInit {
     this.riskRequest?.unsubscribe();
     this.risk.set(null);
     this.customResult.set(null);
+    this.selectedScenario.set(null);
     this.error.set(null);
     this.loading.set(false);
     if (!this.accountId) { this.error.set('The signed-in account could not be identified. Sign in again.'); return; }
@@ -84,6 +86,7 @@ export class RiskDashboardComponent implements OnInit {
     this.loadDashboard();
   }
   updateWindow(period: PerformancePeriod): void { this.historicalWindow.set(period); this.loadDashboard(); }
+  showCustomResult(result: ShockResult | null): void { this.customResult.set(result); this.selectedScenario.set(result); }
   formatRisk(value: number | null | undefined, prefix = '', suffix = ''): string { return formatAmount(value, prefix, suffix); }
   riskReason(result: RiskScalarMetric | RiskVarResult | undefined): string {
     return result && result.status !== 'READY' ? result.reasons.join(' · ') : '';

@@ -17,6 +17,11 @@
     <section class="state-panel" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><strong>Loading risk estimates…</strong><span>Preparing deterministic portfolio analytics.</span></section>
   } @else if (error(); as message) {
     <section class="state-panel error-panel" role="alert"><strong>Risk dashboard unavailable</strong><span>{{ message }}</span><button type="button" (click)="loadDashboard()">Retry</button></section>
+    @if (accountId; as account) {
+      <app-stress-scenarios [accountId]="account" [customResult]="customResult()" (replayRun)="selectedScenario.set($event)" />
+      <app-custom-shock [accountId]="account" (shockRun)="showCustomResult($event)" />
+      <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="selectedScenario()" />
+    }
   } @else if (portfolio(); as current) {
     @if (risk(); as assessment) { @for (issue of assessment.issues; track $index) { <p role="status">{{ issue.code }} · {{ issue.message }}</p> } }
     <section class="kpi-grid" aria-label="Risk summary">
@@ -33,10 +38,10 @@
     <app-distribution-drawdown [portfolio]="current" />
     <app-risk-contribution [portfolio]="current" />
 
-    <div class="stress-alert" role="status"><span>Historical stress replay is unavailable. No validated event-loss calculation is currently supplied.</span></div>
-    <app-stress-scenarios [customResult]="customResult()" [capabilities]="risk()?.stressCapabilities" />
-    <app-custom-shock [portfolio]="current" (shockRun)="customResult.set($event)" />
-    <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="customResult()" />
+    <div class="stress-alert" role="status"><span>Historical replays validate each holding's identity and event endpoints before reporting a portfolio result. Returns apply to current exposures, with cash unchanged.</span></div>
+    <app-stress-scenarios [accountId]="accountId!" [customResult]="customResult()" [capabilities]="risk()?.stressCapabilities" (replayRun)="selectedScenario.set($event)" />
+    <app-custom-shock [accountId]="accountId!" (shockRun)="showCustomResult($event)" />
+    <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="selectedScenario()" />
     <app-concentration [portfolio]="current" />
   }
 </main>

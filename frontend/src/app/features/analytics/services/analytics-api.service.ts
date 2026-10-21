@@ -6,7 +6,7 @@ import { handleApiError } from '../../../services/api-error';
 import { HistoricalPrices } from '../models/historical-prices.model';
 import { PortfolioSummary } from '../models/portfolio-summary.model';
 import { PerformancePeriod, PortfolioPerformance } from '../models/portfolio-performance.model';
-import { PortfolioRisk, PortfolioShock, RiskVarOptions } from '../models/portfolio-risk.model';
+import { HistoricalReplay, PortfolioRisk, PortfolioShock, RiskVarOptions } from '../models/portfolio-risk.model';
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
@@ -15,6 +15,11 @@ export class AnalyticsApiService {
   calculateShock(accountId: number, priceChangePercent: number): Observable<PortfolioShock> {
     return this.http.post<PortfolioShock>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/risk/shock`,
       { priceChangePercent }).pipe(catchError(handleApiError('calculate price shock')));
+  }
+
+  replayHistory(accountId: number, scenarioId: string): Observable<HistoricalReplay> {
+    return this.http.post<HistoricalReplay>(`${environment.apiUrl}/v1/accounts/${accountId}/analytics/risk/replay/${encodeURIComponent(scenarioId)}`,
+      {}).pipe(catchError(handleApiError('run historical stress replay')));
   }
 
   getRisk(accountId: number, period: PerformancePeriod,

@@ -38,6 +38,12 @@ export interface ScenarioWaterfall {
   endingEquityUsd: number;
   cashReserveUsd: number;
 }
-export interface ShockResult extends PortfolioShock {
+export interface ScenarioBreakdown {
+  valuation: PortfolioShock['valuation'];
+  totalPnL: number | null;
+  impactPercent: number | null;
+  postShockEquity: number | null;
+  holdings: PortfolioShock['holdings'];
   waterfall: ScenarioWaterfall;
 }
+export interface ShockResult extends PortfolioShock, ScenarioBreakdown { }

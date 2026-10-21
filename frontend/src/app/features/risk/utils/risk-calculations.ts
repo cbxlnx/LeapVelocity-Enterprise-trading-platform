@@ -1,7 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { Instrument } from '../../../models/api.models';
-import { PortfolioRisk, PortfolioShock } from '../../analytics/models/portfolio-risk.model';
-import { DrawdownPoint, RiskPortfolio, ShockResult } from '../models/risk-dashboard.model';
+import { HistoricalReplay, PortfolioRisk, PortfolioShock } from '../../analytics/models/portfolio-risk.model';
+import { DrawdownPoint, RiskPortfolio, ScenarioBreakdown, ShockResult } from '../models/risk-dashboard.model';
 import { RiskDecimal } from './risk-decimal';
 
 export function formatAmount(value: number | null | undefined, prefix = '', suffix = ''): string {
@@ -72,5 +72,22 @@ export function toShockResult(response: PortfolioShock): ShockResult | null {
       startingEquityUsd: response.valuation.totalEquity, endingEquityUsd: response.postShockEquity,
       cashReserveUsd: response.valuation.cashBalance,
       deltas: response.holdings.map(holding => ({ label: holding.symbol, deltaUsd: holding.pnl })) },
+  };
+}
+
+/** Presentation only: all returns, money and totals are supplied by Java. */
+export function toReplayBreakdown(response: HistoricalReplay): ScenarioBreakdown | null {
+  if (response.status !== 'READY' || response.totalPnL == null || response.postShockEquity == null
+      || response.valuation.totalEquity == null || response.valuation.cashBalance == null
+      || response.holdings.length !== response.expectedHoldings || response.validatedHoldings !== response.expectedHoldings
+      || response.holdings.some(row => row.status !== 'READY' || row.pnl == null || row.postShockValue == null || row.priceChangePercent == null)) return null;
+  return { ...response,
+    holdings: response.holdings.map(row => ({ symbol: row.symbol, marketValue: row.marketValue,
+      priceChangePercent: row.priceChangePercent!, pnl: row.pnl!, postShockValue: row.postShockValue! })),
+    waterfall: { title: response.scenario.title,
+      period: `${response.scenario.from} – ${response.scenario.to} · Cumulative historical return on current exposures`,
+      startingEquityUsd: response.valuation.totalEquity, endingEquityUsd: response.postShockEquity,
+      cashReserveUsd: response.valuation.cashBalance,
+      deltas: response.holdings.map(row => ({ label: row.symbol, deltaUsd: row.pnl! })) },
   };
 }

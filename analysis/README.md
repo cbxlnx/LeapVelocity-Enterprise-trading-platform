@@ -61,3 +61,5 @@ Three importer PostgreSQL tests are opt-in through `ANALYTICS_TEST_DB=1`.
 
 See the [implementation report](../docs/python-risk-service.md) and
 [dashboard integration guide](../docs/risk-frontend-guide.md).
+Historical stress windows are imported with the same importer; see the exact
+[event import commands and validation rules](../docs/historical-stress-replay.md).

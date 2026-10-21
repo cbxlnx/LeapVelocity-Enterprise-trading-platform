@@ -3,6 +3,7 @@ package com.leapvelocity.controller;
 import com.leapvelocity.dto.request.RiskRequestDto;
 import com.leapvelocity.dto.request.PriceShockRequestDto;
 import com.leapvelocity.dto.response.PortfolioShockDto;
+import com.leapvelocity.dto.response.PortfolioReplayDto;
 import com.leapvelocity.dto.response.PortfolioRiskDto;
 import com.leapvelocity.dto.response.PortfolioSummaryDto;
 import com.leapvelocity.security.AccountAccessAuthorizer;
@@ -100,6 +101,15 @@ public class PortfolioAnalyticsController {
     public PortfolioShockDto calculateShock(@PathVariable Long id, @Valid @RequestBody PriceShockRequestDto request) {
         AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         return analytics.calculateShock(id, request);
+    }
+
+    @Operation(summary = "Apply validated historical event returns to current holdings",
+            description = "Cumulative adjusted-close endpoint returns for CRISIS_2008 or MARCH_2020. "
+                    + "Requires reviewed security identity bindings and exact same-batch endpoint observations; cash unchanged.")
+    @PostMapping("/risk/replay/{scenarioId}")
+    public PortfolioReplayDto calculateReplay(@PathVariable Long id, @PathVariable String scenarioId) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
+        return analytics.calculateReplay(id, scenarioId);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

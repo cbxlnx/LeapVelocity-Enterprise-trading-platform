@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 @Repository
 public class HistoricalPriceRepository {
     public record AdjustedPrice(String symbol, LocalDate date, BigDecimal adjustedClose) { }
+    public record ReplayPrice(String symbol, LocalDate date, BigDecimal adjustedClose, String source, java.time.Instant loadedAt) { }
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -97,5 +98,18 @@ public class HistoricalPriceRepository {
         return Set.copyOf(jdbcTemplate.query("SELECT DISTINCT symbol FROM analytics.daily_prices "
                         + "WHERE symbol IN (" + placeholders + ") AND price_date < ?",
                 (row, index) -> row.getString("symbol"), parameters.toArray()));
+    }
+
+    /** Exact event endpoints, including provenance; no nearest-date fallback or synthetic sessions. */
+    public List<ReplayPrice> findReplayEndpoints(List<String> symbols, LocalDate from, LocalDate to) {
+        if (symbols.isEmpty()) return List.of();
+        String placeholders = String.join(",", Collections.nCopies(symbols.size(), "?"));
+        List<Object> parameters = new ArrayList<>(symbols);
+        parameters.add(Date.valueOf(from)); parameters.add(Date.valueOf(to));
+        return jdbcTemplate.query("SELECT symbol, price_date, adjusted_close, source, loaded_at FROM analytics.daily_prices "
+                        + "WHERE symbol IN (" + placeholders + ") AND price_date IN (?, ?) ORDER BY symbol, price_date",
+                (row, index) -> new ReplayPrice(row.getString("symbol"), row.getDate("price_date").toLocalDate(),
+                        row.getBigDecimal("adjusted_close"), row.getString("source"),
+                        row.getTimestamp("loaded_at") == null ? null : row.getTimestamp("loaded_at").toInstant()), parameters.toArray());
     }
 }

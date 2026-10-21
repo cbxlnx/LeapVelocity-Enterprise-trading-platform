@@ -64,6 +64,23 @@ public class PortfolioSnapshotService {
         return new ShockSnapshot(summary, issues.stream().distinct().toList());
     }
 
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public HistoricalReplayCalculator.Inputs prepareReplayInputs(Long accountId, HistoricalReplayCatalog.Event event, LocalDate date) {
+        var snapshot = prepareShockInputs(accountId, date);
+        if (snapshot.issues().stream().anyMatch(issue -> issue.severity() == Severity.ERROR)) {
+            return new HistoricalReplayCalculator.Inputs(snapshot, List.of());
+        }
+        var holdings = snapshot.valuation().holdings();
+        var observations = prices.findReplayEndpoints(holdings.stream().map(PortfolioHoldingDto::symbol).toList(), event.from(), event.to());
+        var inputs = holdings.stream().map(holding -> {
+            var instrument = instruments.findBySymbol(holding.symbol()).orElse(null);
+            return new HistoricalReplayCalculator.HoldingInput(holding, instrument == null ? null : instrument.getName(),
+                    instrument == null ? null : instrument.getAssetClass(),
+                    observations.stream().filter(price -> price.symbol().equals(holding.symbol())).toList());
+        }).toList();
+        return new HistoricalReplayCalculator.Inputs(snapshot, inputs);
+    }
+
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ, propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public PortfolioReturnPreparation.PreparedInputs prepareRiskInputs(Long accountId, RiskRequestDto options,
                                                                         LocalDate calculationDate) {

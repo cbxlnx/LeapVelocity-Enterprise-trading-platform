@@ -1,7 +1,7 @@
 /** Deterministic synthetic API data for tests only. Never imported by production. */
 import { Instrument } from '../../../models/api.models';
 import { PerformancePeriod } from '../../analytics/models/portfolio-performance.model';
-import { PortfolioRisk, PortfolioShock, RiskScalarMetric } from '../../analytics/models/portfolio-risk.model';
+import { HistoricalReplay, PortfolioRisk, PortfolioShock, RiskScalarMetric } from '../../analytics/models/portfolio-risk.model';
 
 export const TEST_INSTRUMENTS: Instrument[] = [
   { id: 1, symbol: 'AAA', name: 'Synthetic Alpha', assetClass: 'EQUITY', currency: 'USD', tradable: true },
@@ -41,8 +41,8 @@ export function riskFixture(accountId = 7, period: PerformancePeriod = '1Y'): Po
       unit: 'USD_LOSS', tailConvention: 'EMPIRICAL_INTEGRATED_QUANTILE', varAmount: 55,
       expectedShortfallAmount: 70, expectedShortfallPercent: 7,
       bins: [{ lowerBound: -100, upperBound: 0, count: 50000 }, { lowerBound: 0, upperBound: 100, count: 50000 }] },
-    stressCapabilities: { historical: [{ id: 'CRISIS_2008', title: '2008 financial crisis', status: 'NOT_IMPLEMENTED',
-      reasons: ['Validated event histories and instrument mappings are not supplied.'] }],
+    stressCapabilities: { historical: [{ id: 'MARCH_2020', title: 'March 2020 market stress', status: 'UNAVAILABLE',
+      reasons: ['Select Run replay to validate stored observations and security identity.'] }],
       sectorIncrements: { id: 'SECTOR_INCREMENTS', title: 'Sector increments', status: 'UNAVAILABLE', reasons: ['No sector metadata.'] } },
     series: { status: 'READY', wealth: levels.map((value, index) => ({ date: date(index), value })),
       returns: levels.slice(1).map((value, index) => ({ from: date(index), to: date(index + 1), value: value / levels[index] - 1 })), reasons: [] },
@@ -58,4 +58,19 @@ export function shockFixture(accountId = 7): PortfolioShock {
       { symbol: 'AAA', marketValue: 600, priceChangePercent: -10, pnl: -60, postShockValue: 540 },
       { symbol: 'BBB', marketValue: 400, priceChangePercent: -10, pnl: -40, postShockValue: 360 },
     ] };
+}
+
+/** Synthetic contract fixture; not evidence of real historical observations. */
+export function replayFixture(accountId = 7): HistoricalReplay {
+  const shock = shockFixture(accountId);
+  return { schemaVersion: '1.0', calculatedAt: shock.calculatedAt, calculationDate: shock.calculationDate,
+    status: 'READY', reasons: [], scenario: { id: 'MARCH_2020', title: 'March 2020 market stress', from: '2020-02-28', to: '2020-03-31' },
+    methodology: 'CUMULATIVE_ADJUSTED_CLOSE_RETURN_ON_CURRENT_EXPOSURES', priceSource: 'synthetic-test-fixture',
+    priceField: 'adjusted_close', identityReviewVersion: 'TEST_ONLY', identityReviewedOn: '2026-10-21',
+    valuation: shock.valuation, expectedHoldings: 2, validatedHoldings: 2,
+    totalPnL: shock.totalPnL, impactPercent: shock.impactPercent, postShockEquity: shock.postShockEquity,
+    holdings: shock.holdings.map(row => ({ ...row, historicalTicker: row.symbol, providerSymbol: row.symbol,
+      securityIdentity: 'Synthetic fixture identity', identitySources: [], identityNotes: 'Fixture only',
+      status: 'READY', reasons: [], fromAdjustedClose: 100, toAdjustedClose: 90, loadedAt: '2026-10-21T10:00:00Z' })),
+    limitations: ['Synthetic contract fixture, not production historical data.'] };
 }

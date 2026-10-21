@@ -1,5 +1,9 @@
 # Risk analytics and stress testing extension
 
+The subsequent [historical replay implementation](historical-stress-replay.md)
+adds validated cumulative event-return replay and independent scenario controls.
+The historical limitations below describe this earlier extension's baseline.
+
 Implemented on the existing `feat/py-lib-serv` working tree after inspecting the
 clean baseline at `8a451c7`. No branch switch, commit, merge or rebase was made.
 No dependency, database schema, persisted portfolio or secret changes are needed.

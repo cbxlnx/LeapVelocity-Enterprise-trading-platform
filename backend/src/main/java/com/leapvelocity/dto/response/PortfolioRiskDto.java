@@ -42,11 +42,7 @@ public record PortfolioRiskDto(
     public record ScenarioAvailability(String id, String title, ResultStatus status, List<String> reasons) { }
     public record StressCapabilities(List<ScenarioAvailability> historical, ScenarioAvailability sectorIncrements) {
         public static StressCapabilities current() {
-            var reasons = List.of("Validated adjusted event-period prices and issuer/ticker continuity mappings are not supplied.",
-                    "The bundled trading calendar covers 2024–2028, outside these event periods; no proxy shocks are assumed.");
-            return new StressCapabilities(List.of(
-                    new ScenarioAvailability("CRISIS_2008", "2008 financial crisis", ResultStatus.NOT_IMPLEMENTED, reasons),
-                    new ScenarioAvailability("MARCH_2020", "March 2020", ResultStatus.NOT_IMPLEMENTED, reasons)),
+            return new StressCapabilities(com.leapvelocity.service.HistoricalReplayCatalog.capabilities(),
                     new ScenarioAvailability("SECTOR_INCREMENTS", "Sector increments", ResultStatus.UNAVAILABLE,
                             List.of("Instrument metadata has no validated sector classification; the existing importer stores prices only.")));
         }

@@ -3,6 +3,7 @@ package com.leapvelocity.service;
 import com.leapvelocity.dto.request.RiskRequestDto;
 import com.leapvelocity.dto.request.PriceShockRequestDto;
 import com.leapvelocity.dto.response.PortfolioShockDto;
+import com.leapvelocity.dto.response.PortfolioReplayDto;
 import com.leapvelocity.dto.response.PortfolioRiskDto;
 import com.leapvelocity.dto.response.PortfolioRiskDto.*;
 import com.leapvelocity.dto.response.PortfolioSummaryDto;
@@ -17,7 +18,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 /** Orchestrates an immutable database snapshot followed by a transaction-free calculation request. */
 @Service
@@ -63,15 +63,22 @@ public class PortfolioAnalyticsService {
                     null, null, null, List.of(), snapshot.issues());
         }
         var holdings = valuation.holdings().stream().map(holding -> {
-            var pnl = holding.marketValue().multiply(change).movePointLeft(2).setScale(2, RoundingMode.HALF_UP);
+            var pnl = PriceSensitivity.pnl(holding.marketValue(), change.movePointLeft(2));
             return new PortfolioShockDto.HoldingShock(holding.symbol(), holding.marketValue(), change, pnl,
                     holding.marketValue().add(pnl));
         }).toList();
         var pnl = holdings.stream().map(PortfolioShockDto.HoldingShock::pnl)
                 .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-        var impact = pnl.multiply(new BigDecimal("100")).divide(valuation.totalEquity(), 8, RoundingMode.HALF_UP);
+        var impact = PriceSensitivity.impact(pnl, valuation.totalEquity());
         return new PortfolioShockDto("1.0", at, date, ResultStatus.READY, List.of(), change, valuation, pnl, impact,
                 valuation.totalEquity().add(pnl), holdings, snapshot.issues());
+    }
+
+    public PortfolioReplayDto calculateReplay(Long accountId, String scenarioId) {
+        var event = HistoricalReplayCatalog.event(scenarioId);
+        var at = clock.instant();
+        var date = at.atZone(ZoneId.of("America/New_York")).toLocalDate();
+        return HistoricalReplayCalculator.calculate(snapshots.prepareReplayInputs(accountId, event, date), event, at, date);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

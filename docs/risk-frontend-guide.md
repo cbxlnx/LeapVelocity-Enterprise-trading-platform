@@ -44,7 +44,7 @@ decimals are strings to retain validation and monetary rounding precision.
 | Holding allocation / concentration | Existing Java holdings, excluding cash from the weight denominator |
 | Instrument-type exposure | Existing instrument `assetClass`; never presented as sector classification |
 | Custom shock, holding table and waterfall | Authenticated Java POST result; price change applied once per holding, cents rounded before summing, cash unchanged |
-| Historical stress replay / stress alert | Unavailable: no validated event histories and replay model |
+| Historical stress replay | Run validates reviewed security identities and exact same-batch adjusted endpoints; backend results populate the existing holding table and waterfall |
 | Sector exposure / sector shocks | Unavailable: no trusted sector classification |
 | Per-holding beta/volatility/VaR and volatility contribution | Unavailable: no per-asset result contract or attribution model |
 | Monte Carlo histogram | Python's same simulation batch as VaR, aggregated into at most 40 USD loss bins; VaR and ES markers |
@@ -60,6 +60,19 @@ populate the impact panel, scenario row, holding table and waterfall. No fronten
 price sensitivity calculator remains. `decimal.js` is still used for exposure
 presentation and waterfall offsets. The shock is not a historical, beta or
 probabilistic model. Input edits, Reset and refresh cancel or clear stale results.
+Custom and historical Run controls also remain available if the Python risk request
+fails; each asks Java for a fresh account valuation independently.
+
+Historical replay uses `POST /api/v1/accounts/{id}/analytics/risk/replay/{scenarioId}`.
+`CRISIS_2008` applies the adjusted-close return from 2007-12-31 to 2008-12-31;
+`MARCH_2020` uses 2020-02-28 to 2020-03-31. These are cumulative calendar-period
+returns applied once to current exposures, not single-day shocks, peak-to-trough
+estimates, daily exposure paths or actual account history. Exact endpoint dates,
+identity evidence, price source, ingestion times and coverage accompany the result.
+Unknown mappings or missing observations make the whole portfolio unavailable,
+with null totals and explicit holding reasons. TSLA cannot replay 2008 because
+its IPO occurred in 2010. See the [replay guide](historical-stress-replay.md) for
+data imports, identity review, calendar scope and actual verification results.
 
 `monteCarlo` includes its own status/reasons, simulation count, confidence, horizon,
 USD loss unit, bins, VaR amount and ES amount/percentage. Negative histogram values
@@ -86,8 +99,10 @@ Current-allocation buy-and-hold history is a reconstruction using today's invest
 weights, not actual account performance. Historical trades/cash flows, FX, shorts
 and derivatives require additional inputs/models. Confidence 99% requires 500
 complete horizon windows; a two-year request may legitimately be unavailable.
-The bundled US equity session calendar covers 2024–2028 and rejects requests
-outside that range rather than extrapolating.
+The bundled calendar for daily risk-return validation covers 2024–2028 and
+rejects daily-history requests outside that range rather than extrapolating.
+Historical cumulative endpoint replay validates exact provider observations
+independently and does not use that daily calendar.
 
 Opt-in real-deployment browser checks are available without response interception:
 

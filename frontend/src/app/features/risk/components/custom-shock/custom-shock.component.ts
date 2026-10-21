@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, output, 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, timeout } from 'rxjs';
 import { AnalyticsApiService } from '../../../analytics/services/analytics-api.service';
-import { RiskPortfolio, ShockResult, ShockValues } from '../../models/risk-dashboard.model';
+import { ShockResult, ShockValues } from '../../models/risk-dashboard.model';
 import { toShockResult, formatAmount } from '../../utils/risk-calculations';
 @Component({ selector: 'app-custom-shock', standalone: true, templateUrl: './custom-shock.component.html',
   styleUrl: './custom-shock.component.css', changeDetection: ChangeDetectionStrategy.OnPush })
@@ -10,7 +10,7 @@ export class CustomShockComponent {
   private readonly api = inject(AnalyticsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private pending?: Subscription;
-  readonly portfolio = input.required<RiskPortfolio>();
+  readonly accountId = input.required<number>();
   readonly shockRun = output<ShockResult | null>();
   readonly shocks = signal<ShockValues>({ market: 0 });
   readonly result = signal<ShockResult | null>(null);
@@ -41,11 +41,11 @@ export class CustomShockComponent {
     }
     this.error.set(null);
     this.loading.set(true);
-    this.pending = this.api.calculateShock(this.portfolio().accountId, change)
+    this.pending = this.api.calculateShock(this.accountId(), change)
       .pipe(timeout(15000), takeUntilDestroyed(this.destroyRef)).subscribe({
         next: response => {
           this.loading.set(false);
-          if (response.valuation.accountId !== this.portfolio().accountId || response.priceChangePercent !== change) {
+          if (response.valuation.accountId !== this.accountId() || response.priceChangePercent !== change) {
             this.error.set('The price shock response does not match the requested account or shock.'); return;
           }
           const result = toShockResult(response);

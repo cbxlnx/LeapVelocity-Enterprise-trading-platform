@@ -10,7 +10,7 @@ import { GridComponent, MarkLineComponent, MarkPointComponent, TooltipComponent 
 import { SVGRenderer } from 'echarts/renderers';
 import { RiskDashboardComponent } from './risk-dashboard.component';
 import { AuthService } from '../../../../services/auth.service';
-import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../../testing/risk-dashboard.fixture';
+import { replayFixture, riskFixture, shockFixture, TEST_INSTRUMENTS } from '../../testing/risk-dashboard.fixture';
 import { RiskHorizon } from '../../models/risk-dashboard.model';
 
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, MarkLineComponent, MarkPointComponent, SVGRenderer]);
@@ -43,7 +43,7 @@ describe('Risk dashboard with actual API responses', () => {
     expect(text).toContain('AAA · 60.00%');
     expect(text).not.toContain('MSFT');
     expect(text).not.toContain('44,935');
-    expect(text).toContain('Historical replay unavailable');
+    expect(text).toContain('Not yet assessed');
     expect(text).toContain('Volatility contribution unavailable');
     expect(text).toContain('Expected Shortfall');
     expect(text).toContain('$70.00');
@@ -73,6 +73,51 @@ describe('Risk dashboard with actual API responses', () => {
     expect(fixture.nativeElement.querySelector('.kpi-grid')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('ACC-001');
     expect(fixture.componentInstance.portfolio()).toBeNull();
+  });
+
+  it('keeps custom shocks usable when the Python risk request fails', () => {
+    http.expectOne(url()).flush({}, { status: 500, statusText: 'Risk service unavailable' });
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('[aria-label="Market shock percentage"]');
+    input.value = '-10'; input.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('.shock-card button.primary').click();
+    http.expectOne('/api/v1/accounts/7/analytics/risk/shock').flush(shockFixture());
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.breakdown-table').textContent).toContain('$540.00');
+    expect(fixture.componentInstance.customResult()?.totalPnL).toBe(-100);
+    expect(fixture.nativeElement.querySelector('.kpi-grid')).toBeNull();
+  });
+
+  it('runs a historical replay and populates the same backend holding breakdown', () => {
+    http.expectOne(url()).flush(riskFixture()); fixture.detectChanges();
+    fixture.nativeElement.querySelector('[aria-label="Run replay MARCH_2020"]').click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Validating historical data');
+    const request = http.expectOne('/api/v1/accounts/7/analytics/risk/replay/MARCH_2020');
+    expect(request.request.method).toBe('POST');
+    request.flush(replayFixture()); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.breakdown-table').textContent).toContain('$540.00');
+    expect(fixture.nativeElement.querySelector('.stress-card').textContent).toContain('2020-02-28');
+    expect(fixture.componentInstance.selectedScenario()?.totalPnL).toBe(-100);
+    expect(fixture.componentInstance.customResult()).toBeNull();
+  });
+
+  it.each(['unavailable', 'error', 'wrong-account', 'incomplete'])('shows %s historical results without a fabricated total', state => {
+    http.expectOne(url()).flush(riskFixture()); fixture.detectChanges();
+    fixture.nativeElement.querySelector('[aria-label="Run replay MARCH_2020"]').click();
+    const request = http.expectOne('/api/v1/accounts/7/analytics/risk/replay/MARCH_2020');
+    if (state === 'error') request.flush({}, { status: 500, statusText: 'Calculation failed' });
+    else {
+      const response = replayFixture(state === 'wrong-account' ? 8 : 7);
+      if (state === 'unavailable') { response.status = 'UNAVAILABLE'; response.totalPnL = null; response.reasons = ['MISSING_EVENT_PRICE']; }
+      if (state === 'incomplete') response.validatedHoldings = 1;
+      request.flush(response);
+    }
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.breakdown-table')).toBeNull();
+    expect(fixture.componentInstance.selectedScenario()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.stress-card').textContent).toContain(state === 'unavailable' ? 'MISSING_EVENT_PRICE'
+      : state === 'error' ? 'calculation failed' : state === 'wrong-account' ? 'does not match' : 'incomplete holding coverage');
   });
 
   it('rejects another account response and unsupported holding periods', () => {

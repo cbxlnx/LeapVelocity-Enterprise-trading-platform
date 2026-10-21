@@ -1,4 +1,10 @@
 :host { display: block; }
+.historical-scenario { padding: 16px 0; border-bottom: 1px solid #e5ebef; }
+.historical-scenario header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.historical-scenario button { padding: 8px 12px; border: 1px solid #cbd5dc; border-radius: 3px; background: #fff; color: #20364e; cursor: pointer; }
+.historical-scenario button:disabled { opacity: .5; cursor: default; }
+details { margin-top: 10px; font-size: 12px; }
+summary { cursor: pointer; }
 .risk-card { border: 1px solid #d5dde6; border-radius: 4px; background: #fff; }
 .section-heading { padding: 24px 24px 20px; }
 .section-heading h2 { margin: 0; color: #142337; font-size: 19px; }
