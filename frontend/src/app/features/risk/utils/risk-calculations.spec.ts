@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
-import { toShockResult, drawdownPoints, toRiskPortfolio } from './risk-calculations';
+import { replayFixture, riskFixture, shockFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
+import { toReplayBreakdown, toShockResult, drawdownPoints, toRiskPortfolio } from './risk-calculations';
 
 describe('account-specific risk presentation', () => {
   it('uses actual market values and excludes cash from concentration denominators', () => {
@@ -21,8 +21,7 @@ describe('account-specific risk presentation', () => {
     const portfolio = toRiskPortfolio(riskFixture(), null);
     expect(portfolio.holdings[0].company).toBeNull();
     expect(portfolio.instrumentExposure).toBeNull();
-    expect(portfolio.insights[1].value).toBe('Unavailable');
-    expect(portfolio.insights[1].detail).toContain('no sector classification');
+    expect(portfolio.insights.some(insight => insight.label.includes('Sector'))).toBe(false);
   });
 
   it('draws actual dates and keeps the initial wealth peak', () => {
@@ -54,6 +53,19 @@ describe('account-specific risk presentation', () => {
     expect(result.waterfall.cashReserveUsd).toBe(100);
     response.status = 'UNAVAILABLE'; response.totalPnL = null;
     expect(toShockResult(response)).toBeNull();
+  });
+
+  it.each(['missing', 'duplicate', 'unexpected', 'empty'] as const)('rejects %s holding coverage even when a server response claims READY', kind => {
+    const shock = shockFixture();
+    const replay = replayFixture();
+    for (const response of [shock, replay]) {
+      if (kind === 'missing') response.holdings.pop();
+      if (kind === 'duplicate') response.holdings[1].symbol = response.holdings[0].symbol;
+      if (kind === 'unexpected') response.holdings[1].symbol = 'UNKNOWN';
+      if (kind === 'empty') { response.holdings = []; response.valuation.holdings = []; }
+    }
+    expect(toShockResult(shock)).toBeNull();
+    expect(toReplayBreakdown(replay)).toBeNull();
   });
 
   it('sums fractional-dollar exposures without binary rounding drift', () => {

@@ -1,6 +1,6 @@
 import { EChartsOption } from 'echarts';
 import { PortfolioRisk, MonteCarloDistribution } from '../../analytics/models/portfolio-risk.model';
-import { DrawdownPoint, RiskPortfolio, ScenarioWaterfall } from '../models/risk-dashboard.model';
+import { DrawdownPoint, ScenarioWaterfall } from '../models/risk-dashboard.model';
 import { formatAmount } from './risk-calculations';
 import { RiskDecimal } from './risk-decimal';
 
@@ -71,17 +71,6 @@ export function createDrawdownOptions(points: DrawdownPoint[], maximumLoss: numb
         label: { show: true, position: 'right' as const, formatter: formatAmount(maximumLoss, maximumLoss ? '−' : '', '%') },
         data: [{ name: 'Maximum drawdown', coord: [trough.date, trough.percent] }] } } : {}),
     }],
-  };
-}
-
-export function createContributionOptions(portfolio: RiskPortfolio): EChartsOption {
-  return {
-    animation: false,
-    grid: { left: 64, right: 52, top: 8, bottom: 28 },
-    xAxis: { type: 'value', max: 100, axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${value}%` }, splitLine: { lineStyle: { color: gridColor } } },
-    yAxis: { type: 'category', data: portfolio.holdings.map(holding => holding.symbol), axisLabel: { color: '#20364e', fontSize: 10 } },
-    tooltip: { trigger: 'axis', valueFormatter: value => value == null || value === '-' ? 'Unavailable' : formatAmount(Number(value), '', '%') },
-    series: [{ name: 'Allocation · % of invested holdings', type: 'bar', data: portfolio.holdings.map(holding => holding.allocationPercent), barWidth: 12, itemStyle: { color: '#3679b3' } }],
   };
 }
 

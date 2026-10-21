@@ -1,7 +1,6 @@
 import { PortfolioRisk, PortfolioShock } from '../../analytics/models/portfolio-risk.model';
 
 export type RiskHorizon = 1 | 10;
-export type ConcentrationView = 'stock' | 'sector';
 export interface HoldingExposure {
   symbol: string;
   company: string | null;

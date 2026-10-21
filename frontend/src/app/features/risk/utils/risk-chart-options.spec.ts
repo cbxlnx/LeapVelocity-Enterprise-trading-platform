@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { riskFixture, shockFixture, TEST_INSTRUMENTS } from '../testing/risk-dashboard.fixture';
-import { createContributionOptions, createDrawdownOptions, createDistributionOptions, createVarChartOptions, createWaterfallOptions } from './risk-chart-options';
-import { toShockResult, toRiskPortfolio } from './risk-calculations';
+import { riskFixture, shockFixture } from '../testing/risk-dashboard.fixture';
+import { createDrawdownOptions, createDistributionOptions, createVarChartOptions, createWaterfallOptions } from './risk-chart-options';
+import { toShockResult } from './risk-calculations';
 
 describe('real account chart options', () => {
   it('plots backend horizon amounts without square-root scaling or missing-value zeros', () => {
@@ -20,12 +20,6 @@ describe('real account chart options', () => {
     expect(options.xAxis).toMatchObject({ data: points.map(p => p.date) });
     expect(options.yAxis).toMatchObject({ min: -88, max: 0 });
     expect(options.series).toMatchObject([{ markPoint: { data: [{ coord: ['2026-01-05', -80] }] } }]);
-  });
-
-  it('shows allocation without inventing volatility contribution', () => {
-    const options = createContributionOptions(toRiskPortfolio(riskFixture(), TEST_INSTRUMENTS));
-    expect(options.series).toHaveLength(1);
-    expect(options.series).toMatchObject([{ data: [60, 40] }]);
   });
 
   it('maps backend holding deltas to their actual waterfall baselines', () => {

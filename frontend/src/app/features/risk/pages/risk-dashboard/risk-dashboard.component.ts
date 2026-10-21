@@ -7,7 +7,6 @@ import { Instrument } from '../../../../models/api.models';
 import { AnalyticsApiService } from '../../../analytics/services/analytics-api.service';
 import { PortfolioRisk, RiskScalarMetric, RiskVarResult } from '../../../analytics/models/portfolio-risk.model';
 import { PerformancePeriod } from '../../../analytics/models/portfolio-performance.model';
-import { RiskContributionComponent } from '../../components/risk-contribution/risk-contribution.component';
 import { ConcentrationComponent } from '../../components/concentration/concentration.component';
 import { CustomShockComponent } from '../../components/custom-shock/custom-shock.component';
 import { DistributionDrawdownComponent } from '../../components/distribution-drawdown/distribution-drawdown.component';
@@ -19,7 +18,7 @@ import { formatAmount, toRiskPortfolio } from '../../utils/risk-calculations';
 
 @Component({
   selector: 'app-risk-dashboard', standalone: true,
-  imports: [ConcentrationComponent, CustomShockComponent, DistributionDrawdownComponent, RiskContributionComponent,
+  imports: [ConcentrationComponent, CustomShockComponent, DistributionDrawdownComponent,
     ScenarioWaterfallComponent, StressScenariosComponent, VarModelsComponent],
   templateUrl: './risk-dashboard.component.html', styleUrl: './risk-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

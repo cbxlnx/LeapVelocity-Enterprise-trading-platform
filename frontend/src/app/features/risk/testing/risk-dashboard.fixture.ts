@@ -41,7 +41,7 @@ export function riskFixture(accountId = 7, period: PerformancePeriod = '1Y'): Po
       unit: 'USD_LOSS', tailConvention: 'EMPIRICAL_INTEGRATED_QUANTILE', varAmount: 55,
       expectedShortfallAmount: 70, expectedShortfallPercent: 7,
       bins: [{ lowerBound: -100, upperBound: 0, count: 50000 }, { lowerBound: 0, upperBound: 100, count: 50000 }] },
-    stressCapabilities: { historical: [{ id: 'MARCH_2020', title: 'March 2020 market stress', status: 'UNAVAILABLE',
+    stressCapabilities: { historical: [{ id: 'CRISIS_2008', title: '2008 financial crisis · calendar year', status: 'UNAVAILABLE', reasons: [] }, { id: 'MARCH_2020', title: 'March 2020 market stress', status: 'UNAVAILABLE',
       reasons: ['Select Run replay to validate stored observations and security identity.'] }],
       sectorIncrements: { id: 'SECTOR_INCREMENTS', title: 'Sector increments', status: 'UNAVAILABLE', reasons: ['No sector metadata.'] } },
     series: { status: 'READY', wealth: levels.map((value, index) => ({ date: date(index), value })),
@@ -61,10 +61,12 @@ export function shockFixture(accountId = 7): PortfolioShock {
 }
 
 /** Synthetic contract fixture; not evidence of real historical observations. */
-export function replayFixture(accountId = 7): HistoricalReplay {
+export function replayFixture(accountId = 7, scenarioId = 'MARCH_2020'): HistoricalReplay {
   const shock = shockFixture(accountId);
   return { schemaVersion: '1.0', calculatedAt: shock.calculatedAt, calculationDate: shock.calculationDate,
-    status: 'READY', reasons: [], scenario: { id: 'MARCH_2020', title: 'March 2020 market stress', from: '2020-02-28', to: '2020-03-31' },
+    status: 'READY', reasons: [], scenario: scenarioId === 'CRISIS_2008'
+      ? { id: scenarioId, title: '2008 financial crisis · calendar year', from: '2007-12-31', to: '2008-12-31' }
+      : { id: scenarioId, title: 'March 2020 market stress', from: '2020-02-28', to: '2020-03-31' },
     methodology: 'CUMULATIVE_ADJUSTED_CLOSE_RETURN_ON_CURRENT_EXPOSURES', priceSource: 'synthetic-test-fixture',
     priceField: 'adjusted_close', identityReviewVersion: 'TEST_ONLY', identityReviewedOn: '2026-10-21',
     valuation: shock.valuation, expectedHoldings: 2, validatedHoldings: 2,

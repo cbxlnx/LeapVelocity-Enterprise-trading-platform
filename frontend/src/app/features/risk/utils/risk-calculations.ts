@@ -52,7 +52,6 @@ export function toRiskPortfolio(assessment: PortfolioRisk, instruments: Instrume
     insights: [
       { label: 'Largest holding exposure', value: largest?.allocationPercent != null ? `${largest.symbol} · ${formatAmount(largest.allocationPercent, '', '%')}` : 'Unavailable',
         detail: valuation.valuationStatus === 'EMPTY' ? 'No invested holdings' : 'Percentage of invested holdings, excluding cash' },
-      { label: 'Sector exposure', value: 'Unavailable', detail: 'Instrument metadata has no sector classification' },
       { label: 'Cash reserve', value: formatAmount(valuation.cashBalance, '$'),
         detail: total != null && total > 0 ? `${formatAmount(new RiskDecimal(valuation.cashBalance).div(total).times(100).toNumber(), '', '%')} of total account equity` : 'Account cash; equity percentage unavailable' },
       { label: 'Historical data coverage', value: `${assessment.history.returnObservations} daily returns`,
@@ -62,10 +61,18 @@ export function toRiskPortfolio(assessment: PortfolioRisk, instruments: Instrume
   };
 }
 
+function hasCompleteHoldings(response: PortfolioShock | HistoricalReplay): boolean {
+  const expected = new Set(response.valuation.holdings.map(row => row.symbol));
+  return response.valuation.valuationStatus === 'READY' && expected.size > 0
+    && expected.size === response.valuation.holdings.length && response.holdings.length === expected.size
+    && new Set(response.holdings.map(row => row.symbol)).size === expected.size
+    && response.holdings.every(row => expected.has(row.symbol));
+}
+
 /** Map the authoritative server result to a chart without recalculating P&L. */
 export function toShockResult(response: PortfolioShock): ShockResult | null {
   if (response.status !== 'READY' || response.totalPnL == null || response.postShockEquity == null
-      || response.valuation.totalEquity == null || response.valuation.cashBalance == null) return null;
+      || response.valuation.totalEquity == null || response.valuation.cashBalance == null || !hasCompleteHoldings(response)) return null;
   return { ...response,
     waterfall: { title: 'Custom uniform price shock',
       period: `Valuation ${response.valuation.asOf} · Price change ${response.priceChangePercent}%`,
@@ -79,6 +86,7 @@ export function toShockResult(response: PortfolioShock): ShockResult | null {
 export function toReplayBreakdown(response: HistoricalReplay): ScenarioBreakdown | null {
   if (response.status !== 'READY' || response.totalPnL == null || response.postShockEquity == null
       || response.valuation.totalEquity == null || response.valuation.cashBalance == null
+      || !hasCompleteHoldings(response)
       || response.holdings.length !== response.expectedHoldings || response.validatedHoldings !== response.expectedHoldings
       || response.holdings.some(row => row.status !== 'READY' || row.pnl == null || row.postShockValue == null || row.priceChangePercent == null)) return null;
   return { ...response,

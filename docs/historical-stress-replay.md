@@ -5,6 +5,12 @@ switch, commit, merge or rebase was performed. No dependency or database schema
 change is needed. Scenario calculations never write orders, positions, cash or
 prices. Historical prices were populated separately through the existing importer.
 
+The dashboard subsequently added automatic account-specific coverage checks and
+removed unsupported feature placeholders. See the [current dashboard cleanup
+report](risk-dashboard-cleanup.md). The event method, API validation and original
+verification record below remain applicable; unsupported events are now hidden
+from the normal dashboard instead of presented as pre-run or unavailable cards.
+
 ## Root causes and implementation
 
 Historical scenarios previously consisted of static `NOT_IMPLEMENTED` metadata.

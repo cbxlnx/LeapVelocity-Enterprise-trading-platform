@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
-import type { PortfolioRisk } from '../src/app/features/analytics/models/portfolio-risk.model';
+import type { HistoricalReplay, PortfolioRisk } from '../src/app/features/analytics/models/portfolio-risk.model';
 
 const token = process.env['RISK_RUNTIME_TOKEN'];
 const amount = (value: number | null, prefix = '', suffix = '') => value == null ? 'Unavailable'
@@ -20,7 +20,7 @@ test.describe('Deployed account risk dashboard', () => {
     await page.addInitScript(value => localStorage.setItem('leap_access_token', value), token!);
   });
 
-  test('all panels use the real authenticated response or an explicit unavailable state', async ({ page }) => {
+  test('working panels use the real response and unsupported views are absent', async ({ page }) => {
     const pending = page.waitForResponse(r => r.url().includes('/analytics/risk?'));
     await page.goto('/risk');
     const response = await pending;
@@ -33,8 +33,11 @@ test.describe('Deployed account risk dashboard', () => {
     await expect(summary).toContainText(amount(risk.metrics.annualisedVolatility.value, '', '%'));
     await expect(summary).toContainText(amount(risk.metrics.beta.value));
     for (const holding of risk.valuation.holdings) await expect(page.locator('.concentration-card tbody')).toContainText(holding.symbol);
-    await expect(page.locator('.contribution-card')).toContainText('Volatility contribution unavailable');
-    await expect(page.locator('.stress-card')).toContainText('Not yet assessed');
+    await expect(page.locator('.contribution-card')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'By sector', exact: true })).toHaveCount(0);
+    await expect(page.locator('.concentration-card thead th')).toHaveCount(3);
+    await expect(page.locator('.waterfall-section')).toHaveCount(0);
+    for (const removed of ['Not yet assessed', 'No result yet', 'no result yet', 'Volatility contribution', 'Sector exposure', 'Sector increments']) await expect(page.locator('main.risk-dashboard')).not.toContainText(removed);
     await expect(page.getByRole('heading', { name: 'Monte Carlo distribution', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '30 days', exact: true })).toHaveCount(0);
     if (risk.monteCarlo?.status === 'READY') {
@@ -89,8 +92,7 @@ test.describe('Deployed account risk dashboard', () => {
     for (const holding of shock.holdings) await expect(page.locator('.breakdown-table')).toContainText(amount(holding.pnl, '$'));
     await expect(page.locator('.impact-panel')).toContainText(amount(risk.valuation.cashBalance, '$'));
     await expect(page.locator('.waterfall-chart canvas')).toBeVisible();
-    await page.locator('.concentration-card').getByRole('button', { name: 'By sector' }).click();
-    await expect(page.locator('.concentration-card')).toContainText('Sector exposure unavailable');
+    await expect(page.getByRole('button', { name: 'By sector', exact: true })).toHaveCount(0);
   });
 
   test('runtime authentication, account isolation, 99% limits and Analytics remain intact', async ({ page, request }) => {
@@ -109,31 +111,49 @@ test.describe('Deployed account risk dashboard', () => {
       expect(value.requiredObservations).toBe(500);
       if (value.observations < 500) { expect(value.status).not.toBe('READY'); expect(value.lossAmount).toBeNull(); }
     }
+    for (const suffix of ['/risk/shock', '/risk/replay/MARCH_2020']) {
+      expect((await request.post(`${path}${suffix}`, { data: { priceChangePercent: -10 } })).status()).toBe(401);
+      expect((await request.post(`/api/v1/accounts/${risk.valuation.accountId + 1}/analytics${suffix}`, { headers, data: { priceChangePercent: -10 } })).status()).toBe(403);
+    }
     expect((await request.get(`${path}/summary`, { headers })).status()).toBe(200);
     expect((await request.get(`${path}/performance?period=1Y`, { headers })).status()).toBe(200);
   });
 
-  test('historical scenarios return validated results or precise data and identity gaps', async ({ page }) => {
+  test('only historical scenarios with complete real coverage are displayed', async ({ page }) => {
+    const ids = ['CRISIS_2008', 'MARCH_2020'];
+    const responses = ids.map(id => page.waitForResponse(response => response.url().endsWith(`/analytics/risk/replay/${id}`)));
     await page.goto('/risk');
     await expect(page.locator('.kpi-grid')).toBeVisible();
-    for (const id of ['CRISIS_2008', 'MARCH_2020']) {
-      const pending = page.waitForResponse(response => response.url().endsWith(`/analytics/risk/replay/${id}`));
-      await page.getByRole('button', { name: `Run replay ${id}`, exact: true }).click();
-      const response = await pending;
+    let ready = 0;
+    for (let index = 0; index < ids.length; index++) {
+      const id = ids[index];
+      const response = await responses[index];
       expect(response.status()).toBe(200);
-      const result = await response.json();
+      const result: HistoricalReplay = await response.json();
       expect(result.scenario.id).toBe(id);
-      expect(result.status).not.toBe('NOT_IMPLEMENTED');
+      const run = page.getByRole('button', { name: `Run replay ${id}`, exact: true });
       if (result.status === 'READY') {
+        ready++;
         expect(result.validatedHoldings).toBe(result.expectedHoldings);
+        expect(result.holdings.length).toBe(result.valuation.holdings.length);
+        await expect(run).toBeVisible();
         await expect(page.locator('.stress-card')).toContainText(amount(result.totalPnL, '$'));
+        await page.getByRole('button', { name: `View breakdown ${id}`, exact: true }).click();
         await expect(page.locator('.breakdown-table')).toContainText(amount(result.totalPnL, '$'));
         await expect(page.locator('.waterfall-chart canvas')).toBeVisible();
+        const fresh = page.waitForResponse(response => response.url().endsWith(`/analytics/risk/replay/${id}`));
+        await run.click();
+        const refreshed: HistoricalReplay = await (await fresh).json();
+        expect(refreshed.status).toBe('READY');
+        await expect(page.locator('.breakdown-table')).toContainText(amount(refreshed.totalPnL, '$'));
       } else {
         expect(result.totalPnL).toBeNull();
         expect(result.reasons.length).toBeGreaterThan(0);
-        await expect(page.locator('.stress-card')).toContainText(result.reasons[0]);
+        await expect(run).toHaveCount(0);
       }
     }
+    await expect(page.locator('.historical-scenario')).toHaveCount(ready);
+    await expect(page.locator('.replay-loading')).toHaveCount(0);
+    if (!ready) await expect(page.locator('.stress-card')).toHaveCount(0);
   });
 });

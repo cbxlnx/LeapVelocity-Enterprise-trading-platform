@@ -11,14 +11,14 @@
     <div class="metadata"><strong>95% confidence · {{ horizon() }}-day VaR</strong><span>{{ risk()?.history?.returnObservations ?? 'Unavailable' }} daily returns · {{ risk()?.valuation?.holdings?.length ?? 'Unavailable' }} holdings</span></div>
   </div>
 
-  <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Account data from stored prices · Explicit calculation availability</strong><span>All values in USD. Portfolio value includes cash; the six risk estimates cover invested holdings and exclude cash. Historical charts reconstruct the current allocation; unsupported calculations are labeled unavailable.</span></div></div>
+  <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Account data from stored prices</strong><span>All values in USD. Portfolio value includes cash; the six risk estimates cover invested holdings and exclude cash. Historical charts reconstruct the current allocation. Estimates use the selected historical window and holding period.</span></div></div>
 
   @if (loading()) {
     <section class="state-panel" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><strong>Loading risk estimates…</strong><span>Preparing deterministic portfolio analytics.</span></section>
   } @else if (error(); as message) {
     <section class="state-panel error-panel" role="alert"><strong>Risk dashboard unavailable</strong><span>{{ message }}</span><button type="button" (click)="loadDashboard()">Retry</button></section>
     @if (accountId; as account) {
-      <app-stress-scenarios [accountId]="account" [customResult]="customResult()" (replayRun)="selectedScenario.set($event)" />
+      <app-stress-scenarios [accountId]="account" (replayRun)="selectedScenario.set($event)" />
       <app-custom-shock [accountId]="account" (shockRun)="showCustomResult($event)" />
       <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="selectedScenario()" />
     }
@@ -36,11 +36,9 @@
 
     <section class="var-insights-grid"><app-var-models [assessment]="current.assessment" [horizon]="horizon()" (horizonChange)="updateHorizon($event)" /><aside class="risk-card insights-card"><h2>Risk insights</h2><p>Exposure, cash and history coverage</p>@for (insight of current.insights; track insight.label) { <div class="insight-row"><span>{{ insight.label }}</span><strong>{{ insight.value }}</strong><small>{{ insight.detail }}</small></div> }<small class="insight-note">Holding weights exclude cash. Total account equity includes cash once.</small></aside></section>
     <app-distribution-drawdown [portfolio]="current" />
-    <app-risk-contribution [portfolio]="current" />
 
-    <div class="stress-alert" role="status"><span>Historical replays validate each holding's identity and event endpoints before reporting a portfolio result. Returns apply to current exposures, with cash unchanged.</span></div>
-    <app-stress-scenarios [accountId]="accountId!" [customResult]="customResult()" [capabilities]="risk()?.stressCapabilities" (replayRun)="selectedScenario.set($event)" />
-    <app-custom-shock [accountId]="accountId!" (shockRun)="showCustomResult($event)" />
+    <app-stress-scenarios [accountId]="accountId!" [capabilities]="risk()?.stressCapabilities" (replayRun)="selectedScenario.set($event)" />
+    <app-custom-shock [accountId]="accountId!" [disabledReason]="!current.valuationReady || !current.holdings.length ? 'A current, supported holdings valuation is required. Refresh after adding holdings or updating prices.' : null" (shockRun)="showCustomResult($event)" />
     <app-scenario-waterfall [waterfalls]="waterfalls()" [result]="selectedScenario()" />
     <app-concentration [portfolio]="current" />
   }

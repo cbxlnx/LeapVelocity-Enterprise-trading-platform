@@ -11,6 +11,7 @@ export class CustomShockComponent {
   private readonly destroyRef = inject(DestroyRef);
   private pending?: Subscription;
   readonly accountId = input.required<number>();
+  readonly disabledReason = input<string | null>(null);
   readonly shockRun = output<ShockResult | null>();
   readonly shocks = signal<ShockValues>({ market: 0 });
   readonly result = signal<ShockResult | null>(null);
@@ -36,6 +37,7 @@ export class CustomShockComponent {
   run(): void {
     const change = this.shocks().market;
     this.clear();
+    if (this.disabledReason()) return;
     if (!Number.isFinite(change) || Math.abs(change) > 50) {
       this.error.set('Use a finite price change from −50% to +50%.'); return;
     }

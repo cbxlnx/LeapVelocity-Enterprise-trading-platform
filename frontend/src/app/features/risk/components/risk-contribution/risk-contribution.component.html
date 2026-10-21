@@ -1,8 +1,0 @@
-<section class="risk-card contribution-card" aria-labelledby="contribution-heading">
-  <header class="section-heading split-heading"><div><h2 id="contribution-heading">Risk contribution by holding</h2><p>Actual holding allocation is shown below; volatility attribution is unavailable.</p></div><div class="legend"><span><i class="allocation"></i>Allocation · % of invested holdings</span></div></header>
-  <div class="contribution-layout">
-    @if (portfolio().valuationReady) { <div class="chart contribution-chart" echarts [options]="options()" aria-label="Actual holdings allocation"></div> }
-    @else { <p role="status">Allocation unavailable: no valid invested valuation.</p> }
-    <aside class="insight-panel"><strong>Volatility contribution unavailable</strong><p>The service calculates portfolio volatility, but does not implement covariance-based attribution to individual holdings.</p><p>Allocation is a percentage of invested value and must not be labeled as a share of portfolio volatility.</p></aside>
-  </div>
-</section>

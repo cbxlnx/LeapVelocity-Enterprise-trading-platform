@@ -1,4 +1,5 @@
 :host { display: block; }
+.waterfall-section { margin-top: 22px; }
 .breakdown-table { overflow-x: auto; margin-bottom: 20px; padding: 16px; background: #fff; border: 1px solid #d5dde6; }
 table { width: 100%; border-collapse: collapse; color: #20364e; font-size: 12px; }
 th, td { padding: 10px; border-bottom: 1px solid #e5ebef; text-align: right; white-space: nowrap; }
