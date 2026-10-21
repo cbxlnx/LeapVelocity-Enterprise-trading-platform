@@ -1,38 +1,33 @@
-import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { EChartsOption } from 'echarts';
+import { NgxEchartsDirective } from 'ngx-echarts';
 import { PerformancePoint } from '../../models/portfolio-performance.model';
-import { formatTradingDate } from '../../models/trading-date';
 
 @Component({
-  selector: 'app-performance-chart', standalone: true, imports: [DecimalPipe],
+  selector: 'app-performance-chart', standalone: true, imports: [NgxEchartsDirective],
   templateUrl: './performance-chart.component.html', styleUrl: './performance-chart.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PerformanceChartComponent {
   readonly points = input.required<PerformancePoint[]>();
-  readonly formatDate = formatTradingDate;
-  readonly chart = computed(() => {
+  readonly chartOptions = computed<EChartsOption>(() => {
     const points = this.points();
-    if (points.length === 0) return null;
-    const left = 80, top = 24, width = 840, height = 260;
-    const values = points.flatMap((point) => [point.portfolioIndex, point.benchmarkIndex]);
-    const low = Math.min(...values), high = Math.max(...values);
-    const padding = Math.max((high - low) * 0.1, high * 0.02, 0.01);
-    const min = Math.max(0, low - padding), max = high + padding;
-    const time = (day: string) => Date.parse(`${day}T00:00:00Z`);
-    const first = time(points[0].date);
-    const span = time(points[points.length - 1].date) - first;
-    const y = (value: number) => top + (max - value) / (max - min) * height;
-    const plotted = points.map((point) => ({ ...point,
-      x: span === 0 ? left + width / 2 : left + (time(point.date) - first) / span * width,
-      portfolioY: y(point.portfolioIndex), benchmarkY: y(point.benchmarkIndex),
-    }));
-    const path = (key: 'portfolioY' | 'benchmarkY') => plotted.map((point) => `${point.x.toFixed(2)},${point[key].toFixed(2)}`).join(' ');
+    const labels = points.map(point => point.date);
     return {
-      points: plotted, portfolioLine: path('portfolioY'), benchmarkLine: path('benchmarkY'),
-      yTicks: Array.from({ length: 5 }, (_, i) => ({ y: top + i * height / 4, value: max - i * (max - min) / 4 })),
-      xTicks: [...new Set([0, Math.floor((plotted.length - 1) / 2), plotted.length - 1])].map((index) => plotted[index]),
-      left, right: left + width, bottom: top + height, baseline: y(100),
+      animation: false,
+      grid: { left: 54, right: 18, top: 8, bottom: 34 },
+      tooltip: { trigger: 'axis', valueFormatter: value => `${Number(Array.isArray(value) ? value[0] : value).toFixed(2)}` },
+      xAxis: { type: 'category', data: labels, boundaryGap: false, axisLine: { lineStyle: { color: '#c8d2dc' } }, axisLabel: { color: '#586c7d', fontSize: 11, hideOverlap: true, formatter: (value: string) => this.formatDate(value) } },
+      yAxis: { type: 'value', scale: true, splitNumber: 4, axisLabel: { color: '#586c7d', fontSize: 11, formatter: (value: number) => value.toFixed(0) }, splitLine: { lineStyle: { color: '#e8ecef' } } },
+      series: [
+        { name: 'Portfolio', type: 'line', data: points.map(point => point.portfolioIndex), showSymbol: false, color: '#173b63', lineStyle: { color: '#173b63', width: 2.5 }, itemStyle: { color: '#173b63' }, areaStyle: { color: 'rgba(23, 59, 99, 0.10)' } },
+        { name: 'SPY', type: 'line', data: points.map(point => point.benchmarkIndex), showSymbol: false, color: '#c05819', lineStyle: { color: '#c05819', width: 2, type: 'dashed' }, itemStyle: { color: '#c05819' } },
+        { name: 'Start = 100', type: 'line', data: points.map(() => 100), showSymbol: false, silent: true, color: '#aebbc8', lineStyle: { color: '#aebbc8', width: 1, type: 'dashed' }, itemStyle: { color: '#aebbc8' } },
+      ],
     };
   });
+
+  private formatDate(date: string): string {
+    return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(`${date}T00:00:00Z`));
+  }
 }

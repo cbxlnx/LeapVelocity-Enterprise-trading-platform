@@ -1,9 +1,16 @@
 <section class="simulation" aria-labelledby="simulation-heading" [attr.aria-busy]="loading()">
   <div class="simulation-heading">
-    <div><h2 id="simulation-heading">Historical simulation</h2><p>Hypothetical performance using the current allocation as the initial allocation. Excludes cash and does not represent your account's actual historical returns.</p></div>
+    <div>
+      <h2 id="simulation-heading">Historical simulation</h2>
+      @if (performance(); as preview) {
+        <p>Simulation shows portfolio performance from {{ preview.from ? formatDate(preview.from) : '—' }} to {{ preview.to ? formatDate(preview.to) : '—' }} · {{ preview.points.length }} observations</p>
+      } @else {
+        <p>Hypothetical performance using the current allocation as the initial allocation.</p>
+      }
+    </div>
     <div class="simulation-controls">
       <label for="simulation-period">Simulation period<select id="simulation-period" [value]="period()" (change)="changePeriod($event)">@for (option of periods; track option) { <option [value]="option">{{ option }}</option> }</select></label>
-      <button type="button" (click)="refresh.emit()" [disabled]="loading()">Refresh simulation</button>
+      <button type="button" (click)="refresh.emit()" [disabled]="loading()">{{ loading() ? 'Loading…' : 'Refresh' }}</button>
     </div>
   </div>
   @if (loading()) {
@@ -16,20 +23,30 @@
     } @else if (data.simulationStatus === 'UNAVAILABLE') {
       <div class="simulation-state simulation-error" role="alert"><h3>Simulation unavailable</h3><ul>@for (issue of data.issues; track $index) { <li>{{ issue }}</li> }</ul></div>
     } @else {
-      @if (data.from && data.to) {
-        <p class="effective-range">Common available period: <time [attr.datetime]="data.from">{{ formatDate(data.from) }}</time>–<time [attr.datetime]="data.to">{{ formatDate(data.to) }}</time> · {{ data.points.length }} observations</p>
-      }
       <div class="simulation-returns">
-        <div><span>Simulated portfolio return</span><strong data-testid="simulated-return" [class.negative]="data.portfolioReturnPercent !== null && data.portfolioReturnPercent < 0">@if (data.portfolioReturnPercent !== null && data.portfolioReturnPercent > 0) {+}{{ data.portfolioReturnPercent | number:'1.2-2' }}%</strong></div>
-        <div><span>SPY return</span><strong data-testid="benchmark-return" [class.negative]="data.benchmarkReturnPercent !== null && data.benchmarkReturnPercent < 0">@if (data.benchmarkReturnPercent !== null && data.benchmarkReturnPercent > 0) {+}{{ data.benchmarkReturnPercent | number:'1.2-2' }}%</strong></div>
+        <div><span>Simulated portfolio</span><strong data-testid="simulated-return" [class.negative]="data.portfolioReturnPercent !== null && data.portfolioReturnPercent < 0">@if (data.portfolioReturnPercent !== null && data.portfolioReturnPercent > 0) {+}{{ data.portfolioReturnPercent | number:'1.2-2' }}%</strong><small>Index {{ data.points[data.points.length - 1].portfolioIndex | number:'1.2-2' }}</small></div>
+        <div><span>SPY benchmark</span><strong data-testid="benchmark-return" [class.negative]="data.benchmarkReturnPercent !== null && data.benchmarkReturnPercent < 0">@if (data.benchmarkReturnPercent !== null && data.benchmarkReturnPercent > 0) {+}{{ data.benchmarkReturnPercent | number:'1.2-2' }}%</strong><small>Index {{ data.points[data.points.length - 1].benchmarkIndex | number:'1.2-2' }}</small></div>
+        <div><span>Excess return</span><strong [class.negative]="(data.portfolioReturnPercent ?? 0) - (data.benchmarkReturnPercent ?? 0) < 0">@if ((data.portfolioReturnPercent ?? 0) - (data.benchmarkReturnPercent ?? 0) > 0) {+}{{ (data.portfolioReturnPercent ?? 0) - (data.benchmarkReturnPercent ?? 0) | number:'1.2-2' }}%</strong><small>Portfolio − SPY</small></div>
       </div>
-      <div class="legend" aria-label="Chart legend"><span><i class="portfolio-key" aria-hidden="true"></i>Portfolio</span><span><i class="benchmark-key" aria-hidden="true"></i>SPY benchmark</span><span>Index · Start = 100</span></div>
+        <div class="simulation-context">
+          <p class="method-note"><span class="info-icon" aria-hidden="true">i</span><span>Today's weights applied to historical prices. No trading, cash, fees or taxes included. This is a scenario, not your account history.</span></p>
+        </div>
+      <div class="legend" aria-label="Chart legend"><span><i class="portfolio-key" aria-hidden="true"></i>Portfolio</span><span><i class="benchmark-key" aria-hidden="true"></i>SPY</span><span>Index · Start = 100</span></div>
       <app-performance-chart [points]="data.points" />
-      <p class="method-note">Buy-and-hold using adjusted closing prices, without rebalancing. Cash, fees and taxes excluded. Returns refer to the displayed common period; missing dates are not filled with zero.</p>
       @if (data.weightingDate) {
-        <p class="initial-weights">Initial allocation from current holdings valued on {{ formatDate(data.weightingDate) }}:
-          @for (holding of data.initialWeights; track holding.symbol) { <span>{{ holding.symbol }} {{ holding.weight | percent:'1.1-1' }}</span> }
-        </p>
+        <div class="allocation-section">
+          <div class="allocation-heading"><strong>Stock weights used</strong><span>As of {{ formatDate(data.weightingDate) }}</span></div>
+          <div class="allocation-bar" aria-label="Current portfolio allocation">
+            @for (holding of data.initialWeights; track holding.symbol) {
+              <span class="allocation-segment" [style.width.%]="holding.weight * 100" [attr.title]="holding.symbol + ' ' + (holding.weight | percent:'1.1-1')"></span>
+            }
+          </div>
+          <div class="allocation-legend">
+            @for (holding of data.initialWeights; track holding.symbol) {
+              <span><i class="allocation-swatch" aria-hidden="true"></i><strong>{{ holding.symbol }}</strong> {{ holding.weight | percent:'1.1-1' }}</span>
+            }
+          </div>
+        </div>
       }
     }
   }
