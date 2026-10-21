@@ -1,0 +1,20 @@
+:host { display: block; }
+.chart-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.risk-card { min-width: 0; padding: 24px; border: 1px solid #d5dde6; border-radius: 4px; background: #fff; }
+.section-heading { margin-bottom: 16px; }
+.section-heading h2 { margin: 0; color: #142337; font-size: 19px; }
+.section-heading p { margin: 6px 0 0; color: #586c7d; font-size: 12px; }
+.info { display: inline-grid; width: 14px; height: 14px; place-items: center; border: 1px solid #718296; border-radius: 50%; color: #536a80; font: 700 9px Georgia, serif; vertical-align: 2px; }
+.chart-label { margin-bottom: -4px; color: #536a80; font-size: 9px; text-transform: uppercase; }
+.chart { width: 100%; height: 246px; }
+.es-callout, .drawdown-callout { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 12px; }
+.es-callout { background: #fcecef; }
+.es-callout strong, .drawdown-callout strong { display: block; color: #20364e; font-size: 11px; }
+.es-callout span, .drawdown-callout span { display: block; margin-top: 4px; color: #718296; font-size: 10px; }
+.callout-value { color: #bb3842; font: 500 17px var(--font-mono); text-align: right; white-space: nowrap; }
+.callout-value small { display: block; margin-top: 5px; font: 10px var(--font-mono); }
+.drawdown-callout { background: #eaf1f5; }
+.drawdown-callout > strong { color: #bb3842; font: 500 17px var(--font-mono); white-space: nowrap; }
+.fine-print { margin: 14px 0 0; color: #718296; font-size: 10px; }
+@media (max-width: 880px) { .chart-pair { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .risk-card { padding: 16px; } .chart { height: 220px; } }

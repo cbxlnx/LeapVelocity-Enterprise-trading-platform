@@ -22,15 +22,18 @@ export const routes: Routes = [
   {
     path: 'analytics',
     canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/analytics/pages/analytics-dashboard/analytics-dashboard.component').then(
-        (m) => m.AnalyticsDashboardComponent,
-      ),
+    loadChildren: () =>
+      import('./features/analytics/analytics.routes').then((m) => m.ANALYTICS_ROUTES),
   },
   {
     path: 'order',
     canActivate: [authGuard],
     loadChildren: () => import('./features/order/order.routes').then((m) => m.ORDER_ROUTES),
+  },
+  {
+    path: 'risk',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/risk/risk.routes').then((m) => m.RISK_ROUTES),
   },
   {
     path: 'blotter',
