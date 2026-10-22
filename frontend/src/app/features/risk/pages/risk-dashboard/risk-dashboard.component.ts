@@ -8,9 +8,9 @@ import { DistributionDrawdownComponent } from '../../components/distribution-dra
 import { ScenarioWaterfallComponent } from '../../components/scenario-waterfall/scenario-waterfall.component';
 import { StressScenariosComponent } from '../../components/stress-scenarios/stress-scenarios.component';
 import { VarModelsComponent } from '../../components/var-models/var-models.component';
-import { RiskDashboardMockService } from '../../services/risk-dashboard-mock.service';
-import { RiskDashboardData, RiskHorizon, RiskPortfolio, ShockResult, ShockValues, ScenarioWaterfall } from '../../models/risk-dashboard.model';
-import { calculateCustomShock, calculateMaximumDrawdown, getVaRForHorizon, reconcileWaterfall } from '../../utils/risk-calculations';
+import { RiskDashboardApiService } from '../../services/risk-dashboard-api.service';
+import { RiskDashboardData, RiskHorizon, RiskPortfolio, ShockResult, ShockValues } from '../../models/risk-dashboard.model';
+import { calculateMaximumDrawdown } from '../../utils/risk-calculations';
 
 @Component({
   selector: 'app-risk-dashboard',
@@ -29,13 +29,14 @@ import { calculateCustomShock, calculateMaximumDrawdown, getVaRForHorizon, recon
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RiskDashboardComponent implements OnInit {
-  private readonly service = inject(RiskDashboardMockService);
+  private readonly service = inject(RiskDashboardApiService);
   private readonly destroyRef = inject(DestroyRef);
   readonly math = Math;
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly shockLoading = signal(false);
   readonly data = signal<RiskDashboardData | null>(null);
-  readonly selectedAccountId = signal('ACC-001');
+  readonly selectedAccountId = signal('');
   readonly historicalWindow = signal<'1Y' | '6M' | '3M'>('1Y');
   readonly horizon = signal<RiskHorizon>(1);
   readonly customShocks = signal<ShockValues>({ ...BASELINE_SHOCKS });
@@ -46,39 +47,31 @@ export class RiskDashboardComponent implements OnInit {
   readonly portfolio = computed(() => this.forWindow(this.basePortfolio()));
   readonly selectedVaR = computed(() => {
     const current = this.portfolio();
-    return current ? getVaRForHorizon(current.oneDayVar, this.horizon()) : null;
+    return current?.varByHorizon?.[this.horizon()] ?? (this.horizon() === 1 ? current?.oneDayVar ?? null : null);
   });
   readonly scenarioPortfolio = computed(() => {
     const current = this.portfolio();
     if (!current) return null;
-    const result = this.currentShockResult(current);
+    const result = this.customResult();
+    const customScenario = result?.waterfall ? {
+      id: 'custom-shock',
+      title: 'Custom shock',
+      period: 'Current positions',
+      description: 'Backend-calculated market and sector increments.',
+      kind: 'custom' as const,
+      lossUsd: result.lossUsd,
+      lossPercent: result.impactPercent,
+      waterfall: result.waterfall,
+    } : null;
     return {
       ...current,
-      scenarios: current.scenarios.map((scenario) => scenario.kind === 'custom' ? {
-        ...scenario,
-        lossUsd: result.lossUsd,
-        lossPercent: result.impactPercent,
-        period: `Market ${this.customShocks().market}% · Sector increments 0%`,
-      } : scenario),
+      scenarios: [...current.scenarios.filter((scenario) => scenario.kind !== 'custom'), ...(customScenario ? [customScenario] : [])],
     };
   });
   readonly waterfalls = computed(() => {
     const current = this.portfolio();
     if (!current) return [];
-    const result = this.currentShockResult(current);
-    const deltas = current.holdings.map((holding) => ({
-      label: holding.symbol,
-      deltaUsd: -holding.marketValue * ((this.customShocks().market + this.customShocks()[holding.sector]) / 100),
-    }));
-    const custom: ScenarioWaterfall = {
-      title: 'Custom shock',
-      period: 'Current positions · User-defined shock',
-      startingEquityUsd: current.portfolioValueUsd,
-      deltas,
-      endingEquityUsd: result.postShockEquityUsd,
-      cashReserveUsd: current.cashReserveUsd,
-    };
-    return [...current.historicalWaterfalls, custom];
+    return [...current.historicalWaterfalls, ...(this.customResult()?.waterfall ? [this.customResult()!.waterfall!] : [])];
   });
 
   ngOnInit(): void {
@@ -91,9 +84,7 @@ export class RiskDashboardComponent implements OnInit {
     this.service.getDashboard().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.data.set(data);
-        if (!data.portfolios.some((portfolio) => portfolio.accountId === this.selectedAccountId())) {
-          this.selectedAccountId.set(data.portfolios[0]?.accountId ?? '');
-        }
+        this.selectedAccountId.set(data.portfolios[0]?.accountId ?? '');
         this.customResult.set(null);
         this.loading.set(false);
       },
@@ -114,17 +105,24 @@ export class RiskDashboardComponent implements OnInit {
     this.horizon.set(horizon);
   }
 
-  runCustomShock(event: { shocks: ShockValues; result: ShockResult }): void {
-    this.customShocks.set({ ...event.shocks });
-    this.customResult.set({ ...event.result });
+  runCustomShock(shocks: ShockValues): void {
+    this.customShocks.set({ ...shocks });
+    this.shockLoading.set(true);
+    this.error.set(null);
+    this.service.runCustomShock(shocks).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result) => {
+        this.customResult.set(result);
+        this.shockLoading.set(false);
+      },
+      error: (error: Error) => {
+        this.shockLoading.set(false);
+        this.error.set(error.message);
+      },
+    });
   }
 
   editShock(): void {
     this.customShocks.set({ ...this.customShocks() });
-  }
-
-  private currentShockResult(portfolio: RiskPortfolio): ShockResult {
-    return this.customResult() ?? calculateCustomShock(portfolio.holdings, portfolio.portfolioValueUsd, this.customShocks());
   }
 
   private forWindow(portfolio: RiskPortfolio | null): RiskPortfolio | null {
@@ -138,8 +136,20 @@ export class RiskDashboardComponent implements OnInit {
       historicalFrom: drawdownSeries[0]?.date ?? portfolio.historicalFrom,
       maximumDrawdownPercent,
       maximumDrawdownDate: trough?.date ?? portfolio.maximumDrawdownDate,
-      dailyReturnCount: Math.round(portfolio.dailyReturnCount * drawdownSeries.length / portfolio.drawdownSeries.length),
+      dailyReturnCount: portfolio.drawdownSeries.length === 0 ? 0 : Math.round(portfolio.dailyReturnCount * drawdownSeries.length / portfolio.drawdownSeries.length),
       drawdownSeries,
     };
+  }
+
+  formatCurrency(value: number | null | undefined, digits = 2): string {
+    return value === null || value === undefined ? 'Unavailable' : value.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  formatMetric(value: number | null | undefined, digits = 2): string {
+    return value === null || value === undefined ? 'Unavailable' : value.toFixed(digits);
+  }
+
+  ratioPercent(value: number | null | undefined, total: number | null | undefined): string {
+    return value === null || value === undefined || total === null || total === undefined || total === 0 ? 'Unavailable' : (value / total * 100).toFixed(2);
   }
 }

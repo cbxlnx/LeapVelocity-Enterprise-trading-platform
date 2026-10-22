@@ -4,18 +4,25 @@ import { calculateCustomShock, calculateMaximumDrawdown, getVaRForHorizon, recon
 
 describe('risk calculation invariants', () => {
   const portfolio = RISK_DASHBOARD_SEED.portfolios[0];
+  const historicalVar = portfolio.oneDayVar.historicalUsd;
+  const monteCarloVar = portfolio.oneDayVar.monteCarloUsd;
+  const portfolioValue = portfolio.portfolioValueUsd;
+
+  if (historicalVar === null || monteCarloVar === null || portfolioValue === null) {
+    throw new Error('Risk seed must contain complete values for invariant tests.');
+  }
 
   it('scales each VaR model by the square-root horizon', () => {
     const scaled = getVaRForHorizon(portfolio.oneDayVar, 10);
-    expect(scaled.historicalUsd).toBeCloseTo(portfolio.oneDayVar.historicalUsd * Math.sqrt(10), 2);
-    expect(scaled.monteCarloUsd).toBeGreaterThan(portfolio.oneDayVar.monteCarloUsd);
+    expect(scaled.historicalUsd).toBeCloseTo(historicalVar * Math.sqrt(10), 2);
+    expect(scaled.monteCarloUsd).toBeGreaterThan(monteCarloVar);
   });
 
   it('keeps allocations and volatility contributions coherent', () => {
-    expect(portfolio.holdings.reduce((sum, holding) => sum + holding.allocationPercent, 0)).toBeCloseTo(100, 5);
-    expect(portfolio.holdings.reduce((sum, holding) => sum + holding.volatilityContributionPercent, 0)).toBeCloseTo(100, 5);
-    expect(portfolio.portfolioValueUsd).toBe(portfolio.investedEquityUsd + portfolio.cashReserveUsd);
-    expect(portfolio.expectedShortfallUsd).toBeGreaterThan(portfolio.oneDayVar.monteCarloUsd);
+    expect(portfolio.holdings.reduce((sum, holding) => sum + (holding.allocationPercent ?? 0), 0)).toBeCloseTo(100, 5);
+    expect(portfolio.holdings.reduce((sum, holding) => sum + (holding.volatilityContributionPercent ?? 0), 0)).toBeCloseTo(100, 5);
+    expect(portfolioValue).toBe(portfolio.investedEquityUsd + portfolio.cashReserveUsd);
+    expect(portfolio.expectedShortfallUsd ?? 0).toBeGreaterThan(monteCarloVar);
   });
 
   it('derives the maximum drawdown from the visible series', () => {
@@ -23,11 +30,11 @@ describe('risk calculation invariants', () => {
   });
 
   it('applies market plus sector shock once per holding', () => {
-    const result = calculateCustomShock(portfolio.holdings, portfolio.portfolioValueUsd, {
+    const result = calculateCustomShock(portfolio.holdings, portfolioValue, {
       market: -10, Technology: -5, Financials: 0, Energy: 0, Healthcare: 0,
     });
-    expect(result.lossUsd).toBe(-portfolio.holdings.reduce((sum, holding) => sum + holding.marketValue * ((-10 + (holding.sector === 'Technology' ? -5 : 0)) / 100), 0));
-    expect(result.postShockEquityUsd).toBe(portfolio.portfolioValueUsd - result.lossUsd);
+    expect(result.lossUsd).toBe(-portfolio.holdings.reduce((sum, holding) => sum + (holding.marketValue ?? 0) * ((-10 + (holding.sector === 'Technology' ? -5 : 0)) / 100), 0));
+    expect(result.postShockEquityUsd).toBe(portfolioValue - result.lossUsd);
   });
 
   it('reconciles waterfall start, deltas, and end', () => {

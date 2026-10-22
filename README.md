@@ -36,6 +36,7 @@ The local Docker-based environment currently defines these runtime services:
 - `auth-stub`: authentication service running on port `4000`
 - `frontend`: production Angular served by Nginx on host port `8085`
 - `analytics-import`: finite historical-price loading job after database health
+- `risk-service`: read-only FastAPI risk analytics service on the internal network
 - `trade-api`: Spring Boot trading API running on port `8081`
 - `execution-engine`: asynchronous execution processor consuming Kafka events
 - `trade-db`: PostgreSQL database running on port `5432`
@@ -60,6 +61,8 @@ Create a `.env` file in the project root if one does not already exist. At minim
 DB_NAME=leapvelocity_trading_db
 DB_USER=postgres
 DB_PASSWORD=change_me
+RISK_DB_USER=risk_readonly
+RISK_DB_PASSWORD=change_me
 POSTGRES_PORT=5432
 APP_PORT=8081
 AUTH_STUB_PORT=4000
@@ -70,12 +73,22 @@ JWT_SECRET=your-secure-secret
 JWT_ISSUER=leapvelocity-auth
 JWT_EXPIRES_IN=1h
 REFRESH_TOKEN_EXPIRES_IN=7d
+RISK_BENCHMARK=SPY
+RISK_DEFAULT_LOOKBACK_DAYS=252
+RISK_DEFAULT_CONFIDENCE=0.95
+RISK_DEFAULT_MC_PATHS=10000
+RISK_MINIMUM_OBSERVATIONS=30
 ```
 
 ### Important Notes
 
 - JWT_SECRET is required. The authentication and API services will not start without it.
 - DB_PASSWORD must be set for PostgreSQL to initialize correctly.
+- `risk-service` reads `analytics.daily_prices` through the dedicated
+	`risk_readonly` role and also starts each database transaction as read-only.
+- The read-only role is created during first database initialization. If the
+	database volume already exists, run `docker compose down -v` once before
+	restarting, or create the role and grants manually.
 
 ### Local Build and Startup
 
@@ -117,6 +130,10 @@ For production deployment, the same service boundaries can be deployed into a ma
 - http://localhost:4000
 - localhost:9092
 - http://localhost:8090
+
+Risk dashboard requests are served through the frontend at
+`/risk-api/v1/accounts/{accountId}/risk/dashboard`; the risk service is not
+published directly to the host.
 
 Kafka UI is connected to the local Kafka broker defined in Docker Compose and can be used to inspect brokers, topics, and consumer groups.
 

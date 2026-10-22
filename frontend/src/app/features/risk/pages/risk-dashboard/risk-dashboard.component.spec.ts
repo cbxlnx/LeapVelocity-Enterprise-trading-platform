@@ -1,12 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { of } from 'rxjs';
 import { provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import { RiskDashboardComponent } from './risk-dashboard.component';
+import { RISK_DASHBOARD_SEED } from '../../data/risk-dashboard.mock';
+import { RiskDashboardApiService } from '../../services/risk-dashboard-api.service';
 
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, MarkAreaComponent, MarkLineComponent, SVGRenderer]);
 
@@ -20,7 +23,17 @@ describe('Risk dashboard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RiskDashboardComponent],
-      providers: [provideRouter([]), provideEchartsCore({ echarts })],
+      providers: [
+        provideRouter([]),
+        provideEchartsCore({ echarts }),
+        {
+          provide: RiskDashboardApiService,
+          useValue: {
+            getDashboard: () => of(RISK_DASHBOARD_SEED),
+            runCustomShock: () => of({ lossUsd: 100, impactPercent: 1, postShockEquityUsd: 9900 }),
+          },
+        },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(RiskDashboardComponent);
     fixture.detectChanges();

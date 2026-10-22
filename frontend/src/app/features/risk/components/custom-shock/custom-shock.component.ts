@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
 import { BASELINE_SHOCKS } from '../../data/risk-dashboard.mock';
 import { RiskPortfolio, ShockResult, ShockValues } from '../../models/risk-dashboard.model';
-import { calculateCustomShock } from '../../utils/risk-calculations';
 
 @Component({
   selector: 'app-custom-shock',
@@ -14,7 +13,8 @@ export class CustomShockComponent {
   readonly math = Math;
   readonly portfolio = input.required<RiskPortfolio>();
   readonly preset = input.required<ShockValues>();
-  readonly shockRun = output<{ shocks: ShockValues; result: ShockResult }>();
+  readonly result = input<ShockResult | null>(null);
+  readonly shockRun = output<ShockValues>();
   readonly shocks = signal<ShockValues>({ ...BASELINE_SHOCKS });
   readonly controls: Array<{ key: keyof ShockValues; label: string; min: number; max: number }> = [
     { key: 'market', label: 'Market', min: -50, max: 50 },
@@ -38,12 +38,22 @@ export class CustomShockComponent {
   }
 
   run(): void {
-    const shocks = this.shocks();
-    this.shockRun.emit({ shocks, result: calculateCustomShock(this.portfolio().holdings, this.portfolio().portfolioValueUsd, shocks) });
+    this.shockRun.emit({ ...this.shocks() });
   }
 
-  impact(): ShockResult {
-    return calculateCustomShock(this.portfolio().holdings, this.portfolio().portfolioValueUsd, this.shocks());
+  impactLabel(): string {
+    const result = this.result();
+    return result ? `${result.lossUsd >= 0 ? '−' : '+'}$${Math.abs(result.lossUsd).toLocaleString('en-US')}` : 'Run to calculate';
+  }
+
+  impactPercentLabel(): string {
+    const result = this.result();
+    return result ? `${result.impactPercent >= 0 ? '−' : '+'}${Math.abs(result.impactPercent).toFixed(2)}%` : 'Backend result pending';
+  }
+
+  postShockLabel(): string {
+    const value = this.result()?.postShockEquityUsd;
+    return value === undefined ? 'Unavailable' : `$${value.toLocaleString('en-US')}`;
   }
 
   formatShock(value: number): string {

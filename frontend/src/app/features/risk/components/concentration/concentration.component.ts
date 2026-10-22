@@ -18,4 +18,12 @@ export class ConcentrationComponent {
     this.view.set(view);
     this.viewChange.emit(view);
   }
+
+  formatMetric(value: number | null, digits = 1): string {
+    return value === null ? 'Unavailable' : value.toFixed(digits);
+  }
+
+  formatCurrency(value: number | null): string {
+    return value === null ? 'Unavailable' : value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 }

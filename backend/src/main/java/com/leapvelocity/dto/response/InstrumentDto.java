@@ -8,8 +8,13 @@ public record InstrumentDto(
         String name,
         String assetClass,
         String currency,
-        boolean tradable
+        boolean tradable,
+        String sector
 ) {
+
+    public InstrumentDto(Long id, String symbol, String name, String assetClass, String currency, boolean tradable) {
+        this(id, symbol, name, assetClass, currency, tradable, "Other");
+    }
 
     public static InstrumentDto from(Instrument instrument) {
         return new InstrumentDto(
@@ -18,7 +23,8 @@ public record InstrumentDto(
                 instrument.getName(),
                 instrument.getAssetClass(),
                 instrument.getCurrency(),
-                instrument.isTradable()
+                instrument.isTradable(),
+                instrument.getSector()
         );
     }
 }

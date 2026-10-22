@@ -6,12 +6,40 @@ services:
     environment:
       TRADE_API_UPSTREAM: ${TRADE_API_UPSTREAM:-trade-api:8081}
       AUTH_UPSTREAM: ${AUTH_UPSTREAM:-auth-stub:4000}
+      RISK_API_UPSTREAM: ${RISK_API_UPSTREAM:-risk-service:8091}
     ports:
       - "${FRONTEND_PORT:-8085}:8080"
     depends_on:
       trade-api:
         condition: service_started
       auth-stub:
+        condition: service_started
+    networks:
+      - trade-net
+
+  risk-service:
+    build:
+      context: ./risk-service
+      dockerfile: Dockerfile
+    container_name: trading-platform-risk-service
+    environment:
+      RISK_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      RISK_JWT_ISSUER: ${JWT_ISSUER:-leapvelocity-auth}
+      RISK_TRADE_API_BASE_URL: ${RISK_TRADE_API_BASE_URL:-http://trade-api:8081/api}
+      RISK_DB_NAME: ${DB_NAME:-leapvelocity_trading_db}
+      RISK_DB_USER: ${RISK_DB_USER:-risk_readonly}
+      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD:-${DB_PASSWORD}}
+      RISK_DB_HOST: trade-db
+      RISK_DB_PORT: 5432
+      RISK_BENCHMARK: ${RISK_BENCHMARK:-SPY}
+      RISK_DEFAULT_LOOKBACK_DAYS: ${RISK_DEFAULT_LOOKBACK_DAYS:-252}
+      RISK_DEFAULT_CONFIDENCE: ${RISK_DEFAULT_CONFIDENCE:-0.95}
+      RISK_DEFAULT_MC_PATHS: ${RISK_DEFAULT_MC_PATHS:-10000}
+      RISK_MINIMUM_OBSERVATIONS: ${RISK_MINIMUM_OBSERVATIONS:-30}
+    depends_on:
+      trade-db:
+        condition: service_healthy
+      trade-api:
         condition: service_started
     networks:
       - trade-net
@@ -27,6 +55,7 @@ services:
       DB_NAME: ${DB_NAME:-leapvelocity_trading_db}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
+      IMPORT_START_DATE: ${IMPORT_START_DATE:-2006-01-01}
     restart: "no"
     depends_on:
       trade-db:
@@ -119,6 +148,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-leapvelocity_trading_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      RISK_DB_USER: ${RISK_DB_USER:-risk_readonly}
+      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD:-${DB_PASSWORD}}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

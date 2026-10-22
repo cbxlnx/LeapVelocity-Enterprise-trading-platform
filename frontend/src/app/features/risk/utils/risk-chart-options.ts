@@ -10,21 +10,22 @@ export function createVarChartOptions(portfolio: RiskPortfolio, horizon: RiskHor
   return {
     animation: false,
     grid: { left: 110, right: 104, top: 8, bottom: 34 },
-    xAxis: { type: 'value', max: Math.max(values.monteCarloUsd * 1.2, 5000), axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `$${(value / 1000).toFixed(1)}k` }, splitLine: { lineStyle: { color: gridColor } } },
+    xAxis: { type: 'value', max: Math.max((values.monteCarloUsd ?? 0) * 1.2, 5000), axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `$${(value / 1000).toFixed(1)}k` }, splitLine: { lineStyle: { color: gridColor } } },
     yAxis: { type: 'category', data: ['Historical', 'Parametric', 'Monte Carlo'], axisLabel: { color: '#20364e', fontSize: 11 } },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `$${Number(value).toLocaleString('en-US')}` },
     series: [{
       type: 'bar',
-      data: [values.historicalUsd, values.parametricUsd, values.monteCarloUsd].map((value, index) => ({ value, itemStyle: { color: ['#142337', '#7890a4', '#3679b3'][index] } })),
+      data: [values.historicalUsd, values.parametricUsd, values.monteCarloUsd].map((value, index) => ({ value: value ?? 0, itemStyle: { color: ['#142337', '#7890a4', '#3679b3'][index] } })),
       barWidth: 18,
       showBackground: true,
       backgroundStyle: { color: '#f0f3f5' },
-      label: { show: true, position: 'right', color: '#142337', fontFamily: 'IBM Plex Mono', fontSize: 10, formatter: (params) => `$${Number(params.value).toLocaleString('en-US')}  ${((Number(params.value) / portfolio.portfolioValueUsd) * 100).toFixed(2)}%` },
+      label: { show: true, position: 'right', color: '#142337', fontFamily: 'IBM Plex Mono', fontSize: 10, formatter: (params) => portfolio.portfolioValueUsd === null ? 'Unavailable' : `$${Number(params.value).toLocaleString('en-US')}  ${((Number(params.value) / portfolio.portfolioValueUsd) * 100).toFixed(2)}%` },
     }],
   };
 }
 
-export function createHistogramOptions(bins: DistributionBin[], varUsd: number): EChartsOption {
+export function createHistogramOptions(bins: DistributionBin[], varUsd: number | null): EChartsOption {
+  const threshold = varUsd ?? 0;
   return {
     animation: false,
     grid: { left: 42, right: 12, top: 24, bottom: 34 },
@@ -34,14 +35,15 @@ export function createHistogramOptions(bins: DistributionBin[], varUsd: number):
     series: [{
       type: 'bar',
       barCategoryGap: '8%',
-      data: bins.map((bin) => ({ value: bin.frequency, itemStyle: { color: bin.returnUsd <= -varUsd ? '#bb3842' : '#3679b3' } })),
-      markLine: { symbol: 'none', lineStyle: { type: 'dashed', color: '#bb3842', width: 1.5 }, label: { color: '#bb3842', formatter: `95% Monte Carlo VaR: -$${varUsd.toLocaleString('en-US')}` }, data: [{ xAxis: bins.find((bin) => bin.returnUsd >= -varUsd)?.returnUsd ?? -varUsd }] },
-      markArea: { silent: true, itemStyle: { color: 'rgba(187, 56, 66, 0.05)' }, data: [[{ xAxis: bins[0]?.returnUsd }, { xAxis: -varUsd }]] },
+      data: bins.map((bin) => ({ value: bin.frequency, itemStyle: { color: bin.returnUsd <= -threshold ? '#bb3842' : '#3679b3' } })),
+      markLine: { symbol: 'none', lineStyle: { type: 'dashed', color: '#bb3842', width: 1.5 }, label: { color: '#bb3842', formatter: varUsd === null ? 'Monte Carlo VaR unavailable' : `95% Monte Carlo VaR: -$${varUsd.toLocaleString('en-US')}` }, data: [{ xAxis: bins.find((bin) => bin.returnUsd >= -threshold)?.returnUsd ?? -threshold }] },
+      markArea: { silent: true, itemStyle: { color: 'rgba(187, 56, 66, 0.05)' }, data: [[{ xAxis: bins[0]?.returnUsd }, { xAxis: -threshold }]] },
     }],
   };
 }
 
-export function createDrawdownOptions(points: DrawdownPoint[], maximumDrawdownPercent: number, maximumDrawdownDate: string): EChartsOption {
+export function createDrawdownOptions(points: DrawdownPoint[], maximumDrawdownPercent: number | null, maximumDrawdownDate: string | null): EChartsOption {
+  const drawdown = maximumDrawdownPercent ?? 0;
   return {
     animation: false,
     grid: { left: 42, right: 18, top: 18, bottom: 34 },
@@ -56,7 +58,7 @@ export function createDrawdownOptions(points: DrawdownPoint[], maximumDrawdownPe
       lineStyle: { color: '#3679b3', width: 1.5 },
       itemStyle: { color: '#bb3842' },
       areaStyle: { color: 'rgba(54, 121, 179, 0.18)' },
-      markPoint: { symbol: 'circle', symbolSize: 7, itemStyle: { color: '#bb3842' }, label: { show: true, position: 'right', color: '#bb3842', formatter: `${maximumDrawdownPercent.toFixed(2)}%` }, data: [{ name: 'Maximum drawdown', coord: [maximumDrawdownDate, maximumDrawdownPercent] as [string, number] }] },
+      markPoint: { symbol: 'circle', symbolSize: 7, itemStyle: { color: '#bb3842' }, label: { show: true, position: 'right', color: '#bb3842', formatter: maximumDrawdownPercent === null ? 'Unavailable' : `${maximumDrawdownPercent.toFixed(2)}%` }, data: maximumDrawdownDate === null ? [] : [{ name: 'Maximum drawdown', coord: [maximumDrawdownDate, -drawdown] as [string, number] }] },
     }],
   };
 }
@@ -70,8 +72,8 @@ export function createContributionOptions(portfolio: RiskPortfolio): EChartsOpti
     yAxis: { type: 'category', data: portfolio.holdings.map((holding) => holding.symbol), axisLabel: { color: '#20364e', fontSize: 10 } },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `${Number(value).toFixed(1)}%` },
     series: [
-      { name: 'Allocation · % of invested equity', type: 'bar', data: portfolio.holdings.map((holding) => holding.allocationPercent), barWidth: 8, itemStyle: { color: '#aebdca' } },
-      { name: 'Share of total portfolio volatility', type: 'bar', data: portfolio.holdings.map((holding) => holding.volatilityContributionPercent), barWidth: 8, itemStyle: { color: '#3679b3' } },
+      { name: 'Allocation · % of invested equity', type: 'bar', data: portfolio.holdings.map((holding) => holding.allocationPercent ?? 0), barWidth: 8, itemStyle: { color: '#aebdca' } },
+      { name: 'Share of total portfolio volatility', type: 'bar', data: portfolio.holdings.map((holding) => holding.volatilityContributionPercent ?? 0), barWidth: 8, itemStyle: { color: '#3679b3' } },
     ],
   };
 }
