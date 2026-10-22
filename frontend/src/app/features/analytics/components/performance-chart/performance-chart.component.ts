@@ -17,7 +17,7 @@ export class PerformanceChartComponent {
     return {
       animation: false,
       grid: { left: 54, right: 18, top: 8, bottom: 34 },
-      tooltip: { trigger: 'axis', valueFormatter: value => `${Number(Array.isArray(value) ? value[0] : value).toFixed(2)}` },
+      tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: value => `${Number(Array.isArray(value) ? value[0] : value).toFixed(2)}` },
       xAxis: { type: 'category', data: labels, boundaryGap: false, axisLine: { lineStyle: { color: '#c8d2dc' } }, axisLabel: { color: '#586c7d', fontSize: 11, hideOverlap: true, formatter: (value: string) => this.formatDate(value) } },
       yAxis: { type: 'value', scale: true, splitNumber: 4, axisLabel: { color: '#586c7d', fontSize: 11, formatter: (value: number) => value.toFixed(0) }, splitLine: { lineStyle: { color: '#e8ecef' } } },
       series: [

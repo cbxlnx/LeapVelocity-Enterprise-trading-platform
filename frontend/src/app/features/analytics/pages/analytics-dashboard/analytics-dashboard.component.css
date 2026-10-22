@@ -93,6 +93,86 @@ select { width: 100%; }
 		border-color: var(--border);
 		color: var(--text);
 	}
+
+	.range-controls button:hover:not(:disabled) {
+		background: #e07836;
+		border-color: #f2a16e;
+	}
+
+	.headline-price span,
+	.range-statistics .gain,
+	.comparison-panel .gain {
+		color: #8ae6b9 !important;
+	}
+
+	.range-statistics .loss,
+	.comparison-panel .loss {
+		color: #ffaaaa !important;
+	}
+
+	.range-controls,
+	.comparison-panel {
+		background: var(--surface-raised);
+		border-color: var(--border);
+	}
+
+	.prototype-notice,
+	.comparison-selector,
+	.stats-note,
+	.comparison-note {
+		background: var(--surface-inset);
+		border-color: var(--border);
+		color: var(--text);
+	}
+
+	.range-controls label,
+	.range-controls span,
+	.comparison-panel header p,
+	.comparison-selector > span,
+	.comparison-panel table,
+	.comparison-state,
+	.chart-labels {
+		color: var(--text-muted);
+	}
+
+	.stats-note .info-icon,
+	.comparison-note .info-icon {
+		border-color: var(--text-muted);
+		color: var(--text-muted);
+	}
+
+	.comparison-panel h2,
+	.comparison-panel header p strong,
+	.comparison-panel tbody th,
+	.comparison-panel td {
+		color: var(--text-strong);
+	}
+
+	.comparison-panel th,
+	.comparison-panel td {
+		border-color: var(--border);
+	}
+
+	.comparison-panel thead {
+		background: var(--surface-subtle);
+	}
+
+	.comparison-picker button,
+	.selected-comparisons button {
+		background: var(--surface);
+		border-color: var(--border);
+		color: var(--text);
+	}
+
+	.comparison-panel .gain,
+	.range-statistics .gain {
+		color: #71d3a8 !important;
+	}
+
+	.comparison-panel .loss,
+	.range-statistics .loss {
+		color: #ff8f8f !important;
+	}
 }
 
 @media (max-width: 760px) { .instrument-view { grid-template-columns: 1fr; } .range-statistics { order: 2; } }

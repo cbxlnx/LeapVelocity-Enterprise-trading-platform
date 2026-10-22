@@ -1000,6 +1000,8 @@ input.input-invalid:focus {
   .review-instrument, .review-details dd, .cash-after strong, .estimated-value strong, .result-panel strong, .recent-order-row strong { color: var(--text-strong); }
   .review-details dt, .cash-after span, .estimated-value span, .estimated-value small, .review-note, .result-panel p:last-child, .recent-order-meta { color: var(--text-muted); }
   .review-details, .estimated-value, .recent-orders-list, .recent-order-row { border-color: var(--border); }
+  .result-panel-heading h2 { color: var(--text-strong); }
+  .result-panel-heading p:last-child { color: var(--text-muted); }
   .side-chip { background: #176b4b; color: #f4f7fa; }
   .side-chip.sell { background: #8f3d43; color: #fff0f0; }
   .place-order-button { border: 1px solid #f08a52; box-shadow: 0 0 0 1px rgba(240, 138, 82, .25); }

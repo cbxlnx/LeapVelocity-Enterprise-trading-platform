@@ -22,7 +22,7 @@ export class PriceChartComponent {
     return {
       animation: false,
       grid: [{ left: 56, right: 16, top: 12, height: '58%' }, { left: 56, right: 16, top: '75%', height: '17%' }],
-      tooltip: { trigger: 'axis', valueFormatter: (value) => {
+      tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => {
         const amount = Array.isArray(value) ? Number(value[0]) : Number(value);
         return Number.isFinite(amount) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: this.currency(), minimumFractionDigits: 2 }).format(amount) : '';
       } },

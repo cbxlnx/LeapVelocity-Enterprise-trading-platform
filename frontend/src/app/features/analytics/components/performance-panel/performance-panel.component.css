@@ -82,6 +82,9 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 	select, button { background: var(--surface); border-color: var(--border); color: var(--text); }
 	.simulation-returns strong { color: #71d3a8; }
 	.simulation-returns strong.negative { color: #ff8f8f; }
+	.simulation-context { background: var(--surface-inset); border-color: var(--border); }
+	.weight-item { background: var(--surface-raised); border-color: var(--border); color: var(--text); }
+	.weight-item strong, .weight-item b { color: var(--text-strong); }
 }
 .simulation-error ul { padding-left: 20px; }
 @media (max-width: 900px) { .simulation-heading { flex-direction: column; } }
