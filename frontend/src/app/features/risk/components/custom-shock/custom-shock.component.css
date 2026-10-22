@@ -17,11 +17,25 @@
 .impact-panel > strong { display: inline-block; color: #20364e; font-size: 11px; }
 .impact-panel > span { float: right; font-size: 9px; }
 .impact-value { clear: both; display: flex; justify-content: space-between; padding: 18px 0 14px; color: #bb3842; font: 500 23px var(--font-mono); }
+.impact-value.impact-loss { color: #c94f59; }
+.impact-value.impact-gain { color: #16875d; }
 .impact-value small { align-self: center; font: 13px var(--font-mono); }
 .post-shock { display: flex; justify-content: space-between; padding: 14px 0; border-top: 1px solid #d5dde6; color: #586c7d; font-size: 11px; }
 .post-shock strong { color: #20364e; font: 500 14px var(--font-mono); }
 .impact-panel p { margin: 8px 0 0; font-size: 10px; }
 .rule-note { display: grid; gap: 5px; margin-top: 22px; padding: 14px 12px; background: #f1f4f5; color: #586c7d; font-size: 10px; line-height: 1.5; }
 .rule-note strong { color: #20364e; }
+
+:host-context(.dark-theme) {
+	.risk-card { background: var(--surface-raised); border-color: var(--border); }
+	.section-heading h2, .shock-control, .post-shock strong, .rule-note strong { color: var(--text-strong); }
+	.section-heading p, .shock-control small, .post-shock, .impact-panel, .rule-note { color: var(--text-muted); }
+	.actions button, .shock-value { background: var(--surface-inset); border-color: var(--border); color: var(--text); }
+	.impact-panel, .rule-note { background: var(--surface-inset); }
+	.post-shock { border-color: var(--border); }
+	input[type='range'] { background: #344553; }
+	.impact-value.impact-loss { color: #ffaaaa; }
+	.impact-value.impact-gain { color: #8ae6b9; }
+}
 @media (max-width: 900px) { .shock-layout { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .risk-card { padding: 16px; } .split-heading { flex-direction: column; } .actions { width: 100%; } .actions button { flex: 1; } .shock-control { grid-template-columns: 84px minmax(90px, 1fr) 62px; gap: 8px; } .shock-control small { display: none; } }

@@ -588,8 +588,8 @@
   font-weight: 600;
 }
 
-.mover-card:first-child h3 { color: #16734e; }
-.mover-down-heading { color: #b13339 !important; }
+.mover-up-heading { color: #16875d !important; }
+.mover-down-heading { color: #c94f59 !important; }
 
 .mover-description {
   margin: 5px 0 13px;
@@ -623,8 +623,8 @@
 }
 
 .mover-row strong { color: #263b50; font-family: var(--font-ui); font-size: 11px; }
-.mover-up { color: #16734e; }
-.mover-down { color: #b13339; }
+.mover-up { color: #16875d; }
+.mover-down { color: #c94f59; }
 
 .market-snapshot {
   margin: 16px 0 0;
@@ -869,6 +869,42 @@
   .positions-table .loss,
   .positions-table .loss strong {
     color: #ff8f8f !important;
+  }
+
+  .mover-card {
+    background: var(--surface-raised);
+    border-color: var(--border);
+  }
+
+  .mover-card h3,
+  .mover-row strong {
+    color: var(--text-strong);
+  }
+
+  .mover-kicker,
+  .mover-description,
+  .mover-head,
+  .mover-row {
+    color: var(--text-muted);
+  }
+
+  .mover-head,
+  .mover-row {
+    border-color: var(--border);
+  }
+
+  .mover-up,
+  .market-table td.price-up {
+    color: #8ae6b9 !important;
+  }
+
+  .mover-down,
+  .market-table td.price-down {
+    color: #ffaaaa !important;
+  }
+
+  .market-table td.price-unchanged {
+    color: var(--text-muted);
   }
 }
 

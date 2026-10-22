@@ -73,6 +73,24 @@ body {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+.chart-tooltip {
+  border: 1px solid #d5dde6 !important;
+  border-radius: 3px !important;
+  box-shadow: 0 8px 20px rgba(20, 35, 55, 0.18) !important;
+  font-family: var(--font-ui) !important;
+}
+
+:root.dark-theme .chart-tooltip {
+  background: #22313e !important;
+  border-color: #7190a5 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42) !important;
+  color: #f4f7fa !important;
+}
+
+:root.dark-theme .chart-tooltip * {
+  color: #e8eef3 !important;
+}
+
 :root.dark-theme body {
   color-scheme: dark;
 }
@@ -269,6 +287,217 @@ body {
   color: #ffffff;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+:root.dark-theme body .risk-dashboard {
+  background: var(--canvas);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .risk-card,
+:root.dark-theme body .risk-dashboard .kpi,
+:root.dark-theme body .risk-dashboard .state-panel {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard h1,
+:root.dark-theme body .risk-dashboard h2,
+:root.dark-theme body .risk-dashboard .kpi strong,
+:root.dark-theme body .risk-dashboard .metadata strong,
+:root.dark-theme body .risk-dashboard .insight-row strong,
+:root.dark-theme body .risk-dashboard .state-panel strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .risk-dashboard .eyebrow,
+:root.dark-theme body .risk-dashboard .intro,
+:root.dark-theme body .risk-dashboard .as-of,
+:root.dark-theme body .risk-dashboard .kpi span,
+:root.dark-theme body .risk-dashboard .kpi small,
+:root.dark-theme body .risk-dashboard .insights-card > p,
+:root.dark-theme body .risk-dashboard .insight-row span,
+:root.dark-theme body .risk-dashboard .insight-row small,
+:root.dark-theme body .risk-dashboard .insight-note,
+:root.dark-theme body .risk-dashboard .state-panel,
+:root.dark-theme body .risk-dashboard .stress-alert small {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .risk-dashboard .toolbar label {
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .toolbar select,
+:root.dark-theme body .risk-dashboard .refresh,
+:root.dark-theme body .risk-dashboard .state-panel button {
+  background: var(--surface-inset);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .refresh:hover,
+:root.dark-theme body .risk-dashboard .state-panel button:hover {
+  background: #385164;
+  color: #ffffff;
+}
+
+:root.dark-theme body .risk-dashboard .notice,
+:root.dark-theme body .risk-dashboard .insight-panel {
+  background: var(--surface-inset);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .risk-dashboard .notice strong,
+:root.dark-theme body .risk-dashboard .insight-panel strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .risk-dashboard .insight-row {
+  border-color: var(--border);
+}
+
+:root.dark-theme body .risk-dashboard .stress-alert {
+  background: #3b252a;
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .loss-kpi strong,
+:root.dark-theme body .risk-dashboard .loss-kpi em,
+:root.dark-theme body .risk-dashboard .stress-alert > strong,
+:root.dark-theme body .risk-dashboard .stress-alert b {
+  color: #ff8f8f;
+}
+
+:root.dark-theme body .risk-dashboard .spinner {
+  border-color: var(--border);
+  border-top-color: #f08a52;
+}
+
+:root.dark-theme body .risk-dashboard .chart {
+  filter: brightness(1.18) contrast(.96);
+}
+
+:root.dark-theme body .risk-dashboard app-risk-contribution,
+:root.dark-theme body .risk-dashboard app-distribution-drawdown,
+:root.dark-theme body .risk-dashboard app-stress-scenarios,
+:root.dark-theme body .risk-dashboard app-custom-shock,
+:root.dark-theme body .risk-dashboard app-scenario-waterfall,
+:root.dark-theme body .risk-dashboard app-concentration {
+  display: block;
+  margin-top: 22px;
+}
+
+:root.dark-theme body .risk-dashboard .risk-card,
+:root.dark-theme body .risk-dashboard .waterfall-card {
+  background: var(--surface-raised) !important;
+  border-color: var(--border) !important;
+}
+
+:root.dark-theme body .risk-dashboard .segmented button,
+:root.dark-theme body .risk-dashboard .actions button,
+:root.dark-theme body .risk-dashboard .shock-value,
+:root.dark-theme body .risk-dashboard .action button {
+  background: var(--surface-inset) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+:root.dark-theme body .risk-dashboard .segmented button.active {
+  background: var(--surface-subtle) !important;
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .allocation-note,
+:root.dark-theme body .risk-dashboard .impact-panel,
+:root.dark-theme body .risk-dashboard .rule-note,
+:root.dark-theme body .risk-dashboard .scenario-detail,
+:root.dark-theme body .risk-dashboard .insight-panel,
+:root.dark-theme body .risk-dashboard .sector-card,
+:root.dark-theme body .risk-dashboard .warning {
+  background: var(--surface-inset) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border);
+}
+
+:root.dark-theme body .risk-dashboard .table-head,
+:root.dark-theme body .risk-dashboard .sector-table-head,
+:root.dark-theme body .risk-dashboard .table-wrap thead,
+:root.dark-theme body .risk-dashboard .table-wrap tfoot {
+  background: var(--surface-inset) !important;
+  color: var(--text-muted) !important;
+}
+
+:root.dark-theme body .risk-dashboard .scenario-row,
+:root.dark-theme body .risk-dashboard .post-shock,
+:root.dark-theme body .risk-dashboard .waterfall-card footer,
+:root.dark-theme body .risk-dashboard .table-wrap td,
+:root.dark-theme body .risk-dashboard .table-wrap th,
+:root.dark-theme body .risk-dashboard .sector-row {
+  border-color: var(--border) !important;
+}
+
+:root.dark-theme body .risk-dashboard .scenario-name strong,
+:root.dark-theme body .risk-dashboard .scenario-detail strong,
+:root.dark-theme body .risk-dashboard .post-shock strong,
+:root.dark-theme body .risk-dashboard .sector-card > strong,
+:root.dark-theme body .risk-dashboard .allocation-note strong,
+:root.dark-theme body .risk-dashboard .rule-note strong {
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .loss,
+:root.dark-theme body .risk-dashboard .impact-value,
+:root.dark-theme body .risk-dashboard .callout-value,
+:root.dark-theme body .risk-dashboard .drawdown-callout > strong,
+:root.dark-theme body .risk-dashboard .waterfall-card footer strong {
+  color: #ffaaaa !important;
+}
+
+:root.dark-theme body .risk-dashboard .impact {
+  background: #344553 !important;
+}
+
+:root.dark-theme body .risk-dashboard .es-callout,
+:root.dark-theme body .risk-dashboard .stress-alert {
+  background: #3b252a !important;
+}
+
+:root.dark-theme body .risk-dashboard .chart,
+:root.dark-theme body .risk-dashboard echarts {
+  filter: brightness(1.2) contrast(.96);
+}
+
+:root.dark-theme body .risk-dashboard .kpi em {
+  color: #8ae6b9;
+}
+
+:root.dark-theme body .risk-dashboard .loss-kpi strong,
+:root.dark-theme body .risk-dashboard .loss-kpi em {
+  color: #ffaaaa !important;
+}
+
+:root.dark-theme body .risk-dashboard .risk-card button:hover:not(:disabled),
+:root.dark-theme body .risk-dashboard .refresh:hover:not(:disabled),
+:root.dark-theme body .risk-dashboard .state-panel button:hover:not(:disabled) {
+  background: #466277 !important;
+  border-color: #8fb0c4 !important;
+  color: #ffffff !important;
+}
+
+:root.dark-theme body .risk-dashboard .impact-panel > strong,
+:root.dark-theme body .risk-dashboard .impact-panel > span,
+:root.dark-theme body .risk-dashboard .impact-panel p,
+:root.dark-theme body .risk-dashboard .impact-panel .impact-value {
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .var-card .chart,
+:root.dark-theme body .risk-dashboard .contribution-chart,
+:root.dark-theme body .risk-dashboard .waterfall-card .chart {
+  filter: brightness(1.35) contrast(.94);
 }
 
 // ===== ENTERPRISE COLOR UTILITIES =====

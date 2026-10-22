@@ -16,5 +16,16 @@
 .drawdown-callout { background: #eaf1f5; }
 .drawdown-callout > strong { color: #bb3842; font: 500 17px var(--font-mono); white-space: nowrap; }
 .fine-print { margin: 14px 0 0; color: #718296; font-size: 10px; }
+
+:host-context(.dark-theme) {
+	.risk-card { background: var(--surface-raised); border-color: var(--border); }
+	.section-heading h2 { color: var(--text-strong); }
+	.section-heading p, .chart-label, .fine-print, .es-callout span, .drawdown-callout span { color: var(--text-muted); }
+	.es-callout { background: #3b252a; }
+	.drawdown-callout { background: var(--surface-inset); }
+	.es-callout strong, .drawdown-callout strong { color: var(--text-strong); }
+	.callout-value, .drawdown-callout > strong { color: #ffaaaa; }
+	.chart { filter: brightness(1.2) contrast(.96); }
+}
 @media (max-width: 880px) { .chart-pair { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .risk-card { padding: 16px; } .chart { height: 220px; } }

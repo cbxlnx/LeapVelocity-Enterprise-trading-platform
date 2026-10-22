@@ -85,6 +85,13 @@ tbody tr:hover { background: #f8fafb; }
   td { border-bottom-color: var(--border); }
   tbody tr:hover { background: var(--surface-subtle); }
 
+  .refresh-button:hover,
+  .table-footer button:hover:not(:disabled) {
+    background: #385164;
+    border-color: #7190a5;
+    color: #ffffff;
+  }
+
   .summary-badge.new,
   .status-new,
   .status-cancelled {
