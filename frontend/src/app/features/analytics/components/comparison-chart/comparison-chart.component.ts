@@ -22,7 +22,7 @@ export class ComparisonChartComponent {
     return {
       animation: false,
       grid: { left: 46, right: 18, top: 18, bottom: 30 },
-      tooltip: { trigger: 'axis', valueFormatter: (value) => `${Number(Array.isArray(value) ? value[0] : value).toFixed(2)}` },
+      tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => `${Number(Array.isArray(value) ? value[0] : value).toFixed(2)}` },
       legend: { top: 0, left: 0, textStyle: { color: '#586c7d', fontSize: 10 } },
       xAxis: { type: 'category', data: labels, axisLabel: { color: '#718296', fontSize: 9, hideOverlap: true }, axisLine: { lineStyle: { color: '#c8d2dc' } } },
       yAxis: { type: 'value', axisLabel: { color: '#718296', fontSize: 9, formatter: (value: number) => `${value.toFixed(0)}` }, splitLine: { lineStyle: { color: '#e8ecef' } } },

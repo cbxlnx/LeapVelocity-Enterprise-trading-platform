@@ -20,5 +20,17 @@
 .scenario-detail { grid-column: 1 / -1; display: grid; gap: 4px; padding: 10px 12px; background: #f7f9fa; color: #586c7d; font-size: 10px; }
 .scenario-detail strong { color: #20364e; }
 .fine-print { margin: 0; padding: 14px 24px 18px; color: #718296; font-size: 10px; }
+
+:host-context(.dark-theme) {
+	.risk-card { background: var(--surface-raised); border-color: var(--border); }
+	.section-heading h2, .scenario-name strong, .scenario-detail strong { color: var(--text-strong); }
+	.section-heading p, .scenario-name span, .fine-print, .scenario-detail { color: var(--text-muted); }
+	.table-head { background: var(--surface-inset); color: var(--text-muted); }
+	.scenario-row { border-color: var(--border); }
+	.impact { background: #344553; }
+	.loss { color: #ffaaaa; }
+	.action button { background: var(--surface-inset); border-color: var(--border); color: var(--text); }
+	.scenario-detail { background: var(--surface-inset); }
+}
 @media (max-width: 900px) { .table-head { display: none; } .scenario-row { grid-template-columns: 1fr auto; gap: 10px; } .scenario-name { grid-column: 1 / 2; } .loss { grid-column: 2; grid-row: 1; } .scenario-row > .loss:nth-child(3) { grid-column: 2; grid-row: 2; } .impact { grid-column: 1 / -1; grid-row: 3; } .action { grid-column: 1 / -1; grid-row: 4; text-align: left; } .scenario-detail { grid-row: 5; } }
 @media (max-width: 520px) { .section-heading, .scenario-row { padding-left: 16px; padding-right: 16px; } .section-heading { flex-direction: column; } .fine-print { padding-left: 16px; padding-right: 16px; } }

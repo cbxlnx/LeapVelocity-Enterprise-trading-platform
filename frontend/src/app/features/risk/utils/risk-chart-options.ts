@@ -12,7 +12,7 @@ export function createVarChartOptions(portfolio: RiskPortfolio, horizon: RiskHor
     grid: { left: 110, right: 104, top: 8, bottom: 34 },
     xAxis: { type: 'value', max: Math.max(values.monteCarloUsd * 1.2, 5000), axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `$${(value / 1000).toFixed(1)}k` }, splitLine: { lineStyle: { color: gridColor } } },
     yAxis: { type: 'category', data: ['Historical', 'Parametric', 'Monte Carlo'], axisLabel: { color: '#20364e', fontSize: 11 } },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `$${Number(value).toLocaleString('en-US')}` },
+    tooltip: { trigger: 'axis', className: 'chart-tooltip', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `$${Number(value).toLocaleString('en-US')}` },
     series: [{
       type: 'bar',
       data: [values.historicalUsd, values.parametricUsd, values.monteCarloUsd].map((value, index) => ({ value, itemStyle: { color: ['#142337', '#7890a4', '#3679b3'][index] } })),
@@ -30,7 +30,7 @@ export function createHistogramOptions(bins: DistributionBin[], varUsd: number):
     grid: { left: 42, right: 12, top: 24, bottom: 34 },
     xAxis: { type: 'category', data: bins.map((bin) => bin.returnUsd), axisLabel: { color: axisColor, fontSize: 9, formatter: (value: string) => Number(value) % 3000 === 0 ? `${Number(value) >= 0 ? '+' : ''}${Number(value) / 1000}k` : '' }, axisLine: { lineStyle: { color: '#cbd5dc' } } },
     yAxis: { type: 'value', axisLabel: { color: axisColor, fontSize: 9 }, splitLine: { lineStyle: { color: gridColor } } },
-    tooltip: { trigger: 'axis', valueFormatter: (value) => `${Number(value).toLocaleString('en-US')} paths` },
+    tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => `${Number(value).toLocaleString('en-US')} paths` },
     series: [{
       type: 'bar',
       barCategoryGap: '8%',
@@ -47,7 +47,7 @@ export function createDrawdownOptions(points: DrawdownPoint[], maximumDrawdownPe
     grid: { left: 42, right: 18, top: 18, bottom: 34 },
     xAxis: { type: 'category', data: points.map((point) => point.date), axisLabel: { color: axisColor, fontSize: 9, hideOverlap: true, formatter: (value: string) => value.slice(5) }, axisLine: { lineStyle: { color: '#cbd5dc' } } },
     yAxis: { type: 'value', max: 0, min: -15, axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${value}%` }, splitLine: { lineStyle: { color: gridColor } } },
-    tooltip: { trigger: 'axis', valueFormatter: (value) => `${Number(value).toFixed(2)}%` },
+    tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => `${Number(value).toFixed(2)}%` },
     series: [{
       type: 'line',
       data: points.map((point) => point.percent),
@@ -68,7 +68,7 @@ export function createContributionOptions(portfolio: RiskPortfolio): EChartsOpti
     legend: { top: 0, right: 0, textStyle: { color: axisColor, fontSize: 10 } },
     xAxis: { type: 'value', max: 35, axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${value}%` }, splitLine: { lineStyle: { color: gridColor } } },
     yAxis: { type: 'category', data: portfolio.holdings.map((holding) => holding.symbol), axisLabel: { color: '#20364e', fontSize: 10 } },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `${Number(value).toFixed(1)}%` },
+    tooltip: { trigger: 'axis', className: 'chart-tooltip', axisPointer: { type: 'shadow' }, valueFormatter: (value) => `${Number(value).toFixed(1)}%` },
     series: [
       { name: 'Allocation · % of invested equity', type: 'bar', data: portfolio.holdings.map((holding) => holding.allocationPercent), barWidth: 8, itemStyle: { color: '#aebdca' } },
       { name: 'Share of total portfolio volatility', type: 'bar', data: portfolio.holdings.map((holding) => holding.volatilityContributionPercent), barWidth: 8, itemStyle: { color: '#3679b3' } },
@@ -91,7 +91,7 @@ export function createWaterfallOptions(waterfall: ScenarioWaterfall): EChartsOpt
     grid: { left: 42, right: 12, top: 22, bottom: 30 },
     xAxis: { type: 'category', data: labels, axisLabel: { color: axisColor, fontSize: 9 } },
     yAxis: { type: 'value', axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: gridColor } } },
-    tooltip: { trigger: 'axis', valueFormatter: (value) => `$${Number(value).toLocaleString('en-US')}` },
+    tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => `$${Number(value).toLocaleString('en-US')}` },
     series: [
       { type: 'bar', stack: 'total', itemStyle: { color: 'transparent' }, data: base },
       { type: 'bar', stack: 'total', data: values.map((value, index) => ({ value, itemStyle: { color: index === 0 ? '#142337' : index === values.length - 1 ? '#3679b3' : '#bb3842' } })) },
