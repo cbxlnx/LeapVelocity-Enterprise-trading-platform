@@ -60,11 +60,17 @@ public class QuoteMarket {
     public ExecutionEvent execute(OrderEvent order) throws TemporaryFailureException {
         Quote quote = quotes.get(order.symbol());
         if (quote == null) {
+            log.debug("Execution attempt symbol={} side={} limit={} comparedQuoteField={} comparedQuoteValue={} quoteAge={}",
+                    order.symbol(), order.side(), order.price(), comparedQuoteField(order.side()), null, null);
             throw new TemporaryFailureException("No quote yet for " + order.symbol());
         }
 
         Instant now = clock.instant();
-        if (Duration.between(quote.receivedAt(), now).compareTo(quoteStaleness) > 0) {
+        Duration quoteAge = Duration.between(quote.receivedAt(), now);
+        BigDecimal comparedQuoteValue = comparedQuoteValue(order.side(), quote.event());
+        log.debug("Execution attempt symbol={} side={} limit={} comparedQuoteField={} comparedQuoteValue={} quoteAge={}",
+                order.symbol(), order.side(), order.price(), comparedQuoteField(order.side()), comparedQuoteValue, quoteAge);
+        if (quoteAge.compareTo(quoteStaleness) > 0) {
             throw new TemporaryFailureException("Quote for " + order.symbol() + " is older than " + quoteStaleness);
         }
 
@@ -89,6 +95,14 @@ public class QuoteMarket {
             return quote.ask().compareTo(limit) <= 0 ? quote.ask() : null;
         }
         return quote.bid().compareTo(limit) >= 0 ? quote.bid() : null;
+    }
+
+    private static String comparedQuoteField(Side side) {
+        return side == Side.BUY ? "ask" : "bid";
+    }
+
+    private static BigDecimal comparedQuoteValue(Side side, MarketDataEvent quote) {
+        return side == Side.BUY ? quote.ask() : quote.bid();
     }
 
     private record Quote(MarketDataEvent event, Instant receivedAt) {

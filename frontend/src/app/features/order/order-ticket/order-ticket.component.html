@@ -69,11 +69,11 @@
           <legend>Side</legend>
           <div class="side-toggle">
             <label [class.selected]="orderForm.get('side')?.value === 'BUY'">
-              <input type="radio" formControlName="side" value="BUY" />
+              <input type="radio" formControlName="side" value="BUY" (change)="onSideChange()" />
               BUY
             </label>
             <label [class.selected-sell]="orderForm.get('side')?.value === 'SELL'">
-              <input type="radio" formControlName="side" value="SELL" />
+              <input type="radio" formControlName="side" value="SELL" (change)="onSideChange()" />
               SELL
             </label>
           </div>
@@ -115,22 +115,24 @@
         </div>
 
         <div class="market-reference">
-          <span>Reference market price</span>
+          <span>Executable {{ executableReferenceField }} reference</span>
           @if (quoteError) {
             <strong>Unavailable</strong>
-          } @else if (referenceQuote) {
-            <strong class="mono">{{ referenceQuote.lastPrice | currency:'USD':'symbol':'1.2-2' }}</strong>
+          } @else if (executableReferencePrice !== null) {
+            <strong class="mono">{{ executableReferencePrice | currency:'USD':'symbol':'1.2-2' }}</strong>
           } @else {
-            <strong class="mono">{{ orderForm.get('price')?.value | currency:'USD':'symbol':'1.2-2' }}</strong>
+            <strong>Unavailable</strong>
           }
           @if (quoteLoading) {
             <small>Loading the latest quote...</small>
           } @else if (quoteError) {
             <small role="alert">{{ quoteError }}</small>
+          } @else if (referenceQuote && executableReferencePrice !== null) {
+            <small>Using the {{ executableReferenceField }} from the quote as of {{ referenceQuote.asOf | date:'short' }}. Equality fills; execution is still subject to quote freshness.</small>
           } @else if (referenceQuote) {
-            <small>Price prefilled from the quote as of {{ referenceQuote.asOf | date:'short' }}. Execution at your limit price or better is not guaranteed.</small>
+            <small>The quote has no {{ executableReferenceField }}. Enter a limit price manually; last trade is not used for execution.</small>
           } @else {
-            <small>Enter the maximum price you are willing to pay per share. Execution at your limit price or better is not guaranteed.</small>
+            <small>Enter the limit price. BUY orders execute against the ask; SELL orders execute against the bid.</small>
           }
         </div>
 
