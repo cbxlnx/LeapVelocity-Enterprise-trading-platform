@@ -118,14 +118,25 @@ export class RiskDashboardComponent implements OnInit {
   }
 
   private buildInsights(portfolio: RiskPortfolio): RiskPortfolio['insights'] {
-    const existing = portfolio.insights.filter((insight) => !['Cash reserve', 'Historical data coverage'].includes(insight.label));
     const cashValue = portfolio.portfolioValueUsd;
     const cashPercent = cashValue === null || cashValue === 0 ? null : portfolio.cashReserveUsd / cashValue * 100;
     const requestedDays = this.lookbackDaysFor(this.historicalWindow());
     const coveragePercent = this.historicalWindow() === 'MAX' ? null : Math.min(100, portfolio.dailyReturnCount / requestedDays * 100);
     const missingSymbols = portfolio.coverage?.missingSymbols ?? [];
     const coverageDetail = `${portfolio.sectionStatus?.['historicalRisk']?.status ?? 'READY'} · Usable ${portfolio.historicalFrom} to ${portfolio.historicalTo}${missingSymbols.length ? ` · Missing: ${missingSymbols.join(', ')}` : ` · ${portfolio.holdings.length} held symbols aligned`}`;
+    const largestHolding = portfolio.holdings.reduce((largest, holding) => !largest || (holding.allocationPercent ?? -1) > (largest.allocationPercent ?? -1) ? holding : largest, portfolio.holdings[0]);
+    const largestSector = portfolio.sectorExposure.reduce((largest, sector) => !largest || sector.allocationPercent > largest.allocationPercent ? sector : largest, portfolio.sectorExposure[0]);
     return [
+      {
+        label: 'Largest stock exposure',
+        value: largestHolding ? `${largestHolding.symbol} · ${this.formatPercent(largestHolding.allocationPercent)}` : 'Unavailable',
+        detail: largestHolding ? `$${this.formatNumber(largestHolding.marketValue)} · invested equity` : 'No holding exposure is available.',
+      },
+      {
+        label: 'Largest sector exposure',
+        value: largestSector ? `${largestSector.sector} · ${this.formatPercent(largestSector.allocationPercent)}` : 'Unavailable',
+        detail: largestSector ? `$${this.formatNumber(largestSector.marketValue)} · ${largestSector.symbols.join(' + ')}` : 'No sector exposure is available.',
+      },
       {
         label: 'Cash reserve',
         value: cashPercent === null ? 'Unavailable' : `${cashPercent.toFixed(1)}%`,
@@ -136,8 +147,15 @@ export class RiskDashboardComponent implements OnInit {
         value: coveragePercent === null ? `${portfolio.dailyReturnCount} aligned obs` : `${coveragePercent.toFixed(0)}% · ${portfolio.dailyReturnCount} obs`,
         detail: coverageDetail,
       },
-      ...existing,
     ];
+  }
+
+  private formatPercent(value: number | null): string {
+    return value === null ? 'Unavailable' : `${value.toFixed(1)}%`;
+  }
+
+  private formatNumber(value: number | null): string {
+    return value === null ? 'Unavailable' : value.toLocaleString('en-US');
   }
 
   formatCurrency(value: number | null | undefined, digits = 2): string {

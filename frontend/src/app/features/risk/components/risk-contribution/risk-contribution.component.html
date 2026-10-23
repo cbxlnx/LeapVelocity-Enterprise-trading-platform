@@ -9,8 +9,13 @@
   <div class="contribution-layout">
     <div class="chart contribution-chart" echarts [options]="options()" aria-label="Risk contribution by holding"></div>
     <aside class="insight-panel">
-      <strong>Technology drives 54.5% of volatility</strong>
-      <p>MSFT and AAPL make up 50.1% of invested equity. Their risk contribution also reflects volatility and correlation with other holdings.</p>
+      @if (leadingSector(); as sector) {
+        <strong>{{ sector[0] }} drives {{ sector[1].contribution.toFixed(1) }}% of volatility</strong>
+        <p>{{ sector[1].symbols.join(' and ') }} make up {{ sector[1].allocation.toFixed(1) }}% of invested equity. Their risk contribution also reflects volatility and correlation with other holdings.</p>
+      } @else {
+        <strong>Volatility contribution unavailable</strong>
+        <p>Sector-level risk contribution is unavailable for the current holdings.</p>
+      }
       <p>Diversification offsets some standalone risk. Contributions sum to 100% of portfolio volatility; individual holding VaRs do not add to portfolio VaR.</p>
       <small>Cash: {{ cashShare() }}% of account · 0% volatility contribution</small>
     </aside>

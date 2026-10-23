@@ -64,6 +64,9 @@ describe('Risk dashboard', () => {
     expect(fixture.nativeElement.textContent).toContain('Risk dashboard');
     expect(fixture.nativeElement.textContent).toContain('Portfolio value');
     expect(fixture.nativeElement.textContent).toContain('Stress test scenarios');
+    expect(fixture.nativeElement.textContent).toContain('Largest sector exposure');
+    expect(fixture.nativeElement.textContent).toContain('Technology · 50.1%');
+    expect(fixture.nativeElement.textContent).toContain('Technology drives 54.5% of volatility');
     expect(fixture.nativeElement.querySelector('.risk-card')).toBeTruthy();
   });
 
