@@ -9,9 +9,24 @@ import { GridComponent, MarkAreaComponent, MarkLineComponent, TooltipComponent }
 import { SVGRenderer } from 'echarts/renderers';
 import { RiskDashboardComponent } from './risk-dashboard.component';
 import { RISK_DASHBOARD_SEED } from '../../data/risk-dashboard.mock';
+import { RiskDashboardData } from '../../models/risk-dashboard.model';
 import { RiskDashboardApiService } from '../../services/risk-dashboard-api.service';
 
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, MarkAreaComponent, MarkLineComponent, SVGRenderer]);
+
+const EMPTY_PORTFOLIO_DATA: RiskDashboardData = {
+  portfolios: [{
+    ...RISK_DASHBOARD_SEED.portfolios[0],
+    investedEquityUsd: 0,
+    portfolioValueUsd: RISK_DASHBOARD_SEED.portfolios[0].cashReserveUsd,
+    holdings: [],
+    distribution: [],
+    drawdownSeries: [],
+    sectorExposure: [],
+    scenarios: [],
+    historicalWaterfalls: [],
+  }],
+};
 
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = class { observe(): void {} unobserve(): void {} disconnect(): void {} } as typeof ResizeObserver;
@@ -61,6 +76,8 @@ describe('Risk dashboard', () => {
     sectorButton.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sector');
+    const largestHolding = RISK_DASHBOARD_SEED.portfolios[0].holdings[0];
+    expect(fixture.nativeElement.textContent).toContain(`${largestHolding.symbol} represents ${largestHolding.allocationPercent?.toFixed(1)}% of invested equity`);
   });
 
   it('reloads the server data for a selected lookback without an account selector', async () => {
@@ -78,5 +95,21 @@ describe('Risk dashboard', () => {
 
     expect(fixture.componentInstance.customResult()?.waterfall?.title).toBe('Custom scenario');
     expect(runCustomShock).not.toHaveBeenCalled();
+  });
+
+  it('renders a dedicated empty state without position-dependent dashboard components', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    fixture.componentInstance.data.set(EMPTY_PORTFOLIO_DATA);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('No positions to analyse');
+    expect(fixture.nativeElement.textContent).toContain('Risk analytics will appear once the portfolio contains at least one position.');
+    expect(fixture.nativeElement.textContent).toContain('Risk dashboard');
+    expect(fixture.nativeElement.querySelector('.empty-portfolio-panel')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-var-models')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-distribution-drawdown')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-risk-contribution')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-scenario-waterfall')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-concentration')).toBeNull();
   });
 });
