@@ -108,6 +108,36 @@ describe('DashboardComponent valuation', () => {
     expect(data.unavailableQuoteCount).toBe(0);
   });
 
+  it('includes signed holding gain/loss percentages in allocation hover titles, but not cash', () => {
+    vi.useFakeTimers();
+    try {
+      accountService.getPositions.mockReturnValue(of([
+        { accountId: 1, symbol: 'AAPL', quantity: 10, averageCost: 100 },
+        { accountId: 1, symbol: 'MSFT', quantity: 5, averageCost: 200 },
+        { accountId: 1, symbol: 'FLAT', quantity: 2, averageCost: 50 },
+      ]));
+      marketData.getBatchQuotes.mockReturnValue(of(batch([
+        quote('AAPL', 150), quote('MSFT', 180), quote('FLAT', 50),
+      ])));
+
+      component.loadDashboardData();
+      fixture.detectChanges();
+
+      const titles = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.allocation-segment'),
+        (element) => element.getAttribute('title'),
+      );
+      expect(titles).toEqual([
+        'AAPL 51.72% · Gain/loss: +50.00%',
+        'MSFT 31.03% · Gain/loss: -10.00%',
+        'FLAT 3.45% · Gain/loss: +0.00%',
+        'CASH 13.79%',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('excludes a position without a quote from totals and cost basis', () => {
     accountService.getPositions.mockReturnValue(
       of([

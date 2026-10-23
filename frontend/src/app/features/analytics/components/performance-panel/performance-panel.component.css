@@ -1,4 +1,4 @@
-.simulation { overflow: hidden; background: white; border: 1px solid #dce3e8; border-radius: 0; }
+.simulation { overflow: hidden; background: white; border: 1px solid #dce3e8; border-radius: 4px; }
 .simulation-heading { display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 18px 20px 14px; border-bottom: 1px solid #dce3e8; }
 h2 { margin: 0 0 5px; color: #26384d; font-size: 16px; }
 .simulation-heading p { margin: 0; color: #718296; font-size: 11px; }
@@ -80,6 +80,7 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 		.simulation-context { background: var(--surface); border-color: var(--border); }
 		.weight-item { background: var(--surface-raised); border-color: var(--border); color: var(--text); }
 	select, button { background: var(--surface); border-color: var(--border); color: var(--text); }
+	button:hover:not(:disabled), button:focus-visible { background: #385164; border-color: #7190a5; color: #ffffff; }
 	.simulation-returns strong { color: #71d3a8; }
 	.simulation-returns strong.negative { color: #ff8f8f; }
 	.simulation-context { background: var(--surface-inset); border-color: var(--border); }

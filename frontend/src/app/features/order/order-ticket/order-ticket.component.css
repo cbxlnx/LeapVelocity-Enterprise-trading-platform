@@ -321,6 +321,12 @@ input.input-invalid:focus {
   font-size: 10px;
 }
 
+.side-toggle label:not(.selected):not(.selected-sell):hover,
+.side-toggle label:not(.selected):not(.selected-sell):focus-within {
+  background: #d0dee8;
+  color: #263b50;
+}
+
 .side-toggle label.selected {
   background: #16734e;
   color: #ffffff;
@@ -987,6 +993,14 @@ input.input-invalid:focus {
   .side-toggle label { color: #b3c0cb; }
   .side-toggle label.selected { background: #176b4b; }
   .side-toggle label.selected-sell { background: #8f3d43; }
+  .side-toggle label:not(.selected):not(.selected-sell):hover,
+  .side-toggle label:not(.selected):not(.selected-sell):focus-within {
+    background: #466277;
+    color: #ffffff;
+  }
+  .recent-orders-link { color: #b9dcf5; }
+  .recent-orders-link:hover,
+  .recent-orders-link:focus-visible { color: #ffffff; text-decoration: underline; }
 
   .market-reference,
   .ready-note {

@@ -90,7 +90,7 @@
                 class="allocation-segment"
                 [style.width.%]="segment.percentage"
                 [style.backgroundColor]="segment.color"
-                [attr.title]="segment.symbol + ' ' + formatAllocationPercent(segment.percentage)">
+                [attr.title]="segment.symbol + ' ' + formatAllocationPercent(segment.percentage) + (segment.gainLossPercent !== undefined ? ' · Gain/loss: ' + formatPercent(segment.gainLossPercent) : '')">
               </span>
             }
           </div>

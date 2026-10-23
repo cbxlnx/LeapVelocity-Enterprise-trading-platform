@@ -37,6 +37,7 @@ interface AllocationSegment {
   percentage: number;
   color: string;
   gainLoss?: number;
+  gainLossPercent?: number;
 }
 
 @Component({
@@ -458,10 +459,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         value: position.currentMarketValue ?? 0,
         percentage: totalValue > 0 ? ((position.currentMarketValue ?? 0) / totalValue) * 100 : 0,
         gainLoss: position.gainLoss ?? 0,
+        gainLossPercent: position.gainLossPercent,
       }));
     const maxGain = Math.max(0, ...positions.map((position) => position.gainLoss > 0 ? position.gainLoss : 0));
     const maxLoss = Math.max(0, ...positions.map((position) => position.gainLoss < 0 ? Math.abs(position.gainLoss) : 0));
-    const segments = positions.map((position) => ({
+    const segments: AllocationSegment[] = positions.map((position) => ({
       ...position,
       color: this.getAllocationColor(position.gainLoss, maxGain, maxLoss),
     }));

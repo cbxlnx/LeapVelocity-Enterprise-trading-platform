@@ -894,11 +894,13 @@
   }
 
   .mover-up,
+  .mover-up-heading,
   .market-table td.price-up {
     color: #8ae6b9 !important;
   }
 
   .mover-down,
+  .mover-down-heading,
   .market-table td.price-down {
     color: #ffaaaa !important;
   }
