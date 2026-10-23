@@ -3,9 +3,10 @@ FROM postgres:16-alpine
 # Keep repo folders tidy while still running SQL in a deterministic order.
 COPY tables/ /docker-entrypoint-initdb.d/tables/
 COPY data/ /docker-entrypoint-initdb.d/data/
+COPY 02-risk-readonly.sh /docker-entrypoint-initdb.d/02-risk-readonly.sh
 COPY docker-entrypoint-init.sh /docker-entrypoint-initdb.d/00-run-sql.sh
 RUN sed -i 's/\r$//' /docker-entrypoint-initdb.d/00-run-sql.sh && \
-    chmod +x /docker-entrypoint-initdb.d/00-run-sql.sh
+    chmod +x /docker-entrypoint-initdb.d/00-run-sql.sh /docker-entrypoint-initdb.d/02-risk-readonly.sh
 
 # IP restrictions
 ENV POSTGRES_PASSWORD=${DB_PASSWORD:-change_me}

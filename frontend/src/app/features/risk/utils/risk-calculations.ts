@@ -18,8 +18,8 @@ export function calculateAllocations(values: number[]): number[] {
   return values.map((value) => (value / investedEquityUsd) * 100);
 }
 
-export function scaleVaR(oneDayLossUsd: number, horizon: RiskHorizon): number {
-  return roundCurrency(oneDayLossUsd * Math.sqrt(horizon));
+export function scaleVaR(oneDayLossUsd: number | null, horizon: RiskHorizon): number | null {
+  return oneDayLossUsd === null ? null : roundCurrency(oneDayLossUsd * Math.sqrt(horizon));
 }
 
 export function getVaRForHorizon(oneDayVaR: VaRModels, horizon: RiskHorizon): VaRModels {
@@ -38,19 +38,20 @@ export function calculateMaximumDrawdown(drawdownPercentages: number[]): number 
   return drawdownPercentages.length === 0 ? 0 : Math.min(...drawdownPercentages);
 }
 
-export function calculateRiskContributionTotal(contributions: number[]): number {
-  return contributions.reduce((total, contribution) => total + contribution, 0);
+export function calculateRiskContributionTotal(contributions: Array<number | null>): number {
+  return contributions.reduce<number>((total, contribution) => total + (contribution ?? 0), 0);
 }
 
 export function calculateSectorExposure(holdings: HoldingRisk[]): SectorExposure[] {
   const grouped = new Map<string, { marketValue: number; symbols: string[] }>();
   for (const holding of holdings) {
+    if (holding.marketValue === null || holding.sector === null) continue;
     const current = grouped.get(holding.sector) ?? { marketValue: 0, symbols: [] };
     current.marketValue += holding.marketValue;
     current.symbols.push(holding.symbol);
     grouped.set(holding.sector, current);
   }
-  const investedEquityUsd = holdings.reduce((total, holding) => total + holding.marketValue, 0);
+  const investedEquityUsd = holdings.reduce((total, holding) => total + (holding.marketValue ?? 0), 0);
   return [...grouped.entries()].map(([sector, value]) => ({
     sector: sector as SectorExposure['sector'],
     marketValue: roundCurrency(value.marketValue),
@@ -65,8 +66,9 @@ export function calculateCustomShock(
   shocks: ShockValues,
 ): ShockResult {
   const lossUsd = holdings.reduce((total, holding) => {
-    const combinedShockPercent = shocks.market + shocks[holding.sector];
-    return total - holding.marketValue * (combinedShockPercent / 100);
+    const sectorShock = holding.sector && holding.sector in shocks ? shocks[holding.sector as keyof ShockValues] : 0;
+    const combinedShockPercent = shocks.market + (typeof sectorShock === 'number' ? sectorShock : 0);
+    return total - (holding.marketValue ?? 0) * (combinedShockPercent / 100);
   }, 0);
   const roundedLoss = roundCurrency(lossUsd);
   return {

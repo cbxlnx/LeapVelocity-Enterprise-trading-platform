@@ -92,7 +92,7 @@ function makePortfolio(
   drawdown: number,
 ): RiskPortfolio {
   const holdings = buildHoldings(holdingValues, [26.5, 28, 19.5, 19, 7]);
-  const investedEquityUsd = holdings.reduce((total, holding) => total + holding.marketValue, 0);
+  const investedEquityUsd = holdings.reduce((total, holding) => total + (holding.marketValue ?? 0), 0);
   const portfolioValueUsd = calculatePortfolioValue(investedEquityUsd, cashReserveUsd);
   const scenarios: StressScenario[] = [
     {

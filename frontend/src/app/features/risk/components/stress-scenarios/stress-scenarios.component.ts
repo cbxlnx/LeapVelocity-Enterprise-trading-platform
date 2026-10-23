@@ -17,4 +17,12 @@ export class StressScenariosComponent {
   toggleDetails(id: string): void {
     this.expandedScenario.update((current) => current === id ? null : id);
   }
+
+  currency(value: number | null): string {
+    return value === null ? 'Unavailable' : value.toLocaleString('en-US');
+  }
+
+  metric(value: number | null): string {
+    return value === null ? 'Unavailable' : value.toFixed(2);
+  }
 }

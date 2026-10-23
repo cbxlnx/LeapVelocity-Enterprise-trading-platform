@@ -6,7 +6,7 @@
     </header>
     <div class="chart-label">Paths</div>
     <div class="chart histogram-chart" echarts [options]="histogramOptions()" aria-label="Monte Carlo distribution histogram"></div>
-    <div class="es-callout"><div><strong>Expected Shortfall · 95% · 1 day</strong><span>Average loss in the worst 5% of simulated outcomes</span></div><div class="callout-value">−${{ portfolio().expectedShortfallUsd.toLocaleString('en-US') }}<small>{{ (portfolio().expectedShortfallUsd / portfolio().portfolioValueUsd * 100).toFixed(2) }}% of account</small></div></div>
+    <div class="es-callout"><div><strong>Expected Shortfall · 95% · 1 day</strong><span>Average loss in the worst 5% of simulated outcomes</span></div><div class="callout-value">−${{ currency(portfolio().expectedShortfallUsd) }}<small>{{ ratio(portfolio().expectedShortfallUsd, portfolio().portfolioValueUsd) }}% of account</small></div></div>
     <p class="fine-print">Illustrative simulated outcomes, not predicted returns. Losses can exceed VaR.</p>
   </section>
 
@@ -16,7 +16,7 @@
       <p>{{ portfolio().historicalFrom }} – {{ portfolio().historicalTo }} · Account equity below prior peak</p>
     </header>
     <div class="chart drawdown-chart" echarts [options]="drawdownOptions()" aria-label="Historical drawdown chart"></div>
-    <div class="drawdown-callout"><div><strong>Largest peak-to-trough decline</strong><span>Trough on {{ portfolio().maximumDrawdownDate }} · Historical window only</span></div><strong>−{{ portfolio().maximumDrawdownPercent.toFixed(2) }}%</strong></div>
+    <div class="drawdown-callout"><div><strong>Largest peak-to-trough decline</strong><span>Trough on {{ portfolio().maximumDrawdownDate ?? 'Unavailable' }} · Historical window only</span></div><strong>−{{ metric(portfolio().maximumDrawdownPercent) }}%</strong></div>
     <p class="fine-print">Illustrative historical series · Includes cash · Not a forecast of future drawdowns.</p>
   </section>
 </div>

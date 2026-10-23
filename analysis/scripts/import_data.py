@@ -1,7 +1,9 @@
 """Import daily yfinance prices for database instruments into PostgreSQL.
 
-Run with --symbols AAPL --years 1 for the first import, or without arguments
-for two years of all eligible instruments. No downloads happen on module import.
+Run with --symbols AAPL --years 1 for a short import, or without arguments for
+all eligible instruments from 2006-01-01 through today. IMPORT_START_DATE can
+override that default without editing the command. No downloads happen on
+module import.
 """
 
 import argparse
@@ -58,13 +60,18 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbols", nargs="+", help="Subset of database symbols, e.g. AAPL MSFT")
     period = parser.add_mutually_exclusive_group()
-    period.add_argument("--years", type=int, choices=range(1, 11), default=2)
+    period.add_argument("--years", type=int, choices=range(1, 11))
     period.add_argument("--start", type=parse_date, help="Inclusive start date")
     parser.add_argument("--end", type=parse_date, help="Exclusive end date; default: today in New York")
     args = parser.parse_args(argv)
     today = trading_today()
     args.end = args.end or today
-    args.start = args.start or years_before(args.end, args.years)
+    configured_start = os.getenv("IMPORT_START_DATE")
+    if args.start is None and args.years is not None:
+        args.start = years_before(today, args.years)
+    elif args.start is None and configured_start:
+        args.start = parse_date(configured_start)
+    args.start = args.start or date(2006, 1, 1)
     if args.end > today:
         parser.error("--end cannot be later than today in New York")
     if args.start >= args.end:

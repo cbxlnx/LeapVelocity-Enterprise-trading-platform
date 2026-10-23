@@ -1,24 +1,38 @@
 export type RiskHorizon = 1 | 10 | 30;
 export type ConcentrationView = 'stock' | 'sector';
 export type ScenarioKind = 'historical' | 'custom';
-export type SectorName = 'Technology' | 'Financials' | 'Energy' | 'Healthcare';
+export type SectorName = 'Technology' | 'Financials' | 'Energy' | 'Healthcare' | 'Other';
+
+export interface SectionStatus {
+  status: 'READY' | 'PARTIAL' | 'EMPTY' | 'UNAVAILABLE';
+  issues: string[];
+  observations?: number | null;
+  requiredObservations?: number | null;
+}
+
+export interface RiskCoverage {
+  coveredSymbols: string[];
+  missingSymbols: string[];
+  observedFrom?: string | null;
+  observedTo?: string | null;
+}
 
 export interface HoldingRisk {
   symbol: string;
   company: string;
-  sector: SectorName;
-  marketValue: number;
-  allocationPercent: number;
-  beta: number;
-  standaloneVarUsd: number;
-  annualizedVolatilityPercent: number;
-  volatilityContributionPercent: number;
+  sector: SectorName | null;
+  marketValue: number | null;
+  allocationPercent: number | null;
+  beta: number | null;
+  standaloneVarUsd: number | null;
+  annualizedVolatilityPercent: number | null;
+  volatilityContributionPercent: number | null;
 }
 
 export interface VaRModels {
-  historicalUsd: number;
-  parametricUsd: number;
-  monteCarloUsd: number;
+  historicalUsd: number | null;
+  parametricUsd: number | null;
+  monteCarloUsd: number | null;
 }
 
 export interface DrawdownPoint {
@@ -38,7 +52,7 @@ export interface RiskInsight {
 }
 
 export interface SectorExposure {
-  sector: SectorName;
+  sector: SectorName | string;
   marketValue: number;
   allocationPercent: number;
   symbols: string[];
@@ -72,8 +86,8 @@ export interface StressScenario {
   period: string;
   description: string;
   kind: ScenarioKind;
-  lossUsd: number;
-  lossPercent: number;
+  lossUsd: number | null;
+  lossPercent: number | null;
   waterfall?: ScenarioWaterfall;
 }
 
@@ -85,13 +99,14 @@ export interface RiskPortfolio {
   historicalTo: string;
   cashReserveUsd: number;
   investedEquityUsd: number;
-  portfolioValueUsd: number;
+  portfolioValueUsd: number | null;
   oneDayVar: VaRModels;
-  expectedShortfallUsd: number;
-  volatilityPercent: number;
-  beta: number;
-  maximumDrawdownPercent: number;
-  maximumDrawdownDate: string;
+  varByHorizon?: Partial<Record<RiskHorizon, VaRModels>>;
+  expectedShortfallUsd: number | null;
+  volatilityPercent: number | null;
+  beta: number | null;
+  maximumDrawdownPercent: number | null;
+  maximumDrawdownDate: string | null;
   dailyReturnCount: number;
   monteCarloPathCount: number;
   holdings: HoldingRisk[];
@@ -101,6 +116,9 @@ export interface RiskPortfolio {
   sectorExposure: SectorExposure[];
   scenarios: StressScenario[];
   historicalWaterfalls: ScenarioWaterfall[];
+  sectionStatus?: Record<string, SectionStatus>;
+  coverage?: RiskCoverage;
+  issues?: string[];
 }
 
 export interface RiskDashboardData {
@@ -111,4 +129,5 @@ export interface ShockResult {
   lossUsd: number;
   impactPercent: number;
   postShockEquityUsd: number;
+  waterfall?: ScenarioWaterfall;
 }

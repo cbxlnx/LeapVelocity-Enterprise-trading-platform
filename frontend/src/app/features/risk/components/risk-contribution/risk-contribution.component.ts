@@ -17,4 +17,13 @@ export class RiskContributionComponent {
   readonly portfolio = input.required<RiskPortfolio>();
   readonly options = computed<EChartsOption>(() => createContributionOptions(this.portfolio()));
   readonly contributionTotal = computed(() => calculateRiskContributionTotal(this.portfolio().holdings.map((holding) => holding.volatilityContributionPercent)));
+
+  cashShare(): string {
+    const portfolio = this.portfolio();
+    return portfolio.portfolioValueUsd === null || portfolio.portfolioValueUsd === 0 ? 'Unavailable' : (portfolio.cashReserveUsd / portfolio.portfolioValueUsd * 100).toFixed(2);
+  }
+
+  metric(value: number | null, digits = 2): string {
+    return value === null ? 'Unavailable' : value.toFixed(digits);
+  }
 }

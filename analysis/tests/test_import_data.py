@@ -82,13 +82,18 @@ class ValidationTests(unittest.TestCase):
 
 
 class SelectionAndFlowTests(unittest.TestCase):
-    def test_default_two_years_and_normalized_subset(self):
+    def test_default_long_range_and_normalized_subset(self):
         with patch.object(importer, "trading_today", return_value=date(2026, 10, 14)):
             args = importer.parse_args([])
-            self.assertEqual((args.start, args.end), (date(2024, 10, 14), date(2026, 10, 14)))
+            self.assertEqual((args.start, args.end), (date(2006, 1, 1), date(2026, 10, 14)))
             args = importer.parse_args(["--symbols", "aapl", "AAPL", "--years", "1"])
             self.assertEqual(args.symbols, ["AAPL"])
             self.assertEqual(args.start, date(2025, 10, 14))
+
+    def test_environment_start_overrides_long_range_default(self):
+        with patch.dict(os.environ, {"IMPORT_START_DATE": "2010-01-01"}), patch.object(importer, "trading_today", return_value=date(2026, 10, 14)):
+            args = importer.parse_args([])
+        self.assertEqual(args.start, date(2010, 1, 1))
 
     def test_leap_day_range(self):
         self.assertEqual(importer.years_before(date(2024, 2, 29), 1), date(2023, 2, 28))
