@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { of } from 'rxjs';
 import { provideEchartsCore } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
@@ -19,8 +19,12 @@ if (!globalThis.ResizeObserver) {
 
 describe('Risk dashboard', () => {
   let fixture: ComponentFixture<RiskDashboardComponent>;
+  let getDashboard: ReturnType<typeof vi.fn>;
+  let runCustomShock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    getDashboard = vi.fn(() => of(RISK_DASHBOARD_SEED));
+    runCustomShock = vi.fn(() => of({ lossUsd: 100, impactPercent: 1, postShockEquityUsd: 9900 }));
     await TestBed.configureTestingModule({
       imports: [RiskDashboardComponent],
       providers: [
@@ -29,8 +33,8 @@ describe('Risk dashboard', () => {
         {
           provide: RiskDashboardApiService,
           useValue: {
-            getDashboard: () => of(RISK_DASHBOARD_SEED),
-            runCustomShock: () => of({ lossUsd: 100, impactPercent: 1, postShockEquityUsd: 9900 }),
+            getDashboard,
+            runCustomShock,
           },
         },
       ],
@@ -57,5 +61,22 @@ describe('Risk dashboard', () => {
     sectorButton.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sector');
+  });
+
+  it('reloads the server data for a selected lookback without an account selector', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    fixture.componentInstance.setHistoricalWindow('5Y');
+    fixture.detectChanges();
+
+    expect(getDashboard).toHaveBeenLastCalledWith(1260);
+    expect(fixture.nativeElement.textContent).not.toContain('Account / portfolio');
+  });
+
+  it('commits custom shock output locally without calling the legacy endpoint', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    fixture.componentInstance.runCustomShock({ market: -10, Technology: 0, Financials: 0, Energy: 0, Healthcare: 0 });
+
+    expect(fixture.componentInstance.customResult()?.waterfall?.title).toBe('Custom scenario');
+    expect(runCustomShock).not.toHaveBeenCalled();
   });
 });

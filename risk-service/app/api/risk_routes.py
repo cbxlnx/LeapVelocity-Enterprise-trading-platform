@@ -20,7 +20,7 @@ def get_engine(settings: Settings = Depends(get_settings)) -> RiskEngine:
 async def get_dashboard(
     account_id: int = Path(gt=0),
     horizon: Literal[1, 10, 30] = Query(default=1),
-    lookback_days: int = Query(default=252, alias="lookbackDays", ge=30, le=2000),
+    lookback_days: int = Query(default=252, alias="lookbackDays", ge=30, le=10000),
     confidence: float = Query(default=0.95, ge=0.8, lt=1.0),
     benchmark: str = Query(default="SPY", min_length=1, max_length=20),
     mc_paths: int = Query(default=10000, alias="mcPaths", ge=100, le=100000),

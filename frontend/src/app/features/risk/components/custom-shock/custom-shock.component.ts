@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { BASELINE_SHOCKS } from '../../data/risk-dashboard.mock';
 import { RiskPortfolio, ShockResult, ShockValues } from '../../models/risk-dashboard.model';
+import { calculateCustomShock } from '../../utils/risk-calculations';
 
 @Component({
   selector: 'app-custom-shock',
@@ -13,9 +14,12 @@ export class CustomShockComponent {
   readonly math = Math;
   readonly portfolio = input.required<RiskPortfolio>();
   readonly preset = input.required<ShockValues>();
-  readonly result = input<ShockResult | null>(null);
   readonly shockRun = output<ShockValues>();
   readonly shocks = signal<ShockValues>({ ...BASELINE_SHOCKS });
+  readonly projectedResult = computed<ShockResult | null>(() => {
+    const portfolioValue = this.portfolio().portfolioValueUsd;
+    return portfolioValue === null ? null : calculateCustomShock(this.portfolio().holdings, portfolioValue, this.shocks(), this.portfolio().cashReserveUsd);
+  });
   readonly controls: Array<{ key: keyof ShockValues; label: string; min: number; max: number }> = [
     { key: 'market', label: 'Market', min: -50, max: 50 },
     { key: 'Technology', label: 'Technology', min: -30, max: 30 },
@@ -42,17 +46,17 @@ export class CustomShockComponent {
   }
 
   impactLabel(): string {
-    const result = this.result();
-    return result ? `${result.lossUsd >= 0 ? '−' : '+'}$${Math.abs(result.lossUsd).toLocaleString('en-US')}` : 'Run to calculate';
+    const result = this.projectedResult();
+    return result ? `${result.lossUsd >= 0 ? '−' : '+'}$${Math.abs(result.lossUsd).toLocaleString('en-US')}` : 'Unavailable';
   }
 
   impactPercentLabel(): string {
-    const result = this.result();
-    return result ? `${result.impactPercent >= 0 ? '−' : '+'}${Math.abs(result.impactPercent).toFixed(2)}%` : 'Backend result pending';
+    const result = this.projectedResult();
+    return result ? `${result.impactPercent >= 0 ? '−' : '+'}${Math.abs(result.impactPercent).toFixed(2)}% projected` : 'Unavailable';
   }
 
   postShockLabel(): string {
-    const value = this.result()?.postShockEquityUsd;
+    const value = this.projectedResult()?.postShockEquityUsd;
     return value === undefined ? 'Unavailable' : `$${value.toLocaleString('en-US')}`;
   }
 

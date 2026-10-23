@@ -5,10 +5,9 @@
   </header>
 
   <div class="toolbar" [attr.aria-busy]="loading()">
-    <label><span>Account / portfolio</span><select [value]="selectedAccountId()" (change)="selectAccount($any($event.target).value)" [disabled]="loading()">@for (account of accounts(); track account.accountId) { <option [value]="account.accountId">{{ account.accountId }} · {{ account.accountLabel }}</option> }</select></label>
-    <label><span>Historical window</span><select [value]="historicalWindow()" (change)="historicalWindow.set($any($event.target).value)" [disabled]="loading()"><option value="1Y">13 Oct 2025 – 12 Oct 2026</option><option value="6M">13 Apr 2026 – 12 Oct 2026</option><option value="3M">12 Jul 2026 – 12 Oct 2026</option></select></label>
+    <label><span>Historical lookback</span><select [value]="historicalWindow()" (change)="setHistoricalWindow($any($event.target).value)" [disabled]="loading()"><option value="1Y">1 year · 252 trading days</option><option value="3Y">3 years · 756 trading days</option><option value="5Y">5 years · 1,260 trading days</option><option value="10Y">10 years · 2,520 trading days</option><option value="MAX">Maximum usable history</option></select></label>
     <button type="button" class="refresh" (click)="loadDashboard()" [disabled]="loading()"><span aria-hidden="true">↻</span> Refresh</button>
-    <div class="metadata"><strong>95% confidence · {{ horizon() }}-day VaR</strong><span>{{ portfolio()?.dailyReturnCount || 0 }} daily returns · {{ portfolio()?.holdings?.length || 0 }} of {{ portfolio()?.holdings?.length || 0 }} holdings covered</span></div>
+    <div class="metadata"><strong>95% confidence · {{ horizon() }}-day VaR</strong><span>{{ coverageSummary() }}</span></div>
   </div>
 
   <div class="notice"><span class="notice-icon" aria-hidden="true">i</span><div><strong>Request-time risk analytics</strong><span>Historical adjusted-close data and current account quotes are combined by the risk API. Missing coverage is shown as unavailable.</span></div></div>
@@ -28,14 +27,13 @@
       <article class="kpi loss-kpi"><span>Maximum drawdown <b title="Peak-to-trough decline">i</b></span><strong>−{{ formatMetric(current.maximumDrawdownPercent) }}%</strong><small>Peak to trough · {{ historicalWindow() }}</small><em>Observed decline</em></article>
     </section>
 
-    <section class="var-insights-grid"><app-var-models [portfolio]="current" [horizon]="horizon()" (horizonChange)="updateHorizon($event)" /><aside class="risk-card insights-card"><h2>Risk insights</h2><p>Concentration, liquidity and coverage</p>@for (insight of current.insights; track insight.label) { <div class="insight-row"><span>{{ insight.label }}</span><strong>{{ insight.value }}</strong><small>{{ insight.detail }}</small></div> }<small class="insight-note">Stock and sector weights exclude cash. Cash reduces account-level exposure, not invested concentration.</small></aside></section>
+    <section class="var-insights-grid"><app-var-models [portfolio]="current" [horizon]="horizon()" (horizonChange)="updateHorizon($event)" /><aside class="risk-card insights-card"><h2>Risk insights</h2><p>Concentration, liquidity and coverage</p>@for (insight of insights(); track insight.label) { <div class="insight-row"><span>{{ insight.label }}</span><strong>{{ insight.value }}</strong><small>{{ insight.detail }}</small></div> }<small class="insight-note">Stock and sector weights exclude cash. Cash reduces account-level exposure, not invested concentration.</small></aside></section>
     <app-distribution-drawdown [portfolio]="current" />
     <app-risk-contribution [portfolio]="current" />
 
     <div class="stress-alert" role="alert"><strong aria-hidden="true">△</strong><span>March 2020 replay loss: <b>${{ formatCurrency(current.scenarios.find((scenario) => scenario.id === 'stress-2020')?.lossUsd) }}</b><small>{{ ratioPercent(current.scenarios.find((scenario) => scenario.id === 'stress-2020')?.lossUsd, current.portfolioValueUsd) }}% of account equity · Historical event replay, not a forecast or a 1-day VaR estimate.</small></span></div>
-    <app-stress-scenarios [portfolio]="scenarioPortfolio()!" (editShock)="editShock()" />
-    <app-custom-shock [portfolio]="current" [preset]="customShocks()" [result]="customResult()" (shockRun)="runCustomShock($event)" />
-    <app-scenario-waterfall [waterfalls]="waterfalls()" />
+    <section class="historical-stress-section" aria-labelledby="historical-stress-heading"><header class="stress-section-heading"><h2 id="historical-stress-heading">Historical stress tests</h2><p>Replay observed market events against current positions.</p></header><app-stress-scenarios [portfolio]="historicalPortfolio()!" (viewBreakdown)="focusBreakdown($event)" /><app-scenario-waterfall title="Historical scenario breakdown" [waterfalls]="historicalWaterfalls()" [anchorIds]="historicalWaterfallIds" /></section>
+    <section class="custom-stress-section" aria-labelledby="custom-stress-heading"><header class="stress-section-heading"><h2 id="custom-stress-heading">Custom stress scenario</h2><p>Apply an immediate market shock with sector-specific adjustments to current positions.</p></header><div class="custom-stress-grid"><app-custom-shock [portfolio]="current" [preset]="customShocks()" (shockRun)="runCustomShock($event)" /><app-scenario-waterfall title="Custom scenario waterfall" emptyMessage="Run Custom Shock to apply this scenario." [waterfalls]="customWaterfalls()" [anchorIds]="customWaterfallIds" /></div></section>
     <app-concentration [portfolio]="current" />
   }
 </main>
