@@ -17,6 +17,18 @@ export class RiskContributionComponent {
   readonly portfolio = input.required<RiskPortfolio>();
   readonly options = computed<EChartsOption>(() => createContributionOptions(this.portfolio()));
   readonly contributionTotal = computed(() => calculateRiskContributionTotal(this.portfolio().holdings.map((holding) => holding.volatilityContributionPercent)));
+  readonly leadingSector = computed(() => {
+    const bySector = new Map<string, { contribution: number; allocation: number; symbols: string[] }>();
+    for (const holding of this.portfolio().holdings) {
+      if (!holding.sector) continue;
+      const current = bySector.get(holding.sector) ?? { contribution: 0, allocation: 0, symbols: [] };
+      current.contribution += holding.volatilityContributionPercent ?? 0;
+      current.allocation += holding.allocationPercent ?? 0;
+      current.symbols.push(holding.symbol);
+      bySector.set(holding.sector, current);
+    }
+    return [...bySector.entries()].sort(([, left], [, right]) => right.contribution - left.contribution)[0] ?? null;
+  });
 
   cashShare(): string {
     const portfolio = this.portfolio();
