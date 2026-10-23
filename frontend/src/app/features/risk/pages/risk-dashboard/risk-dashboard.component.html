@@ -17,6 +17,7 @@
   } @else if (error(); as message) {
     <section class="state-panel error-panel" role="alert"><strong>Risk dashboard unavailable</strong><span>{{ message }}</span><button type="button" (click)="loadDashboard()">Retry</button></section>
   } @else if (portfolio(); as current) {
+    @if (hasPositions()) {
     <section class="kpi-grid" aria-label="Risk summary">
       <article class="kpi"><span>Portfolio value</span><strong>${{ formatCurrency(current.portfolioValueUsd) }}</strong><small>Cash + stocks</small><em>Current account equity</em></article>
       <article class="kpi"><span>Historical VaR</span><strong>${{ formatCurrency(selectedVaR()?.historicalUsd, 0) }}</strong><small>{{ ratioPercent(selectedVaR()?.historicalUsd, current.portfolioValueUsd) }}% · {{ horizon() }} day · 95%</small><em>Loss threshold</em></article>
@@ -35,5 +36,8 @@
     <section class="historical-stress-section" aria-labelledby="historical-stress-heading"><header class="stress-section-heading"><h2 id="historical-stress-heading">Historical stress tests</h2><p>Replay observed market events against current positions.</p></header><app-stress-scenarios [portfolio]="historicalPortfolio()!" (viewBreakdown)="focusBreakdown($event)" /><app-scenario-waterfall title="Historical scenario breakdown" [waterfalls]="historicalWaterfalls()" [anchorIds]="historicalWaterfallIds" /></section>
     <section class="custom-stress-section" aria-labelledby="custom-stress-heading"><header class="stress-section-heading"><h2 id="custom-stress-heading">Custom stress scenario</h2><p>Apply an immediate market shock with sector-specific adjustments to current positions.</p></header><div class="custom-stress-grid"><app-custom-shock [portfolio]="current" [preset]="customShocks()" (shockRun)="runCustomShock($event)" /><app-scenario-waterfall title="Custom scenario waterfall" emptyMessage="Run Custom Shock to apply this scenario." [waterfalls]="customWaterfalls()" [anchorIds]="customWaterfallIds" /></div></section>
     <app-concentration [portfolio]="current" />
+    } @else {
+      <section class="state-panel empty-portfolio-panel" role="status" aria-live="polite"><strong>No positions to analyse</strong><span>Risk analytics will appear once the portfolio contains at least one position.</span></section>
+    }
   }
 </main>

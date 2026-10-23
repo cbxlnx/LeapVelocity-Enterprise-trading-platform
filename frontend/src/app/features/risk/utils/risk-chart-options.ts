@@ -45,12 +45,13 @@ export function createHistogramOptions(bins: DistributionBin[], varUsd: number |
 export function createDrawdownOptions(points: DrawdownPoint[], maximumDrawdownPercent: number | null, maximumDrawdownDate: string | null): EChartsOption {
   const minimumDrawdown = Math.min(...points.map((point) => point.percent), 0);
   const drawdownPadding = Math.max(1, Math.abs(minimumDrawdown) * 0.1);
-  const lowerBound = minimumDrawdown - drawdownPadding;
+  const tickInterval = Math.abs(minimumDrawdown) >= 20 ? 10 : 5;
+  const lowerBound = Math.floor((minimumDrawdown - drawdownPadding) / tickInterval) * tickInterval;
   return {
     animation: false,
     grid: { left: 42, right: 18, top: 18, bottom: 34, containLabel: true },
     xAxis: { type: 'category', data: points.map((point) => point.date), axisLabel: { color: axisColor, fontSize: 9, hideOverlap: true, formatter: (value: string) => value.slice(5) }, axisLine: { lineStyle: { color: '#cbd5dc' } } },
-    yAxis: { type: 'value', max: 0, min: lowerBound, axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${value}%` }, splitLine: { lineStyle: { color: gridColor } } },
+    yAxis: { type: 'value', max: 0, min: lowerBound, interval: tickInterval, axisLabel: { color: axisColor, fontSize: 9, formatter: (value: number) => `${value}%` }, splitLine: { lineStyle: { color: gridColor } } },
     tooltip: { trigger: 'axis', className: 'chart-tooltip', valueFormatter: (value) => `${Number(value).toFixed(2)}%` },
     series: [{
       type: 'line',

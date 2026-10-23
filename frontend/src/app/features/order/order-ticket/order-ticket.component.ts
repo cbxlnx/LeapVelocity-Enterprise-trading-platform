@@ -45,6 +45,7 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
   quoteLoading = false;
   quoteError: string | null = null;
   private quoteSubscription: Subscription | null = null;
+  private autoFilledPrice: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -185,6 +186,16 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
       : `Maximum affordable: ${this.maxAffordableQuantity} shares`;
   }
 
+  /** The order-entry reference follows execution semantics: BUY uses ask and SELL uses bid. */
+  get executableReferencePrice(): number | null {
+    const side = this.orderForm.get('side')?.value;
+    return side === 'SELL' ? this.referenceQuote?.bid ?? null : this.referenceQuote?.ask ?? null;
+  }
+
+  get executableReferenceField(): 'bid' | 'ask' {
+    return this.orderForm.get('side')?.value === 'SELL' ? 'bid' : 'ask';
+  }
+
   get displayAccountId(): string {
     return this.accountId === null
       ? 'ACC---'
@@ -193,6 +204,10 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
 
   onSymbolChange(): void {
     this.showInstrumentOptions = true;
+  }
+
+  onSideChange(): void {
+    this.applyExecutableReferencePrice();
   }
 
   normalizeSymbol(): void {
@@ -267,6 +282,7 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
       price: null,
       duration: 'DAY',
     });
+    this.autoFilledPrice = null;
   }
 
   cancelOrder(order: Order): void {
@@ -370,7 +386,7 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
           return;
         }
         this.referenceQuote = quote;
-        this.orderForm.patchValue({ price: quote.lastPrice }, { emitEvent: false });
+        this.applyExecutableReferencePrice();
         this.quoteLoading = false;
         this.changeDetector.detectChanges();
       },
@@ -391,6 +407,25 @@ export class OrderTicketComponent implements OnInit, OnDestroy {
     this.referenceQuote = null;
     this.quoteError = null;
     this.quoteLoading = false;
+    if (this.isPriceAutoFilled()) {
+      this.orderForm.patchValue({ price: null }, { emitEvent: false });
+    }
+    this.autoFilledPrice = null;
+  }
+
+  private applyExecutableReferencePrice(): void {
+    if (!this.isPriceAutoFilled() && this.orderForm.get('price')?.value !== null) {
+      return;
+    }
+
+    const executablePrice = this.executableReferencePrice;
+    this.orderForm.patchValue({ price: executablePrice }, { emitEvent: false });
+    this.autoFilledPrice = executablePrice;
+  }
+
+  private isPriceAutoFilled(): boolean {
+    const currentPrice = this.orderForm.get('price')?.value;
+    return this.autoFilledPrice !== null && Number(currentPrice) === this.autoFilledPrice;
   }
 
   private currentFormSymbol(): string {

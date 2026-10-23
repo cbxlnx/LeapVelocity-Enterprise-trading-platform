@@ -22,7 +22,7 @@ describe('risk chart option factories', () => {
   it('adds a max drawdown point and two contribution series', () => {
     const drawdown = createDrawdownOptions(portfolio.drawdownSeries, portfolio.maximumDrawdownPercent, portfolio.maximumDrawdownDate);
     const drawdownSeries = Array.isArray(drawdown.series) ? drawdown.series[0] : drawdown.series;
-    expect(drawdown.yAxis).toMatchObject({ max: 0, min: expect.closeTo(-13.64, 2) });
+    expect(drawdown.yAxis).toMatchObject({ max: 0, min: -15, interval: 5 });
     expect(drawdownSeries).toHaveProperty('markPoint');
     expect((drawdownSeries as { markPoint: { data: Array<{ coord: [string, number] }> } }).markPoint.data[0].coord[1]).toBe(-12.4);
     const contribution = createContributionOptions(portfolio);
@@ -45,5 +45,14 @@ describe('risk chart option factories', () => {
     expect(values(series[0].data)).toEqual([0, 80, 80, 85, 0]);
     expect(values(series[1].data)).toEqual([100, 20, 10, 5, 85]);
     expect(series[1].data.slice(1, 4).map((item) => typeof item === 'number' ? undefined : item.itemStyle?.color)).toEqual(['#bb3842', '#16875d', '#bb3842']);
+  });
+
+  it('rounds deep drawdown bounds outward to clean ten-percent ticks', () => {
+    const options = createDrawdownOptions([
+      { date: '2026-01-01', percent: 0 },
+      { date: '2026-01-02', percent: -27.1282832 },
+    ], -27.1282832, '2026-01-02');
+
+    expect(options.yAxis).toMatchObject({ max: 0, min: -30, interval: 10 });
   });
 });
