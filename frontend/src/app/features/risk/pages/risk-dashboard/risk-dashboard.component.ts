@@ -43,6 +43,7 @@ export class RiskDashboardComponent implements OnInit {
   readonly customWaterfallIds = ['waterfall-custom-shock'];
 
   readonly portfolio = computed(() => this.data()?.portfolios[0] ?? null);
+  readonly hasPositions = computed(() => (this.portfolio()?.holdings.length ?? 0) > 0);
   readonly selectedVaR = computed(() => {
     const current = this.portfolio();
     return current?.varByHorizon?.[this.horizon()] ?? (this.horizon() === 1 ? current?.oneDayVar ?? null : null);
