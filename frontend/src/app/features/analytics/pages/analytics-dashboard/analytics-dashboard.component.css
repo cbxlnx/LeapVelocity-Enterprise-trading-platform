@@ -11,6 +11,7 @@
 .range-controls small { color: #718296; font-size: 9px; }
 .range-controls button { width: 112px; height: 32px; margin-top: 16px; padding: 0 12px; border: 0; border-radius: 3px; background: #c05819; color: #fff; font: 700 10px var(--font-ui, sans-serif); letter-spacing: .2px; cursor: pointer; }
 .range-controls button:disabled { opacity: .55; cursor: not-allowed; }
+.range-controls button:hover:not(:disabled) { background: #aa4c15; }
 .instrument-view { display: grid; grid-template-columns: minmax(0, 3fr) minmax(230px, 1fr); gap: 18px; align-items: stretch; }
 .instrument-main, .range-statistics { background: #fff; border: 1px solid #dce3e8; border-radius: 4px; }
 .instrument-main { padding: 20px 16px 12px; }
@@ -53,6 +54,8 @@ select { width: 100%; }
 .comparison-picker { display: flex; gap: 6px; max-width: 520px; }
 .comparison-picker select { flex: 1; }
 .comparison-picker button { height: 29px; padding: 0 10px; border: 1px solid #c8d2de; border-radius: 3px; background: #fff; color: #34495d; font: 600 9px var(--font-ui, sans-serif); cursor: pointer; }
+.comparison-picker button:hover:not(:disabled),
+.comparison-picker button:focus-visible { background: #e8eff4; border-color: #9aaebf; }
 .selected-comparisons { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .selected-comparisons button { padding: 4px 7px; border: 1px solid #c8d2de; border-radius: 3px; background: #eef3f6; color: #34495d; font: 600 9px var(--font-ui, sans-serif); cursor: pointer; }
 .comparison-note { display: flex; align-items: center; gap: 10px; margin: 12px -16px 0; padding: 12px 16px; border-top: 1px solid #dce3e8; border-bottom: 1px solid #dce3e8; background: #fbfcfd; color: #142337; font-size: 11px; line-height: 1.55; }
@@ -162,6 +165,13 @@ select { width: 100%; }
 		background: var(--surface);
 		border-color: var(--border);
 		color: var(--text);
+	}
+
+	.comparison-picker button:hover:not(:disabled),
+	.comparison-picker button:focus-visible {
+		background: #385164;
+		border-color: #7190a5;
+		color: #ffffff;
 	}
 
 	.comparison-panel .gain,
