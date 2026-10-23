@@ -1,0 +1,72 @@
+<main class="settings-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <span>ACCOUNT</span><span aria-hidden="true">/</span><span>SETTINGS</span>
+  </nav>
+
+  <header class="page-header">
+    <h1>Account Settings</h1>
+    <p>Top up cash, check your account ID and change your username.</p>
+  </header>
+
+  <p *ngIf="loading" class="state">Loading account settings...</p>
+  <p *ngIf="error" class="message error" role="alert">{{ error }}</p>
+  <p *ngIf="success" class="message success" role="status">{{ success }}</p>
+
+  <section *ngIf="account && balance && !loading" class="settings-sections">
+    <article class="settings-card cash-card">
+      <header class="card-heading">
+        <h2>Cash balance</h2>
+        <p>Add funds to your trading account.</p>
+      </header>
+      <div class="card-body">
+        <div class="balance-display">
+          <span>AVAILABLE TO TRADE</span>
+          <strong>{{ formatCurrency(balance.cashBalance) }}</strong>
+        </div>
+        <form [formGroup]="depositForm" (ngSubmit)="submitDeposit()">
+          <label for="deposit-amount">TOP-UP AMOUNT</label>
+          <div class="deposit-row">
+            <div class="amount-input"><span>$</span><input id="deposit-amount" type="number" min="0.01" max="1000000" step="0.01" formControlName="amount" /></div>
+            <div class="preset-list" aria-label="Top-up presets">
+              <button *ngFor="let amount of [1000, 5000, 25000]" type="button" class="preset-button" (click)="selectDepositAmount(amount)">${{ amount | number }}</button>
+            </div>
+          </div>
+          <p *ngIf="amountControl.invalid && amountControl.touched" class="field-error">Enter an amount between $0.01 and $1,000,000.00.</p>
+          <p class="helper-text">Up to $1,000,000.00 per top-up. Funds are available immediately.</p>
+        </form>
+      </div>
+      <footer class="card-actions">
+        <button type="button" class="primary-button" [disabled]="submitting || depositForm.invalid" (click)="submitDeposit()">{{ submitting ? 'Processing...' : 'Top up' }}</button>
+      </footer>
+    </article>
+
+    <article class="settings-card compact-card">
+      <header class="card-heading">
+        <h2>Account ID</h2>
+        <p>Give this to your broker or compliance team.</p>
+      </header>
+      <div class="card-body inline-value">
+        <code>{{ account.accountId }}</code>
+        <button type="button" class="secondary-button" (click)="copyAccountId()">{{ copied ? 'Copied' : 'Copy' }}</button>
+      </div>
+    </article>
+
+    <article class="settings-card compact-card">
+      <header class="card-heading">
+        <h2>Username</h2>
+        <p>How you appear in the workstation and in order confirmations.</p>
+      </header>
+      <div class="card-body username-body">
+        <form [formGroup]="usernameForm" (ngSubmit)="saveUsername()">
+          <label for="username">USERNAME</label>
+          <input id="username" class="username-input" type="text" formControlName="username" />
+          <p *ngIf="usernameControl.invalid && usernameControl.touched" class="field-error">3-20 characters. Letters, numbers, dot, dash or underscore.</p>
+          <p *ngIf="usernameSaved" class="saved-text" role="status">Username saved for this session.</p>
+        </form>
+      </div>
+      <footer class="card-actions">
+        <button type="button" class="primary-button" [disabled]="usernameForm.invalid" (click)="saveUsername()">Save username</button>
+      </footer>
+    </article>
+  </section>
+</main>

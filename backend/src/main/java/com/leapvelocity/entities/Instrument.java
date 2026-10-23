@@ -25,17 +25,25 @@ public class Instrument {
     
     @Column(nullable = false)
     private boolean tradable;                  // whether instrument can be traded
+
+    @Column(nullable = false)
+    private String sector;                     // canonical risk/concentration sector
     
     // Constructors
     public Instrument() {
     }
     
     public Instrument(String symbol, String name, String assetClass, String currency, boolean tradable) {
+        this(symbol, name, assetClass, currency, tradable, "Other");
+    }
+
+    public Instrument(String symbol, String name, String assetClass, String currency, boolean tradable, String sector) {
         this.symbol = symbol;
         this.name = name;
         this.assetClass = assetClass;
         this.currency = currency;
         this.tradable = tradable;
+        this.sector = sector;
     }
     
     // Getters and Setters
@@ -85,5 +93,13 @@ public class Instrument {
     
     public void setTradable(boolean tradable) {
         this.tradable = tradable;
+    }
+
+    public String getSector() {
+        return sector;
+    }
+
+    public void setSector(String sector) {
+        this.sector = sector;
     }
 }

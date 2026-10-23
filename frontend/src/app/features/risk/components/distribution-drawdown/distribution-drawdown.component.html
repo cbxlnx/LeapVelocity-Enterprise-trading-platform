@@ -1,0 +1,22 @@
+<div class="chart-pair">
+  <section class="risk-card" aria-labelledby="distribution-heading">
+    <header class="section-heading">
+      <h2 id="distribution-heading">Monte Carlo distribution <span class="info" title="Simulated account outcomes">i</span></h2>
+      <p>1-day account P&amp;L · 95% confidence · {{ portfolio().monteCarloPathCount.toLocaleString() }} paths</p>
+    </header>
+    <div class="chart-label">Paths</div>
+    <div class="chart histogram-chart" echarts [options]="histogramOptions()" aria-label="Monte Carlo distribution histogram"></div>
+    <div class="es-callout"><div><strong>Expected Shortfall · 95% · 1 day</strong><span>Average loss in the worst 5% of simulated outcomes</span></div><div class="callout-value">−${{ currency(portfolio().expectedShortfallUsd) }}<small>{{ ratio(portfolio().expectedShortfallUsd, portfolio().portfolioValueUsd) }}% of account</small></div></div>
+    <p class="fine-print">Illustrative simulated outcomes, not predicted returns. Losses can exceed VaR.</p>
+  </section>
+
+  <section class="risk-card" aria-labelledby="drawdown-heading">
+    <header class="section-heading">
+      <h2 id="drawdown-heading">Historical drawdown <span class="info" title="Account equity below prior peak">i</span></h2>
+      <p>{{ portfolio().historicalFrom }} – {{ portfolio().historicalTo }} · Account equity below prior peak</p>
+    </header>
+    <div class="chart drawdown-chart" echarts [options]="drawdownOptions()" aria-label="Historical drawdown chart"></div>
+    <div class="drawdown-callout"><div><strong>Largest peak-to-trough decline</strong><span>Trough on {{ portfolio().maximumDrawdownDate ?? 'Unavailable' }} · Historical window only</span></div><strong>−{{ metric(portfolio().maximumDrawdownPercent) }}%</strong></div>
+    <p class="fine-print">Illustrative historical series · Includes cash · Not a forecast of future drawdowns.</p>
+  </section>
+</div>

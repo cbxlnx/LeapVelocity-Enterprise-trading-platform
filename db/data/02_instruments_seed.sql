@@ -1,16 +1,21 @@
 -- Seed data for instruments table
--- Available tradable financial instruments
+-- Curated US-listed tickers. market-data-publisher polls these symbols.
+-- Keep this list in sync with the default in market-data-publisher/publisher.py.
 
 TRUNCATE TABLE instruments RESTART IDENTITY CASCADE;
 
 INSERT INTO instruments 
-    (symbol, name, asset_class, currency, tradable)
+    (symbol, name, asset_class, currency, tradable, sector)
 VALUES
-    ('GLBEQ1', 'Global Equity Index Fund', 'EQUITY', 'GBP', TRUE),
-    ('CORPB1', 'Sterling Corporate Bond Fund', 'BOND', 'GBP', TRUE),
-    ('CASHGBP', 'Cash GBP', 'CASH', 'GBP', FALSE),
-    ('GILT10', 'UK 10-Year Gilt', 'BOND', 'GBP', TRUE),
-    ('USEQUITY', 'US Equity Fund', 'EQUITY', 'GBP', TRUE),
-    ('EMMARKET', 'Emerging Markets Fund', 'EQUITY', 'GBP', TRUE),
-    ('EUROFIX', 'Euro Fixed Income Fund', 'BOND', 'GBP', TRUE),
-    ('MULTIFUND', 'Multi-Asset Fund', 'FUND', 'GBP', TRUE);
+    ('AAPL', 'Apple Inc.', 'EQUITY', 'USD', TRUE, 'Technology'),
+    ('MSFT', 'Microsoft Corporation', 'EQUITY', 'USD', TRUE, 'Technology'),
+    ('GOOGL', 'Alphabet Inc. Class A', 'EQUITY', 'USD', TRUE, 'Technology'),
+    ('AMZN', 'Amazon.com, Inc.', 'EQUITY', 'USD', TRUE, 'Other'),
+    ('NVDA', 'NVIDIA Corporation', 'EQUITY', 'USD', TRUE, 'Technology'),
+    ('TSLA', 'Tesla, Inc.', 'EQUITY', 'USD', TRUE, 'Other'),
+    ('JPM', 'JPMorgan Chase & Co.', 'EQUITY', 'USD', TRUE, 'Financials'),
+    ('JNJ', 'Johnson & Johnson', 'EQUITY', 'USD', TRUE, 'Healthcare'),
+    ('XOM', 'Exxon Mobil Corporation', 'EQUITY', 'USD', TRUE, 'Energy'),
+    ('WMT', 'Walmart Inc.', 'EQUITY', 'USD', TRUE, 'Other'),
+    ('SPY', 'SPDR S&P 500 ETF Trust', 'FUND', 'USD', TRUE, 'Other'),
+    ('QQQ', 'Invesco QQQ Trust', 'FUND', 'USD', TRUE, 'Technology');

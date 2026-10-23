@@ -142,6 +142,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /accounts/{id}/deposit:
+    post:
+      summary: Deposit cash into an account
+      tags:
+        - accounts
+      operationId: depositAccountCash
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositCashRequest'
+      responses:
+        '200':
+          description: Cash deposited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalanceDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '404':
+          description: Account not found
+        '422':
+          description: Invalid deposit amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /accounts/{id}/orders:
     get:
       summary: Retrieve all orders for an account
@@ -211,6 +250,128 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /market-data/quotes/{symbol}:
+    get:
+      summary: Retrieve the latest market quote for a symbol
+      tags:
+        - market-data
+      operationId: getLatestQuote
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Latest quote retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '404':
+          description: No quote has been received yet for the symbol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /market-data/quotes:
+    get:
+      summary: Retrieve latest market quotes for several symbols
+      description: >-
+        Symbols are trimmed, upper-cased and de-duplicated. Unknown symbols are listed in
+        missingSymbols and still return HTTP 200. Use lastPrice for valuation and asOf to judge freshness.
+      tags:
+        - market-data
+      operationId: getLatestQuotes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated ticker symbols, at most 50 entries; each 1-20 characters
+          example: AAPL,MSFT
+      responses:
+        '200':
+          description: Quotes retrieved; unknown symbols are listed in missingSymbols
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchQuotesDto'
+        '400':
+          description: symbols is missing, has a blank or over-length entry, or exceeds 50 entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /instruments/search:
+    get:
+      summary: Search instruments by symbol or name prefix
+      tags:
+        - instruments
+      operationId: searchInstruments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ''
+          description: Symbol or name prefix to match; blank returns an empty list
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 50
+          description: Maximum number of results; values outside 1-50 are clamped
+      responses:
+        '200':
+          description: Matching instruments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentDto'
+        '401':
+          description: Unauthorized - missing or invalid JWT
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     PlaceOrderRequestDto:
@@ -224,6 +385,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         quantity:
           type: number
           format: double
@@ -255,6 +417,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         side:
           type: string
           enum: [BUY, SELL]
@@ -310,6 +473,28 @@ components:
           format: date-time
           description: Last update timestamp
 
+    AccountBalanceDto:
+      type: object
+      required: [accountId, cashBalance]
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
+          description: Updated available cash balance
+
+    DepositCashRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Amount to add to available cash
+
     PositionDto:
       type: object
       required: [id, accountId, symbol, quantity, averageCost]
@@ -325,6 +510,7 @@ components:
         symbol:
           type: string
           description: Instrument ticker symbol
+          example: USEQUITY
         quantity:
           type: number
           format: double
@@ -333,6 +519,111 @@ components:
           type: number
           format: double
           description: Average acquisition cost per share
+
+    QuoteDto:
+      type: object
+      required: [symbol, lastPrice, asOf, source]
+      properties:
+        symbol:
+          type: string
+          description: Instrument ticker symbol
+          example: AAPL
+        lastPrice:
+          type: number
+          format: double
+          description: Last traded price
+        bid:
+          type: number
+          format: double
+          description: Best bid price
+        ask:
+          type: number
+          format: double
+          description: Best ask price
+        currency:
+          type: string
+          description: Quote currency
+          example: USD
+        asOf:
+          type: string
+          format: date-time
+          description: Quote timestamp reported by the publisher
+        source:
+          type: string
+          description: Data source name
+          example: yfinance
+        change:
+          type: number
+          format: double
+          nullable: true
+          description: Price change from the previous close
+        changePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Percentage change from the previous close
+        dayHigh:
+          type: number
+          format: double
+          nullable: true
+          description: Session high price
+        dayLow:
+          type: number
+          format: double
+          nullable: true
+          description: Session low price
+        volume:
+          type: integer
+          format: int64
+          nullable: true
+          description: Reported session volume
+
+    BatchQuotesDto:
+      type: object
+      required: [quotes, missingSymbols, serverTimestamp]
+      properties:
+        quotes:
+          type: array
+          description: Quotes for the requested symbols that have been received, in request order
+          items:
+            $ref: '#/components/schemas/QuoteDto'
+        missingSymbols:
+          type: array
+          description: Normalized requested symbols with no quote received yet
+          items:
+            type: string
+            example: MSFT
+        serverTimestamp:
+          type: string
+          format: date-time
+          description: Time the batch response was built
+
+    InstrumentDto:
+      type: object
+      required: [id, symbol, name, assetClass, currency, tradable]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal instrument identifier
+        symbol:
+          type: string
+          description: Instrument ticker symbol
+          example: AAPL
+        name:
+          type: string
+          description: Instrument display name
+        assetClass:
+          type: string
+          description: Asset class
+          example: EQUITY
+        currency:
+          type: string
+          description: Trading currency
+          example: USD
+        tradable:
+          type: boolean
+          description: Whether orders can be placed for the instrument
 
     ErrorResponse:
       type: object
@@ -347,4 +638,4 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authentication (to be implemented)
+      description: Unexpired NestJS-issued access JWT required; signature and issuer are verified by Spring Security

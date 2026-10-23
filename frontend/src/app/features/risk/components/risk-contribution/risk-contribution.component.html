@@ -1,0 +1,19 @@
+<section class="risk-card contribution-card" aria-labelledby="contribution-heading">
+  <header class="section-heading split-heading">
+    <div>
+      <h2 id="contribution-heading">Risk contribution by holding <span class="info" title="Allocation versus portfolio volatility share">i</span></h2>
+      <p>Allocation is not the same as risk · Contribution to annualized portfolio volatility</p>
+    </div>
+    <div class="legend"><span><i class="allocation"></i>Allocation · % of invested equity</span><span><i class="contribution"></i>Share of total portfolio volatility</span></div>
+  </header>
+  <div class="contribution-layout">
+    <div class="chart contribution-chart" echarts [options]="options()" aria-label="Risk contribution by holding"></div>
+    <aside class="insight-panel">
+      <strong>Technology drives 54.5% of volatility</strong>
+      <p>MSFT and AAPL make up 50.1% of invested equity. Their risk contribution also reflects volatility and correlation with other holdings.</p>
+      <p>Diversification offsets some standalone risk. Contributions sum to 100% of portfolio volatility; individual holding VaRs do not add to portfolio VaR.</p>
+      <small>Cash: {{ cashShare() }}% of account · 0% volatility contribution</small>
+    </aside>
+  </div>
+  <p class="fine-print">Covariance-based risk attribution · {{ portfolio().dailyReturnCount }} daily returns · Account volatility {{ metric(portfolio().volatilityPercent) }}% annualized · Contributions total {{ contributionTotal().toFixed(1) }}%</p>
+</section>

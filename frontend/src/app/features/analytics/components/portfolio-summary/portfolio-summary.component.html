@@ -1,0 +1,73 @@
+<section class="overview" aria-labelledby="portfolio-heading" [attr.aria-busy]="loading()">
+  <div class="overview-heading">
+    <div><h2 id="portfolio-heading">Account overview</h2>
+      @if (summary(); as data) {
+        <p>Account {{ data.accountId }} · {{ data.currency }}
+          @if (data.asOf) { · Closing prices as of <time [attr.datetime]="data.asOf">{{ formatDate(data.asOf) }}</time> }
+        </p>
+      }
+    </div>
+    <button type="button" (click)="refresh.emit()" [disabled]="loading()">Refresh summary</button>
+  </div>
+
+  @if (loading()) {
+    <p class="summary-state" role="status">Loading portfolio summary…</p>
+  } @else if (error(); as message) {
+    <div class="summary-state summary-error" role="alert"><p>{{ message }}</p><button type="button" (click)="refresh.emit()">Retry summary</button></div>
+  } @else if (summary(); as data) {
+    @if (data.issues.length) {
+      <div class="valuation-issues" role="alert">
+        <strong>Portfolio valuation unavailable</strong>
+        <ul>@for (issue of data.issues; track $index) { <li>{{ issue }}</li> }</ul>
+        <p>Market value, equity, P&amp;L and allocation are unavailable until these issues are resolved.</p>
+      </div>
+    }
+    <div class="metrics">
+      <div class="metric"><span>Holdings value</span><strong data-testid="holdings-value">{{ data.holdingsValue === null ? 'Unavailable' : (data.holdingsValue | currency:data.currency) }}</strong></div>
+      <div class="metric"><span>Cash balance</span><strong data-testid="cash-balance">{{ data.cashBalance | currency:data.currency }}</strong><small>Shown separately from allocation</small></div>
+      <div class="metric"><span>Total equity</span><strong data-testid="total-equity">{{ data.totalEquity === null ? 'Unavailable' : (data.totalEquity | currency:data.currency) }}</strong><small>Cash + holdings value</small></div>
+      <div class="metric"><span>Unrealized P&amp;L</span><strong data-testid="unrealized-pnl" [class.negative]="data.unrealizedPnL !== null && data.unrealizedPnL < 0" [class.positive]="data.unrealizedPnL !== null && data.unrealizedPnL > 0">{{ data.unrealizedPnL === null ? 'Unavailable' : (data.unrealizedPnL | currency:data.currency) }}</strong><small>Cost basis: {{ data.costBasis === null ? 'Unavailable' : (data.costBasis | currency:data.currency) }}</small></div>
+    </div>
+
+    @if (data.holdings.length === 0) {
+      <p class="summary-state" role="status">No invested holdings. Your account value consists of cash.</p>
+    } @else {
+      <h3>Holdings</h3>
+      <div class="holdings-scroll">
+        <table class="holdings-table">
+          <caption class="visually-hidden">Current account holdings and valuation</caption>
+          <thead><tr><th scope="col">Instrument</th><th scope="col">Quantity</th><th scope="col">Average cost</th><th scope="col">Close</th><th scope="col">Market value</th><th scope="col">Cost basis</th><th scope="col">Unrealized P&amp;L</th><th scope="col">Weight</th></tr></thead>
+          <tbody>
+            @for (holding of data.holdings; track holding.symbol) {
+              <tr>
+                <th scope="row">{{ holding.symbol }}</th>
+                <td>{{ holding.quantity | number:'1.0-4' }}</td>
+                <td>@if (holding.currency) { {{ holding.averageCost | currency:holding.currency }} } @else { {{ holding.averageCost | number:'1.2-2' }} }</td>
+                <td>{{ holding.price === null ? '—' : (holding.price | currency:data.currency) }}</td>
+                <td>{{ holding.marketValue === null ? '—' : (holding.marketValue | currency:data.currency) }}</td>
+                <td>{{ holding.costBasis === null ? '—' : (holding.costBasis | currency:data.currency) }}</td>
+                <td [class.negative]="holding.unrealizedPnL !== null && holding.unrealizedPnL < 0" [class.positive]="holding.unrealizedPnL !== null && holding.unrealizedPnL > 0">{{ holding.unrealizedPnL === null ? '—' : (holding.unrealizedPnL | currency:data.currency) }}</td>
+                <td>{{ holding.weight === null ? '—' : (holding.weight | percent:'1.1-1') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="allocation">
+        <h3>Instrument allocation</h3><p>Share of invested holdings. Cash is excluded.</p>
+        @if (data.valuationStatus === 'READY') {
+          @for (holding of data.holdings; track holding.symbol) {
+            @if (holding.weight !== null) {
+              <div class="allocation-item">
+                <div class="allocation-label"><span>{{ holding.symbol }}</span><strong>{{ holding.weight | percent:'1.1-1' }}</strong></div>
+                <div class="allocation-track" aria-hidden="true"><div class="allocation-fill" [style.width.%]="holding.weight * 100"></div></div>
+              </div>
+            }
+          }
+        } @else { <p>Allocation unavailable because the holdings cannot all be valued.</p> }
+      </div>
+    }
+    <p class="summary-note">Current quantities and cash, with holdings valued at one common completed trading date. Unrealized P&amp;L compares market value with purchase cost; it is not a selected-period return. Demo accounts use illustrative purchase costs.</p>
+  }
+</section>

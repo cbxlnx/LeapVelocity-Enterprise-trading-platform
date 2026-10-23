@@ -1,0 +1,333 @@
+<div class="dashboard-container">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <mat-spinner></mat-spinner>
+    <p>Loading your dashboard...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="error-state">
+    <mat-card class="error-card">
+      <mat-card-content>
+        <p class="error-message">{{ error }}</p>
+        <button type="button" class="action-btn action-btn-secondary" (click)="refreshData()">Retry</button>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Main Content -->
+  <ng-container *ngIf="dashboardData && !isLoading">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+      <div class="header-content">
+        <p class="eyebrow">ACCOUNT OVERVIEW</p>
+        <h1>Welcome, {{ dashboardData.account.holderName }}</h1>
+        <p class="subtitle">Your accounts, capital and positions at a glance.</p>
+      </div>
+      <button type="button" class="refresh-btn" (click)="refreshData()">Refresh</button>
+    </div>
+
+    <!-- Balance & Account Info Card -->
+    <mat-card class="balance-card">
+      <mat-card-content>
+        <div class="card-grid">
+          <div class="card-section">
+            <p class="label">CURRENT CASH BALANCE</p>
+            <h3 class="balance-value">{{ formatCurrency(dashboardData.balance.cashBalance) }}</h3>
+            <p class="timestamp">{{ formatUpdatedAt(dashboardData.account.lastUpdated) }}</p>
+          </div>
+
+          <div class="card-section">
+            <div class="account-info">
+              <span class="account-id">{{ dashboardData.account.accountId }}</span>
+              <span [ngClass]="getStatusBadgeClass(dashboardData.account.status)">
+                {{ dashboardData.account.status }}
+              </span>
+            </div>
+            <p class="label">TOTAL ACCOUNT EQUITY</p>
+            <h3 class="equity-value">{{ formatCurrency(dashboardData.totalEquity) }}</h3>
+            <p class="cost-basis">Cash + current market value</p>
+          </div>
+
+          <div class="card-section">
+            <p class="label">UNREALIZED GAIN / LOSS</p>
+            <h3 class="gain-loss-value" [ngClass]="getGainLossClass(dashboardData.unrealizedGainLoss)">
+              <span class="gain-loss-direction" aria-hidden="true">{{ getGainLossDirection(dashboardData.unrealizedGainLoss) }}</span>
+              {{ formatCurrency(dashboardData.unrealizedGainLoss) }}
+            </h3>
+            <p class="gain-loss-percent" [ngClass]="getGainLossClass(dashboardData.unrealizedGainLoss)">
+              {{ formatPercent(dashboardData.unrealizedGainLossPercent) }} gain
+            </p>
+            <p class="gain-loss-cost-basis">
+              Cost basis {{ formatCurrency(dashboardData.portfolioCostBasis) }}
+            </p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button type="button" class="action-btn action-btn-primary" (click)="navigateToOrder()">Place Order</button>
+      <button type="button" class="action-btn action-btn-secondary" (click)="navigateToBlotter()">View History</button>
+      <button type="button" class="action-btn action-btn-secondary" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Positions Table -->
+    <div class="positions-section">
+      <mat-card class="positions-card">
+        <div class="positions-header">
+          <div>
+            <p class="positions-kicker">PORTFOLIO ALLOCATION</p>
+            <h3>Positions</h3>
+            <span class="holdings-count">{{ dashboardData.positions.length }} holdings · USD</span>
+          </div>
+        </div>
+        <mat-card-content>
+          <div class="allocation-bar" aria-label="Portfolio allocation">
+            @for (segment of getAllocationSegments(dashboardData); track segment.symbol) {
+              <span
+                class="allocation-segment"
+                [style.width.%]="segment.percentage"
+                [style.backgroundColor]="segment.color"
+                [attr.title]="segment.symbol + ' ' + formatAllocationPercent(segment.percentage) + (segment.gainLossPercent !== undefined ? ' · Gain/loss: ' + formatPercent(segment.gainLossPercent) : '')">
+              </span>
+            }
+          </div>
+          <div class="allocation-legend">
+            @for (segment of getAllocationSegments(dashboardData); track segment.symbol) {
+              <span><i [style.backgroundColor]="segment.color" aria-hidden="true"></i>{{ segment.symbol }} {{ formatAllocationPercent(segment.percentage) }}</span>
+            }
+          </div>
+          <div class="table-wrapper">
+            <table mat-table [dataSource]="dashboardData.positions" class="positions-table">
+              <!-- Symbol Column -->
+              <ng-container matColumnDef="symbol">
+                <th mat-header-cell *matHeaderCellDef>Symbol</th>
+                <td mat-cell *matCellDef="let position">
+                  <div class="position-symbol">
+                    <strong>{{ position.symbol }}</strong>
+                    @if (position.instrumentName) {
+                      <span>{{ position.instrumentName }}</span>
+                    }
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Quantity Column -->
+              <ng-container matColumnDef="quantity">
+                <th mat-header-cell *matHeaderCellDef>Quantity</th>
+                <td mat-cell *matCellDef="let position">{{ position.quantity }}</td>
+              </ng-container>
+
+              <!-- Average Cost Column -->
+              <ng-container matColumnDef="averageCost">
+                <th mat-header-cell *matHeaderCellDef>Average cost</th>
+                <td mat-cell *matCellDef="let position">{{ formatCurrency(position.averageCost) }}</td>
+              </ng-container>
+
+              <!-- Current Market Value Column -->
+              <ng-container matColumnDef="currentMarketValue">
+                <th mat-header-cell *matHeaderCellDef>Current market value</th>
+                <td mat-cell *matCellDef="let position">
+                  @if (position.quoteAvailable) {
+                    {{ formatCurrency(position.currentMarketValue || 0) }}
+                  } @else {
+                    <span class="quote-unavailable">Quote unavailable</span>
+                  }
+                </td>
+              </ng-container>
+
+              <!-- Gain/Loss Column -->
+              <ng-container matColumnDef="gainLoss">
+                <th mat-header-cell *matHeaderCellDef>Gain/Loss</th>
+                <td mat-cell *matCellDef="let position" [ngClass]="position.quoteAvailable ? getGainLossClass(position.gainLoss) : ''">
+                  @if (position.quoteAvailable) {
+                    <span class="gain-loss-direction" aria-hidden="true">{{ getGainLossDirection(position.gainLoss) }}</span>
+                    <strong>{{ formatCurrency(position.gainLoss || 0) }}</strong>
+                    <span class="percent">({{ formatPercent(position.gainLossPercent || 0) }})</span>
+                  } @else {
+                    <span class="quote-unavailable">Quote unavailable</span>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+          </div>
+
+          <!-- Total Market Value Row -->
+          <div class="total-row">
+            <strong>Total market value</strong>
+            <strong>{{ formatCurrency(dashboardData.totalMarketValue) }}</strong>
+          </div>
+          @if (dashboardData.unavailableQuoteCount > 0) {
+            <p class="quote-note" role="status">
+              {{ dashboardData.unavailableQuoteCount }} position(s) without a market quote are excluded from total market value, equity, and gain/loss.
+            </p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Live Market Overview -->
+    @if (isMarketOverviewLoading) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
+          <div>
+            <p class="eyebrow">LIVE MARKET DATA</p>
+            <h2 id="market-overview-title">Market overview</h2>
+            <p class="market-overview-description">
+              Latest USD quotes from the instrument catalog. Quote availability depends on the live market-data feed.
+            </p>
+          </div>
+          <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+        </div>
+        <div class="market-state" role="status">
+          <mat-spinner diameter="28"></mat-spinner>
+          <span>Loading live market data...</span>
+        </div>
+      </section>
+    } @else if (marketOverviewError) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
+          <div>
+            <p class="eyebrow">LIVE MARKET DATA</p>
+            <h2 id="market-overview-title">Market overview</h2>
+          </div>
+          <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+        </div>
+        <div class="market-state market-error" role="alert">
+          <p>{{ marketOverviewError }}</p>
+          <button type="button" class="action-btn action-btn-secondary" (click)="loadMarketOverview()">Retry</button>
+        </div>
+      </section>
+    } @else if (marketOverview; as overview) {
+      <section class="market-overview" aria-labelledby="market-overview-title">
+        <div class="market-overview-header">
+        <div>
+          <p class="eyebrow">LIVE MARKET DATA</p>
+          <h2 id="market-overview-title">Market overview</h2>
+          <p class="market-overview-description">
+            Latest USD quotes from the instrument catalog. Quote availability depends on the live market-data feed.
+          </p>
+        </div>
+        <button type="button" class="refresh-btn" (click)="loadMarketOverview()">Refresh</button>
+      </div>
+
+        <div class="market-stats">
+          <div class="market-stat market-status-stat">
+            <span class="market-stat-label">MARKET STATUS</span>
+            <strong class="market-status-badge" [class.market-closed-badge]="overview.marketStatus === 'CLOSED'">{{ overview.marketStatus }}</strong>
+            <small>{{ overview.lastUpdated ? formatQuoteTime(overview.lastUpdated) : 'No quote timestamp' }}</small>
+          </div>
+          <div class="market-stat">
+            <span class="market-stat-label">LIVE QUOTES</span>
+            <strong class="market-stat-value market-gain">{{ overview.liveQuotes | number }}</strong>
+            <small>symbols with a current quote</small>
+          </div>
+          <div class="market-stat">
+            <span class="market-stat-label">AWAITING QUOTES</span>
+            <strong class="market-stat-value market-loss">{{ overview.awaitingQuotes | number }}</strong>
+            <small>symbols not yet received</small>
+          </div>
+          <div class="market-stat">
+            <span class="market-stat-label">TOTAL TRACKED</span>
+            <strong class="market-stat-value">{{ overview.totalTracked | number }}</strong>
+            <small>tradable USD instruments</small>
+          </div>
+        </div>
+
+        <div class="market-snapshot">
+          <div class="market-snapshot-header">
+            <div>
+              <h3>Market snapshot</h3>
+              <p>Latest prices, bid/ask and source for the tracked instrument catalog.</p>
+            </div>
+            <span>{{ overview.rows.length > 12 ? 12 : overview.rows.length }} symbols shown</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="market-table">
+              <thead>
+                <tr>
+                  <th scope="col">Symbol</th>
+                  <th scope="col">Instrument</th>
+                  <th scope="col">Asset class</th>
+                  <th scope="col">Last price</th>
+                  <th scope="col">Chg $</th>
+                  <th scope="col">Chg %</th>
+                  <th scope="col">Day high</th>
+                  <th scope="col">Day low</th>
+                  <th scope="col">Volume</th>
+                  <th scope="col">Bid</th>
+                  <th scope="col">Ask</th>
+                  <th scope="col">As of</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of overview.rows.slice(0, 12); track row.instrument.symbol) {
+                  <tr>
+                    <td><strong>{{ row.instrument.symbol }}</strong></td>
+                    <td>{{ row.instrument.name }}</td>
+                    <td>{{ row.instrument.assetClass }}</td>
+                    @if (row.quote; as quote) {
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.change)">
+                        <span class="price-direction" aria-hidden="true">{{ getQuoteChangeSign(quote.change) }}</span>
+                        {{ formatCurrency(quote.lastPrice) }}
+                      </td>
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.change)">{{ formatOptionalCurrency(quote.change) }}</td>
+                      <td class="mono" [ngClass]="getQuoteChangeClass(quote.changePercent)">{{ formatOptionalPercent(quote.changePercent) }}</td>
+                      <td class="mono">{{ formatOptionalCurrency(quote.dayHigh) }}</td>
+                      <td class="mono">{{ formatOptionalCurrency(quote.dayLow) }}</td>
+                      <td class="mono">{{ formatVolume(quote.volume) }}</td>
+                      <td class="mono">{{ quote.bid === null ? '—' : formatCurrency(quote.bid) }}</td>
+                      <td class="mono">{{ quote.ask === null ? '—' : formatCurrency(quote.ask) }}</td>
+                      <td>{{ formatQuoteTime(quote.asOf) }}</td>
+                      <td><span class="quote-status quote-status-live">LIVE</span></td>
+                    } @else {
+                      <td colspan="9" class="quote-unavailable">Quote unavailable</td>
+                      <td><span class="quote-status quote-status-waiting">WAITING</span></td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <div class="market-movers">
+          <article class="mover-card">
+            <p class="mover-kicker">TOP MOVERS</p>
+            <h3 class="mover-up-heading">Gainers</h3>
+            <p class="mover-description">Ranked by daily change % · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Chg %</span></div>
+            @for (row of overview.gainers; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span>{{ formatCurrency(row.quote!.lastPrice) }}</span><span class="mover-up">{{ formatOptionalPercent(row.quote!.changePercent) }}</span></div>
+            }
+          </article>
+          <article class="mover-card">
+            <p class="mover-kicker">TOP MOVERS</p>
+            <h3 class="mover-down-heading">Decliners</h3>
+            <p class="mover-description">Ranked by daily change % · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Chg %</span></div>
+            @for (row of overview.decliners; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span>{{ formatCurrency(row.quote!.lastPrice) }}</span><span class="mover-down">{{ formatOptionalPercent(row.quote!.changePercent) }}</span></div>
+            }
+          </article>
+          <article class="mover-card">
+            <p class="mover-kicker">MOST ACTIVE</p>
+            <h3>By Volume</h3>
+            <p class="mover-description">Ranked by share volume · Live market feed</p>
+            <div class="mover-head"><span>#</span><span>Symbol</span><span>Last</span><span>Volume</span></div>
+            @for (row of overview.mostActive; track row.instrument.symbol; let index = $index) {
+              <div class="mover-row"><span>{{ index + 1 }}</span><strong>{{ row.instrument.symbol }}</strong><span [ngClass]="row.priceDirection === 'up' ? 'mover-up' : row.priceDirection === 'down' ? 'mover-down' : ''">{{ formatCurrency(row.quote!.lastPrice) }}</span><span>{{ formatVolume(row.quote!.volume) }}</span></div>
+            }
+          </article>
+      </div>
+    }
+  </ng-container>
+</div>

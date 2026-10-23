@@ -17,9 +17,12 @@ import com.leapvelocity.repository.InstrumentRepository;
 import com.leapvelocity.repository.OrderRepository;
 import com.leapvelocity.repository.PositionRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.lang.reflect.InvocationHandler;
@@ -62,6 +65,9 @@ class OrderExecutionServiceTransactionTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken("test-admin", null, "ROLE_ADMIN"));
+
         mocks = new RepositoryMocks();
         accountRepository = mocks.accountRepository();
         orderRepository = mocks.orderRepository();
@@ -85,6 +91,11 @@ class OrderExecutionServiceTransactionTest {
 
         Instrument instrument = new Instrument("TEST", "Test Instrument", "EQUITY", "USD", true);
         mocks.instruments.put("TEST", instrument);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     private Order placeAndSettle(Order order) {
@@ -312,7 +323,7 @@ class OrderExecutionServiceTransactionTest {
         @Test
         @DisplayName("should enlist order cancellation in single transaction")
         void cancelOrderIsTransactional() {
-            // Verify: Cancellation updates order status + refund/position atomically
+            // Verify: Cancellation updates only the unsettled order status atomically
             Account account = mocks.accounts.get(1L);
             
             Order order = new Order(account.getId(), "TEST", OrderSide.BUY,
@@ -326,9 +337,9 @@ class OrderExecutionServiceTransactionTest {
             // Cancel the order
             service.cancelOrder(order.getId());
 
-            // Verify: Status changed AND balance refunded in same transaction
+            // Verify: Status changed and the account remains unchanged
             assertEquals(OrderStatus.CANCELLED, order.getStatus());
-            assertEquals(originalBalance.add(new BigDecimal("5000.00")), account.getCashBalance());
+            assertEquals(originalBalance, account.getCashBalance());
         }
     }
 

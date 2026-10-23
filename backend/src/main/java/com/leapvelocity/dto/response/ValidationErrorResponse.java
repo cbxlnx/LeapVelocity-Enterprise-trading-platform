@@ -3,6 +3,7 @@ package com.leapvelocity.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.leapvelocity.entities.enums.api.ErrorCode;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class ValidationErrorResponse {
     private List<FieldError> errors;
 
     public ValidationErrorResponse() {
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now(ZoneOffset.UTC);
         this.errors = new ArrayList<>();
     }
 

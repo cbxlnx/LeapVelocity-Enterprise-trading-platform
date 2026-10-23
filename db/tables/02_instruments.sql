@@ -5,5 +5,6 @@ CREATE TABLE instruments (
     name            TEXT NOT NULL,
     asset_class     TEXT NOT NULL CHECK (asset_class IN ('EQUITY', 'BOND', 'FUND', 'CASH')),
     currency        TEXT NOT NULL,
-    tradable        BOOLEAN NOT NULL
+    tradable        BOOLEAN NOT NULL,
+    sector          TEXT NOT NULL DEFAULT 'Other'
 );

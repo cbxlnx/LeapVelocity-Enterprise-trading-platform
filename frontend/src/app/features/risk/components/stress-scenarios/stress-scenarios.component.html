@@ -1,0 +1,22 @@
+<section class="risk-card stress-card" aria-labelledby="stress-heading">
+  <header class="section-heading split-heading">
+    <div>
+      <h2 id="stress-heading">Stress test scenarios</h2>
+      <p>Current positions under historical and user-defined shocks · Replays, not forecasts</p>
+    </div>
+    <span class="label">Illustrative estimates</span>
+  </header>
+  <div class="table-head"><span>Scenario / shock</span><span>Estimated loss</span><span>% of account</span><span>Impact · 0–{{ impactScale() }}% loss</span><span>Action</span></div>
+  <div class="scenario-list">
+    @for (scenario of portfolio().scenarios; track scenario.id) {
+      <div class="scenario-row">
+        <div class="scenario-name"><strong>{{ scenario.title }}</strong><span>{{ scenario.period }} · {{ scenario.description }}</span></div>
+        <div class="loss">−${{ currency(scenario.lossUsd) }}</div>
+        <div class="loss">−{{ metric(scenario.lossPercent) }}%</div>
+        <div class="impact"><span [class.severe]="isSevereImpact(scenario.lossPercent)" [style.width.%]="impactWidth(scenario.lossPercent)"></span></div>
+        <div class="action"><button type="button" (click)="viewBreakdown.emit(scenario.id)">View breakdown</button></div>
+      </div>
+    }
+  </div>
+  <p class="fine-print">Historical shocks applied to current holdings across each event; cash remains unchanged. No trading, fees or liquidity effects. Losses can exceed these estimates.</p>
+</section>

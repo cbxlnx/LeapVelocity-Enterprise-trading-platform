@@ -14,16 +14,22 @@ import com.leapvelocity.exceptions.InsufficientFundsException;
 import com.leapvelocity.exceptions.InstrumentNotFoundException;
 import com.leapvelocity.exceptions.OrderNotFoundException;
 import com.leapvelocity.service.OrderExecutionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
@@ -79,11 +85,30 @@ class OrderControllerTest {
                 "IDEM-001"
         );
         executedOrder.setStatus(OrderStatus.FILLED);
-        executedOrder.setCreatedOn(LocalDateTime.now());
+        executedOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         // Setup the expected response
         expectedResponse = OrderDto.from(executedOrder);
+
+                authenticateAs(1L);
     }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
+        }
+
+        private void authenticateAs(long accountId) {
+                Jwt jwt = Jwt.withTokenValue("test-token")
+                                .header("alg", "HS256")
+                                .claim("sub", "42")
+                                .claim("username", "order-owner")
+                                .claim("accountId", accountId)
+                                .claim("roles", java.util.List.of("TRADER"))
+                                .build();
+                JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, java.util.List.of(new SimpleGrantedAuthority("ROLE_TRADER")));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
     // =============== Happy Path Tests ===============
 
@@ -160,6 +185,27 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders - Returns 403 when placing an order for another account")
+    void postOrdersReturns403WhenCrossAccount() throws Exception {
+        PlaceOrderRequestDto crossAccountRequest = new PlaceOrderRequestDto(
+                2L,
+                "AAPL",
+                OrderSide.BUY,
+                new BigDecimal("100.00"),
+                new BigDecimal("150.25"),
+                "IDEM-CROSS-001"
+        );
+
+        mockMvc.perform(post("/api/v1/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(crossAccountRequest)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+        verifyNoInteractions(orderExecutionService);
     }
 
     // =============== Validation Error Tests ===============
@@ -496,12 +542,12 @@ class OrderControllerTest {
         Order newOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
         newOrder.setId(orderId);
         newOrder.setStatus(OrderStatus.NEW);
-        newOrder.setCreatedOn(LocalDateTime.now());
+        newOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         Order cancelledOrder = new Order(1L, "AAPL", OrderSide.BUY, new BigDecimal("100"), new BigDecimal("150"), "IDEM-001");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -561,7 +607,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "AAPL", OrderSide.SELL, new BigDecimal("50"), new BigDecimal("200"), "IDEM-SELL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -581,7 +627,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "MSFT", OrderSide.SELL, new BigDecimal("75"), new BigDecimal("300"), "IDEM-SELL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         when(orderExecutionService.cancelOrder(orderId)).thenReturn(cancelledOrder);
 
@@ -635,7 +681,7 @@ class OrderControllerTest {
     void deleteOrderResponseIncludesAllFields() throws Exception {
         // Arrange
         UUID orderId = UUID.randomUUID();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         Order cancelledOrder = new Order(2L, "GOOGL", OrderSide.BUY, new BigDecimal("10"), new BigDecimal("2800"), "IDEM-GOOGL");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
@@ -666,7 +712,7 @@ class OrderControllerTest {
         Order cancelledOrder = new Order(1L, "TSLA", OrderSide.BUY, new BigDecimal("5"), new BigDecimal("250"), "IDEM-TSLA");
         cancelledOrder.setId(orderId);
         cancelledOrder.setStatus(OrderStatus.CANCELLED);
-        cancelledOrder.setCreatedOn(LocalDateTime.now());
+        cancelledOrder.setCreatedOn(LocalDateTime.now(ZoneOffset.UTC));
 
         // First call succeeds, second throws exception
         when(orderExecutionService.cancelOrder(orderId))

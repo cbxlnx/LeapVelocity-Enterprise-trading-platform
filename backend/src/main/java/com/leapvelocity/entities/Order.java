@@ -5,6 +5,7 @@ import com.leapvelocity.entities.enums.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 // customer trade order
@@ -63,7 +64,7 @@ public class Order {
         this.price = price;
         this.status = OrderStatus.NEW;
         this.idempotencyKey = idempotencyKey;
-        this.createdOn = LocalDateTime.now();
+        this.createdOn = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     @PrePersist
@@ -75,7 +76,7 @@ public class Order {
             this.status = OrderStatus.NEW;
         }
         if (this.createdOn == null) {
-            this.createdOn = LocalDateTime.now();
+            this.createdOn = LocalDateTime.now(ZoneOffset.UTC);
         }
     }
     

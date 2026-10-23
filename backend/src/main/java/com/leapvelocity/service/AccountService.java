@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 public class AccountService {
@@ -35,6 +36,17 @@ public class AccountService {
     @Transactional(readOnly = true)
     public AccountBalanceDto getBalance(Long id) {
         Account account = requireAccount(id);
+        return new AccountBalanceDto(account.getId(), account.getCashBalance());
+    }
+
+    @Transactional
+    public AccountBalanceDto depositCash(Long id, BigDecimal amount) {
+        Account account = requireAccount(id);
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be greater than zero");
+        }
+
+        account.credit(amount);
         return new AccountBalanceDto(account.getId(), account.getCashBalance());
     }
 

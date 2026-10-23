@@ -1,0 +1,6 @@
+:host { display: block; }
+.comparison-chart { width: 100%; height: 260px; }
+
+:host-context(.dark-theme) {
+	.comparison-chart { filter: brightness(1.34) contrast(.95); }
+}

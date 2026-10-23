@@ -1,0 +1,50 @@
+:host {
+  display: grid;
+  place-items: center;
+  container-type: size;
+  pointer-events: none;
+  color: var(--market-cyan);
+}
+.market-stage {
+  position: relative;
+  width: min(100cqw, 181.81818cqh);
+  height: min(100cqh, 55cqw);
+}
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.market-grid {
+  stroke: color-mix(in srgb, var(--market-cyan) 22%, transparent);
+  stroke-width: 1;
+}
+.chart-area {
+  fill: url(#market-area);
+}
+.chart-line {
+  fill: none;
+  stroke: url(#market-wire);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--market-cyan) 32%, transparent));
+}
+.chart-markers circle {
+  fill: var(--canvas);
+  stroke: var(--market-green);
+  stroke-width: 2;
+}
+.chart-labels {
+  fill: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.chart-labels text:last-child {
+  fill: var(--market-green);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}

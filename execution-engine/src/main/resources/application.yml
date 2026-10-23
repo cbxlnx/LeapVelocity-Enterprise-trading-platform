@@ -18,6 +18,13 @@ server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
 
+logging:
+  level:
+    root: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: INFO
+    com.neueda.trading.engine: INFO
+
 management:
   endpoints:
     web:
@@ -25,11 +32,17 @@ management:
         include: health,info
 
 engine:
-  min-delay: ${ENGINE_MIN_DELAY:10000ms}
-  max-delay: ${ENGINE_MAX_DELAY:15000ms}
-  max-price-improvement-bps: ${ENGINE_MAX_PRICE_IMPROVEMENT_BPS:50}
+  quote-staleness: ${ENGINE_QUOTE_STALENESS:15s}
   venue: SIM
   topics:
     orders: orders
     executions: ${ENGINE_TOPICS_EXECUTIONS:trade-events}
+    market-data: market-data
+    dead-letter: ${ENGINE_TOPICS_DEAD_LETTER:orders-dlq}
     partitions: 3
+  retry:
+    max-retries: ${ENGINE_RETRY_MAX_RETRIES:3}
+    initial-backoff: ${ENGINE_RETRY_INITIAL_BACKOFF:5s}
+    backoff-multiplier: ${ENGINE_RETRY_BACKOFF_MULTIPLIER:1.0}
+    max-backoff: ${ENGINE_RETRY_MAX_BACKOFF:5s}
+

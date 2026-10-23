@@ -1,0 +1,715 @@
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+
+:root {
+--font-ui: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+--font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+--canvas: #f3f5f6;
+--surface: #ffffff;
+--surface-subtle: #f8fafc;
+--text: #192830;
+--text-strong: #142337;
+--text-muted: #586c7d;
+--border: #d5dde6;
+--surface-raised: #ffffff;
+--surface-inset: #f3f5f6;
+--accent: #c05819;
+--accent-hover: #a84715;
+--on-accent: #ffffff;
+--market-cyan: #087f91;
+--market-green: #106647;
+}
+
+:root.dark-theme {
+  --canvas: #0f161e;
+  --surface: #1a2631;
+  --surface-raised: #22313e;
+  --surface-subtle: #293b4a;
+  --surface-inset: #131e27;
+  --text: #e8eef3;
+  --text-strong: #f4f7fa;
+  --text-muted: #b3c0cb;
+  --border: #4b6071;
+  --market-cyan: #26cdd0;
+  --market-green: #34df9b;
+}
+
+// Keep Angular Material typography on the same bundled font as the application.
+*, *::before, *::after {
+  font-family: var(--font-ui) !important;
+}
+
+.font-mono, .font-mono *, code, pre {
+  font-family: var(--font-mono) !important;
+}
+
+mat-icon, .mat-icon, .material-icons, .material-symbols-outlined {
+  font-family: 'Material Icons' !important;
+}
+
+// ===== CUSTOM GLOBAL STYLES =====
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: var(--canvas);
+  color: var(--text);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.chart-tooltip {
+  border: 1px solid #d5dde6 !important;
+  border-radius: 3px !important;
+  box-shadow: 0 8px 20px rgba(20, 35, 55, 0.18) !important;
+  font-family: var(--font-ui) !important;
+}
+
+:root.dark-theme .chart-tooltip {
+  background: #22313e !important;
+  border-color: #7190a5 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42) !important;
+  color: #f4f7fa !important;
+}
+
+:root.dark-theme .chart-tooltip * {
+  color: #e8eef3 !important;
+}
+
+:root.dark-theme body {
+  color-scheme: dark;
+}
+
+:root.dark-theme body h1,
+:root.dark-theme body h2,
+:root.dark-theme body h3,
+:root.dark-theme body h4,
+:root.dark-theme body strong,
+:root.dark-theme body label,
+:root.dark-theme body th,
+:root.dark-theme body td,
+:root.dark-theme body p,
+:root.dark-theme body span {
+  color: var(--text);
+}
+
+:root.dark-theme body h1,
+:root.dark-theme body h2,
+:root.dark-theme body h3,
+:root.dark-theme body h4 {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body input,
+:root.dark-theme body select,
+:root.dark-theme body textarea,
+:root.dark-theme body button {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body input::placeholder,
+:root.dark-theme body textarea::placeholder {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body table thead tr,
+:root.dark-theme body table tbody tr:hover {
+  background-color: var(--surface-subtle);
+}
+
+:root.dark-theme body table,
+:root.dark-theme body table tbody tr,
+:root.dark-theme body .simulation,
+:root.dark-theme body .overview,
+:root.dark-theme body .filter-panel,
+:root.dark-theme body .history-card,
+:root.dark-theme body mat-card {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+:root.dark-theme body mat-card,
+:root.dark-theme body .chart-card,
+:root.dark-theme body .simulation,
+:root.dark-theme body .overview,
+:root.dark-theme body .filter-panel,
+:root.dark-theme body .history-card,
+:root.dark-theme body .order-panel,
+:root.dark-theme body .review-panel,
+:root.dark-theme body .result-panel,
+:root.dark-theme body .account-strip {
+  background-color: var(--surface-raised);
+}
+
+:root.dark-theme body table thead tr,
+:root.dark-theme body .table-wrapper,
+:root.dark-theme body .holdings-scroll {
+  background-color: var(--surface-inset);
+}
+
+:root.dark-theme body .text-muted,
+:root.dark-theme body .text-slate,
+:root.dark-theme body .eyebrow,
+:root.dark-theme body .subtitle {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .bg-canvas {
+  background-color: var(--canvas);
+}
+
+:root.dark-theme body .bg-surface {
+  background-color: var(--surface);
+}
+
+:root.dark-theme body .analytics-container,
+:root.dark-theme body .blotter-container,
+:root.dark-theme body .dashboard-container,
+:root.dark-theme body .order-container,
+:root.dark-theme body .login-container,
+:root.dark-theme body .register-container,
+:root.dark-theme body .signed-out-container,
+:root.dark-theme body .not-found-container {
+  background-color: var(--canvas);
+  color: var(--text);
+}
+
+:root.dark-theme body .mat-mdc-menu-panel,
+:root.dark-theme body .mat-mdc-dialog-container,
+:root.dark-theme body .mat-mdc-select-panel,
+:root.dark-theme body .mat-mdc-autocomplete-panel {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+:root.dark-theme body .order-confirmation,
+:root.dark-theme body .cancel-confirmation {
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+
+:root.dark-theme body .confirmation-header h2,
+:root.dark-theme body .confirmation-order-id,
+:root.dark-theme body .confirmation-summary dd,
+:root.dark-theme body .cancel-confirmation-header h2,
+:root.dark-theme body .cancel-order-summary strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .confirmation-header p,
+:root.dark-theme body .confirmation-summary dt,
+:root.dark-theme body .cancel-confirmation-header > p:last-child,
+:root.dark-theme body .cancel-order-summary span,
+:root.dark-theme body .cancel-confirmation-note {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .confirmation-summary dl,
+:root.dark-theme body .cancel-order-summary {
+  border-color: var(--border);
+}
+
+:root.dark-theme body .confirmation-secondary,
+:root.dark-theme body .cancel-keep-button {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .confirmation-secondary:hover,
+:root.dark-theme body .cancel-keep-button:hover {
+  background: var(--surface-subtle);
+}
+
+:root.dark-theme body .confirmation-notice {
+  background: #193f32;
+  color: #9ce4bf;
+}
+
+:root.dark-theme body .status-badge {
+  background: #176b4b;
+  border: 1px solid #58c09a;
+  color: #f4f7fa;
+}
+
+:root.dark-theme body .status-badge.status-suspended,
+:root.dark-theme body .status-badge.status-closed,
+:root.dark-theme body .status-badge.status-unavailable {
+  background: #71343a;
+  border-color: #ff8f8f;
+  color: #fff0f0;
+}
+
+:root.dark-theme body .instrument-options {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+:root.dark-theme body .instrument-option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+:root.dark-theme body .instrument-option:hover,
+:root.dark-theme body .instrument-option:focus-visible {
+  background: #385164;
+  color: #ffffff;
+}
+
+:root.dark-theme body .instrument-option strong {
+  color: #ffffff;
+}
+
+:root.dark-theme body .instrument-option span {
+  color: #c4d0da;
+}
+
+.place-order-button:disabled {
+  background: rgba(63, 95, 168, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+:root.dark-theme body .risk-dashboard {
+  background: var(--canvas);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .risk-card,
+:root.dark-theme body .risk-dashboard .kpi,
+:root.dark-theme body .risk-dashboard .state-panel {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard h1,
+:root.dark-theme body .risk-dashboard h2,
+:root.dark-theme body .risk-dashboard .kpi strong,
+:root.dark-theme body .risk-dashboard .metadata strong,
+:root.dark-theme body .risk-dashboard .insight-row strong,
+:root.dark-theme body .risk-dashboard .state-panel strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .risk-dashboard .eyebrow,
+:root.dark-theme body .risk-dashboard .intro,
+:root.dark-theme body .risk-dashboard .as-of,
+:root.dark-theme body .risk-dashboard .kpi span,
+:root.dark-theme body .risk-dashboard .kpi small,
+:root.dark-theme body .risk-dashboard .insights-card > p,
+:root.dark-theme body .risk-dashboard .insight-row span,
+:root.dark-theme body .risk-dashboard .insight-row small,
+:root.dark-theme body .risk-dashboard .insight-note,
+:root.dark-theme body .risk-dashboard .state-panel,
+:root.dark-theme body .risk-dashboard .stress-alert small {
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .risk-dashboard .toolbar label {
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .toolbar select,
+:root.dark-theme body .risk-dashboard .refresh,
+:root.dark-theme body .risk-dashboard .state-panel button {
+  background: var(--surface-inset);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .refresh:hover,
+:root.dark-theme body .risk-dashboard .state-panel button:hover {
+  background: #385164;
+  color: #ffffff;
+}
+
+:root.dark-theme body .risk-dashboard .notice,
+:root.dark-theme body .risk-dashboard .insight-panel {
+  background: var(--surface-inset);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+:root.dark-theme body .risk-dashboard .notice strong,
+:root.dark-theme body .risk-dashboard .insight-panel strong {
+  color: var(--text-strong);
+}
+
+:root.dark-theme body .risk-dashboard .insight-row {
+  border-color: var(--border);
+}
+
+:root.dark-theme body .risk-dashboard .stress-alert {
+  background: #3b252a;
+  color: var(--text);
+}
+
+:root.dark-theme body .risk-dashboard .loss-kpi strong,
+:root.dark-theme body .risk-dashboard .loss-kpi em,
+:root.dark-theme body .risk-dashboard .stress-alert > strong,
+:root.dark-theme body .risk-dashboard .stress-alert b {
+  color: #ff8f8f;
+}
+
+:root.dark-theme body .risk-dashboard .spinner {
+  border-color: var(--border);
+  border-top-color: #f08a52;
+}
+
+:root.dark-theme body .risk-dashboard .chart {
+  filter: brightness(1.18) contrast(.96);
+}
+
+:root.dark-theme body .risk-dashboard app-risk-contribution,
+:root.dark-theme body .risk-dashboard app-distribution-drawdown,
+:root.dark-theme body .risk-dashboard app-stress-scenarios,
+:root.dark-theme body .risk-dashboard app-custom-shock,
+:root.dark-theme body .risk-dashboard app-scenario-waterfall,
+:root.dark-theme body .risk-dashboard app-concentration {
+  display: block;
+  margin-top: 22px;
+}
+
+:root.dark-theme body .risk-dashboard .risk-card,
+:root.dark-theme body .risk-dashboard .waterfall-card {
+  background: var(--surface-raised) !important;
+  border-color: var(--border) !important;
+}
+
+:root.dark-theme body .risk-dashboard .segmented button,
+:root.dark-theme body .risk-dashboard .actions button,
+:root.dark-theme body .risk-dashboard .shock-value,
+:root.dark-theme body .risk-dashboard .action button {
+  background: var(--surface-inset) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+:root.dark-theme body .risk-dashboard .segmented button.active {
+  background: var(--surface-subtle) !important;
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .allocation-note,
+:root.dark-theme body .risk-dashboard .impact-panel,
+:root.dark-theme body .risk-dashboard .rule-note,
+:root.dark-theme body .risk-dashboard .scenario-detail,
+:root.dark-theme body .risk-dashboard .insight-panel,
+:root.dark-theme body .risk-dashboard .sector-card,
+:root.dark-theme body .risk-dashboard .warning {
+  background: var(--surface-inset) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border);
+}
+
+:root.dark-theme body .risk-dashboard .table-head,
+:root.dark-theme body .risk-dashboard .sector-table-head,
+:root.dark-theme body .risk-dashboard .table-wrap thead,
+:root.dark-theme body .risk-dashboard .table-wrap tfoot {
+  background: var(--surface-inset) !important;
+  color: var(--text-muted) !important;
+}
+
+:root.dark-theme body .risk-dashboard .scenario-row,
+:root.dark-theme body .risk-dashboard .post-shock,
+:root.dark-theme body .risk-dashboard .waterfall-card footer,
+:root.dark-theme body .risk-dashboard .table-wrap td,
+:root.dark-theme body .risk-dashboard .table-wrap th,
+:root.dark-theme body .risk-dashboard .sector-row {
+  border-color: var(--border) !important;
+}
+
+:root.dark-theme body .risk-dashboard .scenario-name strong,
+:root.dark-theme body .risk-dashboard .scenario-detail strong,
+:root.dark-theme body .risk-dashboard .post-shock strong,
+:root.dark-theme body .risk-dashboard .sector-card > strong,
+:root.dark-theme body .risk-dashboard .allocation-note strong,
+:root.dark-theme body .risk-dashboard .rule-note strong {
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .loss,
+:root.dark-theme body .risk-dashboard .impact-value,
+:root.dark-theme body .risk-dashboard .callout-value,
+:root.dark-theme body .risk-dashboard .drawdown-callout > strong,
+:root.dark-theme body .risk-dashboard .waterfall-card footer strong {
+  color: #ffaaaa !important;
+}
+
+:root.dark-theme body .risk-dashboard .impact {
+  background: #344553 !important;
+}
+
+:root.dark-theme body .risk-dashboard .es-callout,
+:root.dark-theme body .risk-dashboard .stress-alert {
+  background: #3b252a !important;
+}
+
+:root.dark-theme body .risk-dashboard .chart,
+:root.dark-theme body .risk-dashboard echarts {
+  filter: brightness(1.2) contrast(.96);
+}
+
+:root.dark-theme body .risk-dashboard .kpi em {
+  color: #8ae6b9;
+}
+
+:root.dark-theme body .risk-dashboard .loss-kpi strong,
+:root.dark-theme body .risk-dashboard .loss-kpi em {
+  color: #ffaaaa !important;
+}
+
+:root.dark-theme body .risk-dashboard .risk-card button:hover:not(:disabled),
+:root.dark-theme body .risk-dashboard .refresh:hover:not(:disabled),
+:root.dark-theme body .risk-dashboard .state-panel button:hover:not(:disabled) {
+  background: #466277 !important;
+  border-color: #8fb0c4 !important;
+  color: #ffffff !important;
+}
+
+:root.dark-theme body .risk-dashboard .impact-panel > strong,
+:root.dark-theme body .risk-dashboard .impact-panel > span,
+:root.dark-theme body .risk-dashboard .impact-panel p,
+:root.dark-theme body .risk-dashboard .impact-panel .impact-value {
+  color: var(--text-strong) !important;
+}
+
+:root.dark-theme body .risk-dashboard .var-card .chart,
+:root.dark-theme body .risk-dashboard .contribution-chart,
+:root.dark-theme body .risk-dashboard .waterfall-card .chart {
+  filter: brightness(1.35) contrast(.94);
+}
+
+// ===== ENTERPRISE COLOR UTILITIES =====
+
+.bg-navy {
+  background-color: #142337;
+}
+
+.bg-slate {
+  background-color: #233748;
+}
+
+.bg-canvas {
+  background-color: #f3f5f6;
+}
+
+.bg-surface {
+  background-color: #ffffff;
+}
+
+.text-navy {
+  color: #142337;
+}
+
+.text-slate {
+  color: #233748;
+}
+
+.text-muted {
+  color: #586c7d;
+}
+
+// Financial Indicators
+.gain {
+  color: #106647 !important;
+  font-weight: 500;
+}
+
+.gain-bg {
+  background-color: #f0f7f4;
+  border-left: 3px solid #106647;
+}
+
+.loss {
+  color: #b13339 !important;
+  font-weight: 500;
+}
+
+.loss-bg {
+  background-color: #fdf5f5;
+  border-left: 3px solid #b13339;
+}
+
+// ===== MATERIAL OVERRIDES FOR ENTERPRISE LOOK =====
+
+mat-card {
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8ecef;
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  }
+}
+
+mat-card-header {
+  padding: 16px 16px 0 16px;
+  
+  mat-card-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+    color: #142337;
+  }
+}
+
+mat-card-content {
+  padding: 16px;
+}
+
+// Tables
+table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  thead tr {
+    background-color: #f9fafb;
+    border-bottom: 2px solid #e8ecef;
+    
+    th {
+      padding: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #586c7d;
+      text-align: left;
+    }
+  }
+  
+  tbody tr {
+    border-bottom: 1px solid #e8ecef;
+    
+    &:hover {
+      background-color: #f9fafb;
+    }
+    
+    td {
+      padding: 12px;
+      font-size: 14px;
+      color: #192830;
+    }
+  }
+}
+
+// Buttons
+button {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 2px;
+  
+  mat-icon {
+    margin-right: 8px;
+  }
+}
+
+// Status Badges
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &.status-active {
+    background-color: #f0f7f4;
+    color: #106647;
+    border: 1px solid #106647;
+  }
+  
+  &.status-suspended {
+    background-color: #fff9f0;
+    color: #c05819;
+    border: 1px solid #c05819;
+  }
+  
+  &.status-closed {
+    background-color: #fdf5f5;
+    color: #b13339;
+    border: 1px solid #b13339;
+  }
+}
+
+// Input Fields
+mat-form-field {
+  width: 100%;
+  
+  .mat-mdc-text-field-wrapper {
+    padding-bottom: 0.5em;
+  }
+  
+  input {
+    font-size: 14px;
+    color: #192830;
+  }
+}
+
+// Focus States
+:focus-visible {
+  outline: 2px solid #3f5fa8;
+  outline-offset: 2px;
+}
+
+// Disabled Elements
+:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// ===== RESPONSIVE & UTILITIES =====
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.gap-1 { gap: 8px; }
+.gap-2 { gap: 16px; }
+.gap-3 { gap: 24px; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 600; }
+.font-mono { font-family: var(--font-mono); }
+
+.text-sm { font-size: 12px; }
+.text-base { font-size: 14px; }
+.text-lg { font-size: 16px; }
+
+.uppercase { text-transform: uppercase; }
