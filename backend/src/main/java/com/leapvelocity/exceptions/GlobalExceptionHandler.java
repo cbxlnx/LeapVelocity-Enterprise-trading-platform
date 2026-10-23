@@ -77,6 +77,38 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles QuoteNotFoundException.
+     * Maps to HTTP 404 Not Found with error code MKT-404.
+     */
+    @ExceptionHandler(QuoteNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponse> handleQuoteNotFoundException(
+            QuoteNotFoundException ex,
+            HttpServletRequest request) {
+        logger.warn("Quote not found: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.QUOTE_NOT_FOUND,
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.QUOTE_NOT_FOUND.getHttpStatus()).body(response);
+    }
+
+    @ExceptionHandler(InvalidQuoteRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponse> handleInvalidQuoteRequestException(
+            InvalidQuoteRequestException ex,
+            HttpServletRequest request) {
+        logger.warn("Invalid quote request: {}", ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                ErrorCode.INVALID_QUOTE_REQUEST,
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(ErrorCode.INVALID_QUOTE_REQUEST.getHttpStatus()).body(response);
+    }
+
+    /**
      * Handles InsufficientFundsException.
      * Maps to HTTP 400 Bad Request with error code ORD-400.
      */
@@ -203,9 +235,9 @@ public class GlobalExceptionHandler {
      * Handles authentication/authorization exceptions.
      * Maps to HTTP 401 Unauthorized with error code AUTH-401.
      */
-    @ExceptionHandler({org.springframework.security.core.AuthenticationException.class, org.springframework.security.access.AccessDeniedException.class})
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+        @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+        @ResponseStatus(HttpStatus.UNAUTHORIZED)
+        public ResponseEntity<ErrorResponse> handleAuthenticationException(
             Exception ex,
             HttpServletRequest request) {
         logger.warn("Authentication/Authorization failed: {}", ex.getMessage());
@@ -216,6 +248,24 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(ErrorCode.UNAUTHORIZED.getHttpStatus()).body(response);
     }
+
+        /**
+         * Handles authorization failures after authentication succeeds.
+         * Maps to HTTP 403 Forbidden with error code AUTH-403.
+         */
+        @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+        @ResponseStatus(HttpStatus.FORBIDDEN)
+        public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+                        org.springframework.security.access.AccessDeniedException ex,
+                        HttpServletRequest request) {
+                logger.warn("Access denied: {}", ex.getMessage());
+                ErrorResponse response = new ErrorResponse(
+                                ErrorCode.FORBIDDEN,
+                                request.getRequestURI(),
+                                ex.getMessage()
+                );
+                return ResponseEntity.status(ErrorCode.FORBIDDEN.getHttpStatus()).body(response);
+        }
 
     /**
      * Generic exception handler for any unexpected RuntimeExceptions.
@@ -235,24 +285,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus()).body(response);
     }
 
-    /**     * Handles type mismatch errors (e.g., path variable type conversion failure).
-     * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
-     */
-    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
-            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
-            HttpServletRequest request) {
-        logger.warn("Type mismatch for parameter {}: expected {} but got '{}'", 
-                ex.getName(), ex.getRequiredType().getSimpleName(), ex.getValue());
+        /**
+         * Handles type mismatch errors (e.g., path variable type conversion failure).
+         * Maps to HTTP 422 Unprocessable Entity with error code VAL-422.
+         */
+        @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+        @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+        public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+                org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+                HttpServletRequest request) {
+        Class<?> requiredType = ex.getRequiredType();
+        String expectedType = requiredType != null ? requiredType.getSimpleName() : "unknown";
+
+        logger.warn(
+                "Type mismatch for parameter {}: expected {} but got '{}'",
+                ex.getName(),
+                expectedType,
+                ex.getValue());
+
         ErrorResponse response = new ErrorResponse(
                 ErrorCode.INVALID_INPUT,
                 request.getRequestURI(),
-                String.format("Invalid value for parameter '%s': expected %s", 
-                        ex.getName(), ex.getRequiredType().getSimpleName())
+                String.format(
+                        "Invalid value for parameter '%s': expected %s",
+                        ex.getName(),
+                        expectedType)
         );
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getHttpStatus()).body(response);
-    }
+        }
 
     /**     * Generic exception handler for any unexpected exceptions.
      * Maps to HTTP 500 Internal Server Error.

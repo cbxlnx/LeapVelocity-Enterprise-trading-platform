@@ -4,6 +4,7 @@ import com.leapvelocity.entities.enums.AccountStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 // customer trading account
 @Entity
@@ -44,19 +45,19 @@ public class Account {
         this.cashBalance = cashBalance;
         this.status = status;
         this.version = 0;
-        this.lastUpdated = LocalDateTime.now();
+        this.lastUpdated = LocalDateTime.now(ZoneOffset.UTC);
     }
     
     // deduct cash from account
     public void debit(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Debit amount must be positive");
         }
         if (this.cashBalance.compareTo(amount) < 0) {
             throw new IllegalArgumentException("Insufficient cash balance");
         }
         this.cashBalance = this.cashBalance.subtract(amount);
-        this.lastUpdated = LocalDateTime.now();
+        this.lastUpdated = LocalDateTime.now(ZoneOffset.UTC);
     }
     
     // add cash to account
@@ -65,7 +66,7 @@ public class Account {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
         this.cashBalance = this.cashBalance.add(amount);
-        this.lastUpdated = LocalDateTime.now();
+        this.lastUpdated = LocalDateTime.now(ZoneOffset.UTC);
     }
     
     // check if account is active

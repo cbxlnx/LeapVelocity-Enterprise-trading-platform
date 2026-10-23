@@ -1,0 +1,30 @@
+:host { display: block; }
+.risk-card { padding: 24px; border: 1px solid #d5dde6; border-radius: 4px; background: #fff; }
+.section-heading { margin-bottom: 16px; }
+.section-heading h2 { margin: 0; color: #142337; font-size: 19px; }
+.section-heading p { margin: 6px 0 0; color: #586c7d; font-size: 12px; }
+.split-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.info { display: inline-grid; width: 14px; height: 14px; place-items: center; border: 1px solid #718296; border-radius: 50%; color: #536a80; font: 700 9px Georgia, serif; vertical-align: 2px; }
+.legend { display: flex; flex-wrap: wrap; justify-content: end; gap: 14px; color: #718296; font-size: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 9px; height: 9px; }
+.legend .allocation { background: #aebdca; }
+.legend .contribution { background: #3679b3; }
+.contribution-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: center; }
+.contribution-chart { width: 100%; height: 260px; }
+.insight-panel { padding: 18px; background: #eaf1f5; color: #586c7d; font-size: 11px; line-height: 1.55; }
+.insight-panel strong { color: #20364e; font-size: 12px; }
+.insight-panel p { margin: 14px 0 0; }
+.insight-panel small { display: block; margin-top: 14px; font-size: 10px; }
+.fine-print { margin: 14px 0 0; color: #718296; font-size: 10px; }
+
+:host-context(.dark-theme) {
+	.risk-card { background: var(--surface-raised); border-color: var(--border); }
+	.section-heading h2 { color: var(--text-strong); }
+	.section-heading p, .legend, .fine-print { color: var(--text-muted); }
+	.insight-panel { background: var(--surface-inset); color: var(--text-muted); }
+	.insight-panel strong { color: var(--text-strong); }
+	.contribution-chart { filter: brightness(1.2) contrast(.96); }
+}
+@media (max-width: 900px) { .contribution-layout { grid-template-columns: 1fr; } .insight-panel { max-width: none; } }
+@media (max-width: 620px) { .risk-card { padding: 16px; } .split-heading { flex-direction: column; } .legend { justify-content: start; } }

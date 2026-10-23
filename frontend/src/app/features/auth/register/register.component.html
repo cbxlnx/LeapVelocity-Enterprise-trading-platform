@@ -1,0 +1,152 @@
+<main class="auth-container register-container" role="main">
+  <div class="auth-brand register-brand" aria-label="Enterprise Trading Platform">
+    <div class="brand-mark">ET</div>
+    <div>
+      <div class="brand-name">Enterprise Trading Platform</div>
+      <div class="brand-subtitle">INSTITUTIONAL EXECUTION</div>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    class="auth-theme-toggle"
+    (click)="toggleTheme()"
+    [attr.aria-label]="
+      themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+    "
+    [attr.aria-pressed]="themeService.theme() === 'dark'"
+    [attr.title]="themeService.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+  >
+    <span aria-hidden="true">{{ themeService.theme() === 'dark' ? '☀' : '☾' }}</span>
+  </button>
+
+  <div class="auth-stage">
+    <section class="auth-card register-card" aria-label="Account access">
+      <div class="auth-decoration" aria-hidden="true"></div>
+      <nav class="auth-tabs" aria-label="Account access">
+        <a routerLink="/register" class="active" aria-current="page">Sign up</a>
+        <a routerLink="/login">Sign in</a>
+      </nav>
+      <div class="auth-viewport">
+        <div class="auth-form">
+          <header class="register-header auth-header">
+            <p class="eyebrow">GET STARTED</p>
+            <h1>Create your<br />workspace</h1>
+            <p class="subtitle">Create your account.</p>
+          </header>
+
+          <div *ngIf="errorMessage$ | async as error" class="alert alert-error" role="alert">
+            <p class="alert-message">{{ error }}</p>
+          </div>
+
+          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+            <div class="form-group">
+              <label for="username" class="form-label">Username</label>
+              <div class="input-field">
+                <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5 20v-2a7 7 0 0 1 14 0v2" />
+                </svg>
+                <input
+                  id="username"
+                  type="text"
+                  class="form-input"
+                  formControlName="username"
+                  placeholder="Choose a username"
+                  autocomplete="username"
+                  (keydown)="onKeyDown($event)"
+                />
+              </div>
+              <span
+                *ngIf="
+                  controlHasError('username', 'required') ||
+                  controlHasError('username', 'minlength')
+                "
+                class="error-message"
+                >Use at least 3 characters</span
+              >
+            </div>
+
+            <div class="field-row">
+              <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-field">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="5" y="10" width="14" height="11" rx="3" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+                  </svg>
+                  <input
+                    id="password"
+                    type="password"
+                    class="form-input"
+                    formControlName="password"
+                    placeholder="Create password"
+                    autocomplete="new-password"
+                    (keydown)="onKeyDown($event)"
+                  />
+                </div>
+                <span
+                  *ngIf="
+                    controlHasError('password', 'required') ||
+                    controlHasError('password', 'minlength')
+                  "
+                  class="error-message"
+                  >Use at least 8 characters</span
+                >
+              </div>
+              <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm password</label>
+                <div class="input-field">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="5" y="10" width="14" height="11" rx="3" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+                  </svg>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    class="form-input"
+                    [class.input-error]="passwordsMismatch"
+                    formControlName="confirmPassword"
+                    placeholder="Repeat password"
+                    autocomplete="new-password"
+                    (keydown)="onKeyDown($event)"
+                  />
+                </div>
+                <span *ngIf="passwordsMismatch" class="error-message">Passwords must match</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="register-button"
+              [disabled]="isSubmitDisabled"
+              [attr.aria-busy]="isLoading$ | async"
+            >
+              <span *ngIf="!(isLoading$ | async)" class="button-text"
+                >Sign up<svg
+                  class="button-arrow"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M5 12h14m-5-5 5 5-5 5" /></svg
+              ></span>
+              <span *ngIf="isLoading$ | async" class="button-text"
+                ><span class="spinner"></span>Submitting...</span
+              >
+            </button>
+          </form>
+
+          <div class="security-note">
+            <span class="security-icon" aria-hidden="true"></span>
+            <p>Sign in to start managing your portfolio and trading activities.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <p class="account-link">Already have access? <a routerLink="/login">Sign in</a></p>
+  <p class="copyright">&copy; 2026 TradeVelocity</p>
+  <p class="restriction">Restricted to authorized account holders</p>
+</main>

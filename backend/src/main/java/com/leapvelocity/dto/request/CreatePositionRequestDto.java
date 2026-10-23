@@ -13,7 +13,7 @@ public record CreatePositionRequestDto(
         @Schema(description = "Account ID to associate with this position", example = "1")
         @NotNull Long accountId,
         
-        @Schema(description = "Trading symbol of the instrument", example = "AAPL")
+		@Schema(description = "Trading symbol of the instrument", example = "USEQUITY")
         @NotBlank String symbol,
         
         @Schema(description = "Number of shares held (must be positive)", example = "50")

@@ -13,7 +13,7 @@ public record PositionDto(
         @Schema(description = "Account ID that owns this position", example = "1")
         Long accountId,
         
-        @Schema(description = "Trading symbol of the held instrument", example = "AAPL")
+		@Schema(description = "Trading symbol of the held instrument", example = "USEQUITY")
         String symbol,
         
         @Schema(description = "Number of shares held", example = "50")

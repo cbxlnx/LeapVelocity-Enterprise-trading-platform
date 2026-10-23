@@ -1,0 +1,131 @@
+.signed-out-container {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 96px 24px 72px;
+  place-items: center;
+  background: #142337;
+  color: #192830;
+  font-family: var(--font-ui);
+}
+
+.signed-out-brand {
+  position: absolute;
+  top: 24px;
+  left: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+}
+
+.brand-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 3px;
+  background: #c84f16;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.signed-out-brand strong,
+.signed-out-brand small {
+  display: block;
+}
+
+.signed-out-brand strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.signed-out-brand small {
+  margin-top: 3px;
+  color: #aab9c8;
+  font-size: 9px;
+  letter-spacing: 1.4px;
+}
+
+.signed-out-card {
+  width: min(100%, 430px);
+  box-sizing: border-box;
+  padding: 28px;
+  gap: 8px;
+  border: 1px solid #d9e0e7;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.signed-out-card h1 {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.signed-out-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primary-action,
+.secondary-action {
+  display: grid;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: 3px;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.primary-action {
+  background: #c84f16;
+  color: #ffffff;
+}
+
+.secondary-action {
+  border: 1px solid #cbd8e2;
+  color: #263b50;
+}
+
+.primary-action:hover {
+  background: #ad4312;
+}
+
+.secondary-action:hover {
+  background: #f3f6f8;
+}
+
+.signed-out-container footer {
+  position: absolute;
+  right: 30px;
+  bottom: 28px;
+  color: #9aabba;
+  font-size: 10px;
+}
+
+@media (max-width: 560px) {
+  .signed-out-container {
+    padding: 82px 20px 64px;
+  }
+
+  .signed-out-brand {
+    top: 22px;
+    left: 20px;
+  }
+
+  .signed-out-card {
+    padding: 26px;
+  }
+
+  .signed-out-container footer {
+    right: 20px;
+    bottom: 24px;
+    left: 20px;
+    text-align: center;
+  }
+}

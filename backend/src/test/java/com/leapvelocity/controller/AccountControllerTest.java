@@ -3,6 +3,7 @@ package com.leapvelocity.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leapvelocity.dto.response.AccountBalanceDto;
 import com.leapvelocity.dto.response.AccountDto;
+import com.leapvelocity.dto.request.DepositCashRequestDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.dto.response.PositionDto;
 import com.leapvelocity.entities.Account;
@@ -14,7 +15,12 @@ import com.leapvelocity.entities.enums.OrderStatus;
 import com.leapvelocity.exceptions.AccountNotFoundException;
 import com.leapvelocity.exceptions.GlobalExceptionHandler;
 import com.leapvelocity.service.AccountService;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -23,6 +29,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +37,7 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -67,7 +75,7 @@ class AccountControllerTest {
                 new BigDecimal("250000.00"),
                 AccountStatus.ACTIVE,
                 1,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
         );
 
         testBalance = new AccountBalanceDto(
@@ -82,11 +90,30 @@ class AccountControllerTest {
 
         testOrders = List.of(
                 new OrderDto(UUID.randomUUID(), 1L, "AAPL", OrderSide.BUY, new BigDecimal("100.00"), new BigDecimal("150.25"),
-                        OrderStatus.FILLED, "IDEM-001", LocalDateTime.now()),
+                        OrderStatus.FILLED, "IDEM-001", LocalDateTime.now(ZoneOffset.UTC)),
                 new OrderDto(UUID.randomUUID(), 1L, "MSFT", OrderSide.SELL, new BigDecimal("50.00"), new BigDecimal("380.50"),
-                        OrderStatus.FILLED, "IDEM-002", LocalDateTime.now().minusHours(1))
+                        OrderStatus.FILLED, "IDEM-002", LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
         );
+
+                authenticateAs(1L);
     }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
+        }
+
+        private void authenticateAs(long accountId) {
+                Jwt jwt = Jwt.withTokenValue("test-token")
+                                .header("alg", "HS256")
+                                .claim("sub", "42")
+                                .claim("username", "account-owner")
+                                .claim("accountId", accountId)
+                                .claim("roles", List.of("TRADER"))
+                                .build();
+                JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_TRADER")));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
     // =============== GET /api/v1/accounts/{id} Tests ===============
 
@@ -112,6 +139,33 @@ class AccountControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/v1/accounts/{id}/deposit - Adds cash and returns updated balance")
+    void depositCashReturnsUpdatedBalance() throws Exception {
+        when(accountService.depositCash(1L, new BigDecimal("125.50")))
+                .thenReturn(new AccountBalanceDto(1L, new BigDecimal("250125.50")));
+
+        mockMvc.perform(post("/api/v1/accounts/1/deposit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DepositCashRequestDto(new BigDecimal("125.50")))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId", equalTo(1)))
+                .andExpect(jsonPath("$.cashBalance", equalTo(250125.50)));
+
+        verify(accountService).depositCash(1L, new BigDecimal("125.50"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/accounts/{id}/deposit - Rejects invalid amount")
+    void depositCashRejectsInvalidAmount() throws Exception {
+        mockMvc.perform(post("/api/v1/accounts/1/deposit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DepositCashRequestDto(BigDecimal.ZERO))))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(accountService, never()).depositCash(anyLong(), any());
+        }
+
+    @Test
     @DisplayName("GET /api/v1/accounts/{id} - Returns HTTP 200 OK")
     void getAccountReturnsHttpOk() throws Exception {
         // Arrange
@@ -127,6 +181,7 @@ class AccountControllerTest {
     @DisplayName("GET /api/v1/accounts/{id} - Retrieves different account by ID")
     void getAccountRetrievesDifferentAccountsById() throws Exception {
         // Arrange
+                authenticateAs(2L);
         AccountDto account2 = new AccountDto(
                 2L,
                 "ACC-002",
@@ -134,7 +189,7 @@ class AccountControllerTest {
                 new BigDecimal("500000.00"),
                 AccountStatus.ACTIVE,
                 1,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneOffset.UTC)
         );
         when(accountService.getAccount(2L)).thenReturn(account2);
 
@@ -154,6 +209,7 @@ class AccountControllerTest {
     @DisplayName("GET /api/v1/accounts/{id} - Returns 404 when account not found")
     void getAccountReturns404WhenAccountNotFound() throws Exception {
         // Arrange
+                authenticateAs(99L);
         when(accountService.getAccount(99L))
                 .thenThrow(new AccountNotFoundException(99L));
 
@@ -232,6 +288,7 @@ class AccountControllerTest {
     @DisplayName("GET /api/v1/accounts/{id}/balance - Returns 404 when account not found")
     void getBalanceReturns404WhenAccountNotFound() throws Exception {
         // Arrange
+                authenticateAs(99L);
         when(accountService.getBalance(99L))
                 .thenThrow(new AccountNotFoundException(99L));
 
@@ -312,6 +369,7 @@ class AccountControllerTest {
     @DisplayName("GET /api/v1/accounts/{id}/positions - Returns 404 when account not found")
     void getPositionsReturns404WhenAccountNotFound() throws Exception {
         // Arrange
+                authenticateAs(99L);
         when(accountService.getPositions(99L))
                 .thenThrow(new AccountNotFoundException(99L));
 
@@ -409,6 +467,7 @@ class AccountControllerTest {
     @DisplayName("GET /api/v1/accounts/{id}/orders - Returns 404 when account not found")
     void getOrdersReturns404WhenAccountNotFound() throws Exception {
         // Arrange
+                authenticateAs(99L);
         when(accountService.getOrders(99L))
                 .thenThrow(new AccountNotFoundException(99L));
 
@@ -489,4 +548,38 @@ class AccountControllerTest {
         verify(accountService, times(1)).getPositions(1L);
         verify(accountService, times(1)).getOrders(1L);
     }
+
+        @Test
+        @DisplayName("GET /api/v1/accounts/{id} - Returns 403 for a different account")
+        void getAccountReturns403ForDifferentAccount() throws Exception {
+                authenticateAs(1L);
+
+                mockMvc.perform(get("/api/v1/accounts/2")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isForbidden())
+                                .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+                verifyNoInteractions(accountService);
+        }
+
+            @Test
+            @DisplayName("GET /api/v1/accounts/{id} - Returns 403 for cross-account balance, positions, and orders")
+            void accountReadEndpointsReturn403ForDifferentAccount() throws Exception {
+                mockMvc.perform(get("/api/v1/accounts/2/balance")
+                        .accept(MediaType.APPLICATION_JSON))
+                        .andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+                mockMvc.perform(get("/api/v1/accounts/2/positions")
+                        .accept(MediaType.APPLICATION_JSON))
+                        .andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+                mockMvc.perform(get("/api/v1/accounts/2/orders")
+                        .accept(MediaType.APPLICATION_JSON))
+                        .andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.code", equalTo("AUTH-403")));
+
+                verifyNoMoreInteractions(accountService);
+            }
 }

@@ -1,10 +1,12 @@
 package com.leapvelocity.controller;
 
+import com.leapvelocity.dto.request.DepositCashRequestDto;
 import com.leapvelocity.dto.response.AccountBalanceDto;
 import com.leapvelocity.dto.response.AccountDto;
 import com.leapvelocity.dto.response.OrderDto;
 import com.leapvelocity.dto.response.PositionDto;
 import com.leapvelocity.service.AccountService;
+import com.leapvelocity.security.AccountAccessAuthorizer;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,9 +15,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -50,6 +55,7 @@ public class AccountController {
     public ResponseEntity<AccountDto> getAccount(
             @Parameter(description = "Account ID to retrieve", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         AccountDto account = accountService.getAccount(id);
         return ResponseEntity.ok(account);
     }
@@ -70,8 +76,24 @@ public class AccountController {
     public ResponseEntity<AccountBalanceDto> getBalance(
             @Parameter(description = "Account ID to retrieve balance for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         AccountBalanceDto balance = accountService.getBalance(id);
         return ResponseEntity.ok(balance);
+    }
+
+    @Operation(summary = "Deposit account cash", description = "Add cash to an account after validating the deposit amount")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cash deposited successfully"),
+            @ApiResponse(responseCode = "404", description = "Account not found"),
+            @ApiResponse(responseCode = "422", description = "Invalid deposit amount")
+    })
+    @PostMapping("/{id}/deposit")
+    public ResponseEntity<AccountBalanceDto> depositCash(
+            @Parameter(description = "Account ID to fund", example = "1")
+            @PathVariable Long id,
+            @Valid @RequestBody DepositCashRequestDto request) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
+        return ResponseEntity.ok(accountService.depositCash(id, request.amount()));
     }
 
     /**
@@ -90,6 +112,7 @@ public class AccountController {
     public ResponseEntity<List<PositionDto>> getPositions(
             @Parameter(description = "Account ID to retrieve positions for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         List<PositionDto> positions = accountService.getPositions(id);
         return ResponseEntity.ok(positions);
     }
@@ -110,6 +133,7 @@ public class AccountController {
     public ResponseEntity<List<OrderDto>> getOrders(
             @Parameter(description = "Account ID to retrieve order history for", example = "1")
             @PathVariable Long id) {
+        AccountAccessAuthorizer.requireOwnAccountOrAdmin(id);
         List<OrderDto> orders = accountService.getOrders(id);
         return ResponseEntity.ok(orders);
     }
