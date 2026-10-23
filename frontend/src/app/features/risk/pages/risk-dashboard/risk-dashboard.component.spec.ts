@@ -76,6 +76,8 @@ describe('Risk dashboard', () => {
     sectorButton.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sector');
+    const largestHolding = RISK_DASHBOARD_SEED.portfolios[0].holdings[0];
+    expect(fixture.nativeElement.textContent).toContain(`${largestHolding.symbol} represents ${largestHolding.allocationPercent?.toFixed(1)}% of invested equity`);
   });
 
   it('reloads the server data for a selected lookback without an account selector', async () => {
