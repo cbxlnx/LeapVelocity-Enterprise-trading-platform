@@ -1,9 +1,13 @@
 <section class="waterfall-section" aria-labelledby="waterfall-heading">
-  <header class="section-title"><h2 id="waterfall-heading">Historical scenario breakdown</h2><div class="legend"><span><i class="start"></i>Starting equity</span><span><i class="loss"></i>Stock losses</span><span><i class="end"></i>Ending equity</span></div></header>
+  <header class="section-title"><h2 id="waterfall-heading">{{ title() }}</h2><div class="legend"><span><i class="start"></i>Starting equity</span><span><i class="loss"></i>Stock losses</span><span><i class="end"></i>Ending equity</span></div></header>
+  @if (waterfalls().length === 0) {
+    <div class="waterfall-empty" role="status">{{ emptyMessage() }}</div>
+  } @else {
   <div class="waterfall-grid">
     @for (waterfall of waterfalls(); track waterfall.title; let index = $index) {
-      <article class="waterfall-card"><h3>{{ waterfall.title }}</h3><p>{{ waterfall.period }} · Full-event replay on current holdings</p><div class="chart waterfall-chart" echarts [options]="optionFor(index)" [attr.aria-label]="waterfall.title + ' waterfall chart'"></div><footer><strong>Total loss −${{ (waterfall.startingEquityUsd - waterfall.endingEquityUsd).toLocaleString('en-US') }} · −{{ ((waterfall.startingEquityUsd - waterfall.endingEquityUsd) / waterfall.startingEquityUsd * 100).toFixed(2) }}%</strong><span>${{ waterfall.cashReserveUsd.toLocaleString('en-US') }} cash unchanged</span></footer></article>
+      <article class="waterfall-card" [id]="anchorIds()[index] ?? null" tabindex="-1"><h3>{{ waterfall.title }}</h3><p>{{ waterfall.period }} · Full-event replay on current holdings</p><div class="chart waterfall-chart" echarts [options]="optionFor(index)" [attr.aria-label]="waterfall.title + ' waterfall chart'"></div><footer><strong>Total loss −${{ (waterfall.startingEquityUsd - waterfall.endingEquityUsd).toLocaleString('en-US') }} · −{{ ((waterfall.startingEquityUsd - waterfall.endingEquityUsd) / waterfall.startingEquityUsd * 100).toFixed(2) }}%</strong><span>${{ waterfall.cashReserveUsd.toLocaleString('en-US') }} cash unchanged</span></footer></article>
     }
   </div>
+  }
   <p class="fine-print">Starting account equity → individual stock losses → ending equity. Holding losses reconcile to each scenario total. Illustrative event replays, not forecasts.</p>
 </section>

@@ -13,7 +13,10 @@ import { createWaterfallOptions } from '../../utils/risk-chart-options';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ScenarioWaterfallComponent {
+  readonly title = input('Historical scenario breakdown');
+  readonly emptyMessage = input('No waterfall is available.');
   readonly waterfalls = input.required<ScenarioWaterfall[]>();
+  readonly anchorIds = input<string[]>([]);
   readonly options = computed(() => this.waterfalls().map((waterfall) => createWaterfallOptions(waterfall)));
   optionFor(index: number): EChartsOption {
     return this.options()[index];

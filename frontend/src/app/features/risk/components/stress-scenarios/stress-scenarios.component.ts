@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RiskPortfolio } from '../../models/risk-dashboard.model';
 
 @Component({
@@ -11,12 +11,7 @@ import { RiskPortfolio } from '../../models/risk-dashboard.model';
 export class StressScenariosComponent {
   readonly math = Math;
   readonly portfolio = input.required<RiskPortfolio>();
-  readonly editShock = output<void>();
-  readonly expandedScenario = signal<string | null>(null);
-
-  toggleDetails(id: string): void {
-    this.expandedScenario.update((current) => current === id ? null : id);
-  }
+  readonly viewBreakdown = output<string>();
 
   currency(value: number | null): string {
     return value === null ? 'Unavailable' : value.toLocaleString('en-US');
