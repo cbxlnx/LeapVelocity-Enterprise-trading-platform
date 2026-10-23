@@ -19,15 +19,11 @@
 }
 
 .logo {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  border-radius: 4px;
-  background: #fff;
-  color: #142337;
-  font-size: 11px;
-  font-weight: 700;
+  display: block;
+  width: clamp(160px, 20vw, 230px);
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .brand-text .title {
@@ -373,10 +369,9 @@
     letter-spacing: 1px;
   }
   .welcome-topbar .logo {
-    width: 30px;
-    height: 34px;
+    width: 160px;
+    height: auto;
     flex-shrink: 0;
-    font-size: 17px;
   }
   .welcome-topbar .user-area {
     flex: 0 0 auto;

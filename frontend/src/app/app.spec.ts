@@ -44,6 +44,18 @@ describe('App', () => {
     expect(document.documentElement.classList.contains('dark-theme')).toBeFalsy();
   });
 
+  it('should render the supplied header logo instead of the placeholder', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const header = fixture.nativeElement.querySelector('app-header') as HTMLElement;
+    const logo = header.querySelector('img.logo') as HTMLImageElement;
+
+    expect(logo).toBeTruthy();
+    expect(logo.getAttribute('src')).toBe('logo.png');
+    expect(logo.alt).toBe('TradeVelocity');
+    expect(header.querySelector('.brand-text')).toBeNull();
+  });
+
   it('should switch and persist the selected theme', () => {
     const service = TestBed.inject(ThemeService);
     localStorage.clear();
