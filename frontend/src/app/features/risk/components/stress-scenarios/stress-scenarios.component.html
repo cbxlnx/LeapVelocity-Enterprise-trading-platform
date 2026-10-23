@@ -6,14 +6,14 @@
     </div>
     <span class="label">Illustrative estimates</span>
   </header>
-  <div class="table-head"><span>Scenario / shock</span><span>Estimated loss</span><span>% of account</span><span>Impact · 0–20% loss</span><span>Action</span></div>
+  <div class="table-head"><span>Scenario / shock</span><span>Estimated loss</span><span>% of account</span><span>Impact · 0–{{ impactScale() }}% loss</span><span>Action</span></div>
   <div class="scenario-list">
     @for (scenario of portfolio().scenarios; track scenario.id) {
       <div class="scenario-row">
         <div class="scenario-name"><strong>{{ scenario.title }}</strong><span>{{ scenario.period }} · {{ scenario.description }}</span></div>
         <div class="loss">−${{ currency(scenario.lossUsd) }}</div>
         <div class="loss">−{{ metric(scenario.lossPercent) }}%</div>
-        <div class="impact"><span [style.width.%]="math.min((scenario.lossPercent ?? 0) / 20 * 100, 100)"></span></div>
+        <div class="impact"><span [class.severe]="isSevereImpact(scenario.lossPercent)" [style.width.%]="impactWidth(scenario.lossPercent)"></span></div>
         <div class="action"><button type="button" (click)="viewBreakdown.emit(scenario.id)">View breakdown</button></div>
       </div>
     }

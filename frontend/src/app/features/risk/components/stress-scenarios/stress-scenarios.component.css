@@ -13,7 +13,7 @@
 .scenario-name span { color: #718296; font-size: 10px; }
 .loss { color: #bb3842; font: 500 13px var(--font-mono); white-space: nowrap; }
 .impact { height: 8px; overflow: hidden; background: #e8eef2; }
-.impact span { display: block; height: 100%; background: #bb3842; }
+.impact span { display: block; height: 100%; background: #91a1af; }.impact span.severe { background: #bb3842; }
 .action { text-align: right; }
 .action button { min-width: 108px; height: 34px; padding: 0 10px; border: 1px solid #cbd6df; border-radius: 3px; background: #fff; color: #20364e; font-size: 10px; font-weight: 700; cursor: pointer; }
 .action button.primary { border-color: #c84f13; background: #c84f13; color: #fff; }

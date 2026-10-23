@@ -5,7 +5,7 @@
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 9px; height: 9px; }
 .legend .start { background: #142337; }.legend .loss { background: #bb3842; }.legend .end { background: #3679b3; }
-.waterfall-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.waterfall-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }.waterfall-grid.single-waterfall { grid-template-columns: minmax(0, 1fr); }
 .waterfall-card { min-width: 0; padding: 24px; border: 1px solid #d5dde6; border-radius: 4px; background: #fff; scroll-margin-top: 24px; }
 .waterfall-card h3 { margin: 0; color: #142337; font-size: 18px; }
 .waterfall-card p { margin: 6px 0 0; color: #586c7d; font-size: 11px; }

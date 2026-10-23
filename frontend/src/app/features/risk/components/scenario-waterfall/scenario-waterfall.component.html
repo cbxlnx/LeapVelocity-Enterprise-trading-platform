@@ -3,7 +3,7 @@
   @if (waterfalls().length === 0) {
     <div class="waterfall-empty" role="status">{{ emptyMessage() }}</div>
   } @else {
-  <div class="waterfall-grid">
+  <div class="waterfall-grid" [class.single-waterfall]="waterfalls().length === 1">
     @for (waterfall of waterfalls(); track waterfall.title; let index = $index) {
       <article class="waterfall-card" [id]="anchorIds()[index] ?? null" tabindex="-1"><h3>{{ waterfall.title }}</h3><p>{{ waterfall.period }} · Full-event replay on current holdings</p><div class="chart waterfall-chart" echarts [options]="optionFor(index)" [attr.aria-label]="waterfall.title + ' waterfall chart'"></div><footer><strong>Total loss −${{ (waterfall.startingEquityUsd - waterfall.endingEquityUsd).toLocaleString('en-US') }} · −{{ ((waterfall.startingEquityUsd - waterfall.endingEquityUsd) / waterfall.startingEquityUsd * 100).toFixed(2) }}%</strong><span>${{ waterfall.cashReserveUsd.toLocaleString('en-US') }} cash unchanged</span></footer></article>
     }

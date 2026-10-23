@@ -13,6 +13,10 @@ export class ConcentrationComponent {
   readonly viewChange = output<ConcentrationView>();
   readonly view = signal<ConcentrationView>('stock');
   readonly technologyShare = computed(() => this.portfolio().sectorExposure.find((sector) => sector.sector === 'Technology')?.allocationPercent ?? 0);
+  readonly sectorScale = computed(() => {
+    const largestExposure = Math.max(...this.portfolio().sectorExposure.map((sector) => sector.allocationPercent), 0);
+    return Math.max(10, Math.ceil(largestExposure * 1.1));
+  });
 
   selectView(view: ConcentrationView): void {
     this.view.set(view);
