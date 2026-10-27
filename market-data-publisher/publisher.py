@@ -21,7 +21,10 @@ from confluent_kafka import KafkaException, Producer
 
 log = logging.getLogger("market-data-publisher")
 
-DEFAULT_SYMBOLS = "AAPL,MSFT,GOOGL,AMZN,NVDA,TSLA,JPM,JNJ,XOM,WMT,SPY,QQQ"
+DEFAULT_SYMBOLS = (
+    "AAPL,MSFT,GOOGL,AMZN,NVDA,TSLA,JPM,JNJ,XOM,WMT,SPY,QQQ,"
+    "V,UNH,CVX,PG,CAT,NEE,AMT,LIN,HD,VZ,IEF,LQD,HYG,MUB,EMB"
+)
 DEFAULT_TOPIC = "market-data"
 DEFAULT_BOOTSTRAP_SERVERS = "kafka:29092"
 DEFAULT_POLL_SECONDS = 5.0
