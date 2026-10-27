@@ -35,6 +35,15 @@ describe('RiskDashboardApiService', () => {
     await expect(result).resolves.toEqual(payload);
   });
 
+  it('loads the requested historical lookback window', async () => {
+    const result = firstValueFrom(service.getDashboard(1260));
+    const request = http.expectOne('/risk-api/v1/accounts/7/risk/dashboard?lookbackDays=1260&confidence=0.95');
+
+    request.flush({ portfolios: [] });
+
+    await expect(result).resolves.toEqual({ portfolios: [] });
+  });
+
   it('posts custom shocks for the signed-in account', async () => {
     const shocks = { market: -10, Technology: 2, Financials: 0, Energy: -5, Healthcare: 0 };
     const payload = { lossUsd: 100, impactPercent: 1, postShockEquityUsd: 9900 };

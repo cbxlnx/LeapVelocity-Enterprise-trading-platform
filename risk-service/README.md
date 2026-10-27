@@ -71,7 +71,7 @@ The response contains portfolio value, holdings, allocations, VaR by horizon, ex
 
 Supported query limits:
 
-- `lookbackDays`: 30 to 2000; default `252`
+- `lookbackDays`: 30 to 10000; default `252`
 - `confidence`: 0.8 inclusive to 1.0 exclusive; default `0.95`
 - `benchmark`: default `SPY`
 - `mcPaths`: 100 to 100000; default `10000`

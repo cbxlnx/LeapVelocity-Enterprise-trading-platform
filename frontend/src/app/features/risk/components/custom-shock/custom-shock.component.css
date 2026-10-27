@@ -1,4 +1,4 @@
-:host { display: block; }
+:host { display: block; min-width: 0; container-type: inline-size; }
 .risk-card { padding: 24px; border: 1px solid #d5dde6; border-radius: 4px; background: #fff; }
 .section-heading { margin-bottom: 22px; }
 .section-heading h2 { margin: 0; color: #142337; font-size: 19px; }
@@ -9,9 +9,9 @@
 .actions .primary { border-color: #c84f13; background: #c84f13; color: #fff; }
 .shock-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 36px; align-items: center; }
 .controls { display: grid; gap: 14px; }
-.shock-control { display: grid; grid-template-columns: 105px minmax(120px, 1fr) 68px 76px; align-items: center; gap: 12px; color: #20364e; font-size: 11px; }
+.shock-control { display: grid; grid-template-columns: 105px minmax(0, 1fr) minmax(0, 68px) 76px; align-items: center; gap: 12px; color: #20364e; font-size: 11px; }
 .shock-control input[type='range'] { width: 100%; accent-color: #c84f13; }
-.shock-value { width: 68px; height: 32px; padding: 0 8px; border: 1px solid #cbd6df; border-radius: 3px; color: #20364e; font: 10px var(--font-mono); text-align: center; }
+.shock-value { box-sizing: border-box; width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid #cbd6df; border-radius: 3px; color: #20364e; font: 10px var(--font-mono); text-align: center; }
 .shock-control small { color: #718296; font-size: 9px; white-space: nowrap; }
 .impact-panel { padding: 18px; background: #eaf1f5; color: #586c7d; }
 .impact-panel > strong { display: inline-block; color: #20364e; font-size: 11px; }
@@ -39,3 +39,5 @@
 }
 @media (max-width: 900px) { .shock-layout { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .risk-card { padding: 16px; } .split-heading { flex-direction: column; } .actions { width: 100%; } .actions button { flex: 1; } .shock-control { grid-template-columns: 84px minmax(90px, 1fr) 62px; gap: 8px; } .shock-control small { display: none; } }
+@container (max-width: 760px) { .shock-layout { grid-template-columns: 1fr; gap: 22px; } }
+@container (max-width: 520px) { .shock-control { grid-template-columns: 84px minmax(0, 1fr) 62px; gap: 8px; } .shock-control small { display: none; } }

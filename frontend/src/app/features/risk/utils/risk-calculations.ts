@@ -2,6 +2,7 @@ import {
   HoldingRisk,
   RiskHorizon,
   SectorExposure,
+  ScenarioWaterfall,
   ShockResult,
   ShockValues,
   VaRModels,
@@ -64,17 +65,31 @@ export function calculateCustomShock(
   holdings: HoldingRisk[],
   portfolioValueUsd: number,
   shocks: ShockValues,
+  cashReserveUsd = portfolioValueUsd - holdings.reduce((total, holding) => total + (holding.marketValue ?? 0), 0),
 ): ShockResult {
-  const lossUsd = holdings.reduce((total, holding) => {
+  const deltas = holdings.map((holding) => {
     const sectorShock = holding.sector && holding.sector in shocks ? shocks[holding.sector as keyof ShockValues] : 0;
     const combinedShockPercent = shocks.market + (typeof sectorShock === 'number' ? sectorShock : 0);
-    return total - (holding.marketValue ?? 0) * (combinedShockPercent / 100);
-  }, 0);
-  const roundedLoss = roundCurrency(lossUsd);
+    return {
+      label: holding.symbol,
+      deltaUsd: roundCurrency((holding.marketValue ?? 0) * (combinedShockPercent / 100)),
+    };
+  });
+  const totalImpactUsd = deltas.reduce((total, delta) => total + delta.deltaUsd, 0);
+  const roundedLoss = roundCurrency(-totalImpactUsd);
+  const waterfall: ScenarioWaterfall = {
+    title: 'Custom scenario',
+    period: 'Current positions',
+    startingEquityUsd: roundCurrency(portfolioValueUsd),
+    deltas,
+    endingEquityUsd: roundCurrency(portfolioValueUsd + totalImpactUsd),
+    cashReserveUsd: roundCurrency(cashReserveUsd),
+  };
   return {
     lossUsd: roundedLoss,
     impactPercent: lossPercent(roundedLoss, portfolioValueUsd),
-    postShockEquityUsd: roundCurrency(portfolioValueUsd - roundedLoss),
+    postShockEquityUsd: waterfall.endingEquityUsd,
+    waterfall,
   };
 }
 

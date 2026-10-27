@@ -11,7 +11,7 @@ export class RiskDashboardApiService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
 
-  getDashboard(): Observable<RiskDashboardData> {
+  getDashboard(lookbackDays = 252): Observable<RiskDashboardData> {
     const accountId = this.auth.getAccountId();
     if (accountId === null) {
       return throwError(() => new Error('No signed-in account is available.'));
@@ -19,7 +19,7 @@ export class RiskDashboardApiService {
 
     return this.http.get<RiskDashboardData>(
       `${environment.riskApiUrl}/v1/accounts/${accountId}/risk/dashboard`,
-      { params: new HttpParams().set('lookbackDays', '252').set('confidence', '0.95') },
+      { params: new HttpParams().set('lookbackDays', lookbackDays).set('confidence', '0.95') },
     ).pipe(catchError(handleApiError('load risk dashboard')));
   }
 

@@ -1,4 +1,5 @@
 export type RiskHorizon = 1 | 10 | 30;
+export type HistoricalLookback = '1Y' | '3Y' | '5Y' | '10Y' | 'MAX';
 export type ConcentrationView = 'stock' | 'sector';
 export type ScenarioKind = 'historical' | 'custom';
 export type SectorName = 'Technology' | 'Financials' | 'Energy' | 'Healthcare' | 'Other';

@@ -76,7 +76,8 @@ describe('OrderTicketComponent quote hydration', () => {
 
     expect(marketData.getQuote).toHaveBeenCalledWith('AAPL');
     expect(component.orderForm.get('symbol')?.value).toBe('AAPL');
-    expect(component.orderForm.get('price')?.value).toBe(187.5);
+    expect(component.orderForm.get('price')?.value).toBe(187.6);
+    expect(component.executableReferencePrice).toBe(187.6);
     expect(component.referenceQuote).toEqual(aaplQuote);
     expect(component.quoteLoading).toBe(false);
     expect(component.quoteError).toBeNull();
@@ -90,7 +91,28 @@ describe('OrderTicketComponent quote hydration', () => {
 
     expect(component.orderForm.get('symbol')?.value).toBe('MSFT');
     expect(marketData.getQuote).toHaveBeenCalledWith('MSFT');
-    expect(component.orderForm.get('price')?.value).toBe(400);
+    expect(component.orderForm.get('price')?.value).toBeNull();
+    expect(component.executableReferencePrice).toBeNull();
+  });
+
+  it('uses the bid as the executable reference for SELL orders', () => {
+    component.chooseInstrument('AAPL');
+
+    component.orderForm.patchValue({ side: 'SELL' });
+    component.onSideChange();
+
+    expect(component.executableReferencePrice).toBe(187.4);
+    expect(component.orderForm.get('price')?.value).toBe(187.4);
+  });
+
+  it('does not replace a manually edited price when the side changes', () => {
+    component.chooseInstrument('AAPL');
+    component.orderForm.patchValue({ price: 185 });
+
+    component.orderForm.patchValue({ side: 'SELL' });
+    component.onSideChange();
+
+    expect(component.orderForm.get('price')?.value).toBe(185);
   });
 
   it('ignores a quote response that arrives after the symbol changed', () => {
@@ -107,7 +129,7 @@ describe('OrderTicketComponent quote hydration', () => {
 
     expect(component.orderForm.get('symbol')?.value).toBe('MSFT');
     expect(component.referenceQuote).toEqual(msftQuote);
-    expect(component.orderForm.get('price')?.value).toBe(400);
+    expect(component.orderForm.get('price')?.value).toBeNull();
   });
 
   it('shows an unavailable state and leaves the price empty when the quote fails', () => {

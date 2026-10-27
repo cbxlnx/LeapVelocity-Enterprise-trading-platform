@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +33,7 @@ public class MarketDataController {
 
     private static final int MAX_SYMBOLS_PER_REQUEST = 50;
     private static final int MAX_SYMBOL_LENGTH = 20;
+    private static final Logger log = LoggerFactory.getLogger(MarketDataController.class);
 
     private final MarketDataService marketDataService;
 
@@ -55,7 +58,11 @@ public class MarketDataController {
             @Parameter(description = "Ticker symbol to retrieve the quote for", example = "AAPL")
             @PathVariable String symbol) {
         QuoteDto quote = marketDataService.latestQuote(symbol)
-                .map(QuoteDto::from)
+            .map(latest -> {
+                log.debug("Serving market quote symbol={} lastPrice={} bid={} ask={} asOf={}",
+                    latest.symbol(), latest.lastPrice(), latest.bid(), latest.ask(), latest.asOf());
+                return QuoteDto.from(latest);
+            })
                 .orElseThrow(() -> new QuoteNotFoundException(symbol));
         return ResponseEntity.ok(quote);
     }

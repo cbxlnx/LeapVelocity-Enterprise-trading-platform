@@ -35,6 +35,9 @@ describe('risk calculation invariants', () => {
     });
     expect(result.lossUsd).toBe(-portfolio.holdings.reduce((sum, holding) => sum + (holding.marketValue ?? 0) * ((-10 + (holding.sector === 'Technology' ? -5 : 0)) / 100), 0));
     expect(result.postShockEquityUsd).toBe(portfolioValue - result.lossUsd);
+    expect(result.waterfall?.deltas).toHaveLength(portfolio.holdings.length);
+    expect(result.waterfall?.endingEquityUsd).toBe(result.postShockEquityUsd);
+    expect(result.waterfall?.cashReserveUsd).toBe(portfolio.cashReserveUsd);
   });
 
   it('reconciles waterfall start, deltas, and end', () => {
