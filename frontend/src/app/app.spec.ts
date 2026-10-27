@@ -52,7 +52,8 @@ describe('App', () => {
 
     expect(logo).toBeTruthy();
     expect(logo.getAttribute('src')).toBe('logo.png');
-    expect(logo.alt).toBe('TradeVelocity');
+    expect(logo.alt).toBe('');
+    expect(header.querySelector('.brand-title')?.textContent?.trim()).toBe('Trade Velocity');
     expect(header.querySelector('.brand-text')).toBeNull();
   });
 
