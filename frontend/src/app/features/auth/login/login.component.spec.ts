@@ -49,6 +49,16 @@ describe('LoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the logo icon and Trade Velocity wordmark', () => {
+    const brand = (fixture.nativeElement as HTMLElement).querySelector('.login-brand')!;
+    const logo = brand.querySelector('img.auth-logo') as HTMLImageElement;
+
+    expect(logo.getAttribute('src')).toBe('logo.png');
+    expect(logo.alt).toBe('');
+    expect(brand.querySelector('.auth-brand-title')?.textContent?.trim()).toBe('Trade Velocity');
+    expect(brand.querySelector('.brand-mark')).toBeNull();
+  });
+
   describe('Form Initialization', () => {
     it('should initialize form with empty username and password', () => {
       expect(component.loginForm.get('username')?.value).toBe('');

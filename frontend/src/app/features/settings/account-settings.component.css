@@ -5,23 +5,23 @@
 .page-header h1 { margin: 0; font-size: 22px; font-weight: 600; }
 .page-header p { margin: 4px 0 0; color: #586c7d; font-size: 12px; }
 .settings-sections { display: grid; gap: 20px; }
-.settings-card { border: 1px solid #d4dce3; background: #fff; }
+.settings-card { overflow: hidden; border: 1px solid #d4dce3; border-radius: 6px; background: #fff; }
 .card-heading { padding: 16px 20px 13px; border-bottom: 1px solid #d4dce3; }
 .card-heading h2 { margin: 0; color: #142337; font-size: 14px; font-weight: 700; }
 .card-heading p { margin: 4px 0 0; color: #586c7d; font-size: 12px; }
 .card-body { padding: 20px; }
-.balance-display, .inline-value { background: #e9eef2; border: 1px solid #d4dce3; }
+.balance-display, .inline-value { background: #e9eef2; border: 1px solid #d4dce3; border-radius: 4px; }
 .balance-display { padding: 18px 16px; }
 .balance-display span, label { display: block; color: #34516f; font-size: 10px; font-weight: 600; letter-spacing: .5px; }
 .balance-display strong { display: block; margin-top: 7px; color: #142337; font: 26px var(--font-mono); font-variant-numeric: tabular-nums; }
 form { margin: 18px 0 0; }
 label { margin-bottom: 8px; }
 .deposit-row { display: flex; gap: 16px; align-items: stretch; }
-.amount-input { display: flex; align-items: center; flex: 1; min-width: 220px; height: 38px; padding: 0 12px; border: 1px solid #c8d2dc; background: #fff; color: #586c7d; }
+.amount-input { display: flex; align-items: center; flex: 1; min-width: 220px; height: 38px; padding: 0 12px; border: 1px solid #c8d2dc; border-radius: 4px; background: #fff; color: #586c7d; }
 .amount-input:focus-within { border-color: #c05819; box-shadow: 0 0 0 2px rgba(192, 88, 25, .12); }
 input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: #142337; font: 14px var(--font-mono); padding-left: 7px; }
 .preset-list { display: flex; gap: 8px; }
-.preset-button, .secondary-button { border: 1px solid #c8d2dc; background: #fff; color: #142337; cursor: pointer; font: 12px var(--font-mono); }
+.preset-button, .secondary-button { border: 1px solid #c8d2dc; border-radius: 4px; background: #fff; color: #142337; cursor: pointer; font: 12px var(--font-mono); }
 .preset-button { min-width: 68px; padding: 0 10px; }
 .preset-button:hover, .secondary-button:hover { border-color: #c05819; color: #c05819; }
 .helper-text, .field-error, .saved-text { margin: 9px 0 0; font-size: 11px; }
@@ -29,7 +29,7 @@ input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparen
 .field-error { color: #a52f36; }
 .saved-text { color: #1f765d; }
 .card-actions { display: flex; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid #d4dce3; background: #e9eef2; }
-.primary-button { min-width: 100px; height: 33px; border: 0; background: #d98559; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+.primary-button { min-width: 100px; height: 33px; border: 0; border-radius: 4px; background: #d98559; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .primary-button:not(:disabled):hover { background: #c05819; }
 .primary-button:disabled { background: #d39a7b; color: #fff; cursor: not-allowed; opacity: 1; }
 .compact-card .card-body { min-height: 58px; }
@@ -37,9 +37,9 @@ input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparen
 code { color: #142337; font: 16px var(--font-mono); }
 .secondary-button { min-width: 62px; height: 32px; font-family: var(--font-ui); }
 .username-body form { margin: 0; max-width: 385px; }
-.username-input { width: 100%; height: 37px; box-sizing: border-box; padding: 0 12px; border: 1px solid #c8d2dc; background: #fff; font: 13px var(--font-ui); }
+.username-input { width: 100%; height: 37px; box-sizing: border-box; padding: 0 12px; border: 1px solid #c8d2dc; border-radius: 4px; background: #fff; font: 13px var(--font-ui); }
 .username-input:focus { border-color: #c05819; outline: 0; box-shadow: 0 0 0 2px rgba(192, 88, 25, .12); }
-.message { margin: 0 0 18px; padding: 10px 12px; font-size: 12px; }
+.message { margin: 0 0 18px; padding: 10px 12px; border-radius: 4px; font-size: 12px; }
 .error { color: #a52f36; background: #fff2f2; }
 .success { color: #1f765d; background: #eef8f3; }
 .state { color: #586c7d; font-size: 12px; }

@@ -1,1 +1,9 @@
 .auth-form { --auth-slide-start: 8px; }
+
+.register-logo {
+	display: block;
+	width: clamp(160px, 20vw, 230px);
+	max-width: 100%;
+	height: auto;
+	object-fit: contain;
+}
