@@ -17,6 +17,7 @@
 
 :host-context(.dark-theme) {
 	.waterfall-card { background: var(--surface-raised); border-color: var(--border); }
+	.waterfall-empty { background: var(--surface-raised); border-color: var(--border); color: var(--text-muted); }
 	.section-title h2, .waterfall-card h3 { color: var(--text-strong); }
 	.section-title p, .legend, .waterfall-card p, .waterfall-card footer span, .fine-print { color: var(--text-muted); }
 	.waterfall-card footer { border-color: var(--border); }
